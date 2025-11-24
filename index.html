@@ -137,25 +137,21 @@ async function onJoin() {
   vid.loop=false;
   container.appendChild(vid);
 
-  try { if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'}); }catch(e){console.warn(e);}
-  try { await vid.play(); }catch(err){console.warn(err); 
-    const hint=document.createElement('div');
-    hint.style.position='absolute'; hint.style.color='#fff'; hint.style.fontSize='18px';
-    hint.style.textAlign='center'; hint.style.left='0'; hint.style.right='0'; hint.style.top='40%';
-    hint.textContent='再生がブロックされました。画面をタップして再生してください。';
-    container.appendChild(hint);
-    container.addEventListener('click',async()=>{try{await vid.play(); hint.remove();}catch{}},{once:true});
-  }
+  // 動画読み込み完了後に再生・フルスクリーン
+  vid.addEventListener('loadeddata', async () => {
+    try { await vid.play(); } catch(e){ console.warn(e); }
+    try { if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'}); } catch(e){ console.warn(e); }
+  });
 
+  // 再生中の操作制限
   const blockKeys=(ev)=>{const blocked=[' ','Spacebar','k','K','MediaPlayPause','MediaStop','Escape']; if(blocked.includes(ev.key)||blocked.includes(ev.code)){ev.preventDefault();}};
   document.addEventListener('keydown',blockKeys,{capture:true});
-
   const preventAction=(ev)=>{ev.preventDefault(); ev.stopPropagation();};
   container.addEventListener('contextmenu',preventAction);
   container.addEventListener('click',preventAction);
 
-  vid.addEventListener('pause',()=>{setTimeout(()=>{if(vid.paused) vid.play().catch(()=>{});},50);});
-  vid.addEventListener('ended',async()=>{try{if(document.fullscreenElement) await document.exitFullscreen();}catch(e){} container.style.display='none'; container.innerHTML=''; document.removeEventListener('keydown',blockKeys,{capture:true});});
+  // 動画終了時の処理は一旦コメントアウトして安定させる
+  // vid.addEventListener('ended',async()=>{container.style.display='none'; container.innerHTML=''; document.removeEventListener('keydown',blockKeys,{capture:true});});
 }
 
 init=()=>{updateButtonState(); setInterval(updateButtonState,1000); pwInput.addEventListener('input',updateButtonState); joinBtn.addEventListener('click',onJoin);};
