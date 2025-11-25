@@ -30,8 +30,8 @@ video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:cover}
     <p class="desc">以下の「ラジオ体操参加」ボタンは日本時間の <strong>06:00〜06:05</strong> と設定した時間に押せます。パスワードを入れるといつでも参加可能です。</p>
     <div id="remainingTime"></div>
     <div class="controls">
-      <input id="pw" type="password" placeholder="パスワード (省略可)" aria-label="password">
-      <button id="joinBtn" disabled>ラジオ体操参加</button>
+      <input id="pw" type="password" placeholder="パスワード (運営用)" aria-label="password">
+      <button id="joinBtn" disabled>草原に入る</button>
     </div>
     <div class="small">※ボタンを押すと画面が切り替わり、動画が全画面で自動再生されます。</div>
   </div>
@@ -67,7 +67,7 @@ function updateButtonState(){
   const pw=pwInput.value===config.bypassPassword;
   const allowed=isWithinAllowedWindow() || pw;
   joinBtn.disabled=!allowed;
-  joinBtn.textContent=pw?'ラジオ体操参加（パスワード解除）':allowed?'ラジオ体操参加':'時間外';
+  joinBtn.textContent=pw?'草原に入る（パスワード解除）':allowed?'草原に入る':'時間外';
 
   if(!pw){
     if(allowed){
@@ -81,7 +81,7 @@ function updateButtonState(){
       const hours=Math.floor(diff/3600000);
       const minutes=Math.floor((diff%3600000)/60000);
       const seconds=Math.floor((diff%60000)/1000);
-      remainingTimeDiv.textContent=`次の参加可能時間まで: ${hours}時間 ${minutes}分 ${seconds}秒`;
+      remainingTimeDiv.textContent=`ラジオ体操開始まで: ${hours}時間 ${minutes}分 ${seconds}秒`;
     }
   }else remainingTimeDiv.textContent='';
 }
@@ -133,3 +133,4 @@ init();
 </script>
 </body>
 </html>
+
