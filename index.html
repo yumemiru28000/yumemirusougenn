@@ -26,8 +26,8 @@ video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:cover}
 <div class="wrap">
   <div class="card">
     <h1>ユメミる草原</h1>
-    <p class="subtitle">ラジオ体操開始時間: 毎朝6時、その他指定時間にも参加可能</p>
-    <p class="desc">以下の「ラジオ体操参加」ボタンは日本時間の <strong>06:00〜06:05</strong> と設定した時間に押せます。パスワードを入れるといつでも参加可能です。</p>
+    <p class="subtitle">ラジオ体操開始時間: 毎朝6時2分、その他指定時間にも参加可能</p>
+    <p class="desc">以下の「ラジオ体操参加」ボタンは日本時間の <strong>06:02〜06:05</strong> と設定した時間に押せます。パスワードを入れるといつでも参加可能です。</p>
     <div id="remainingTime"></div>
     <div class="controls">
       <input id="pw" type="password" placeholder="パスワード (省略可)" aria-label="password">
@@ -47,8 +47,7 @@ const config = {
   ],
   bypassPassword: '0505',
   allowedTimes: [
-    {hour:6, startMinute:0, endMinute:5},
-    {hour:7, startMinute:0, endMinute:5}
+    {hour:6, startMinute:2, endMinute:5}
   ]
 };
 
@@ -187,3 +186,4 @@ init();
 </script>
 </body>
 </html>
+
