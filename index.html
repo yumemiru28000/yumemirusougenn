@@ -45,34 +45,21 @@ h1{
 }
 p.subtitle{margin:0 0 12px;color:#475569;font-weight:600;}
 p.desc{margin:0 0 20px;color:#334155;}
-button{
-  background:var(--yume-pink);
-  color:#4a4a4a;
-  border:0;
-  padding:12px 22px;
-  border-radius:14px;
-  font-size:17px;
-  cursor:pointer;
-  box-shadow:0 3px 6px #00000025;
-  font-weight:600;
-}
-button:hover{background:#ffe6f4;}
-button:disabled{opacity:0.45;cursor:not-allowed;}
-input[type=password]{
-  padding:8px 10px;
-  border-radius:10px;
-  border:2px solid var(--yume-blue);
-  background:#ffffffaa;
-  backdrop-filter:blur(4px);
-}
-/* ボタン配置 */
 .button-row{
   display:flex;
   justify-content:space-between;
   align-items:center;
   margin-bottom:12px;
 }
-#joinBtn{flex:1; margin:0 12px;}
+.button-row img{
+  width:100px; /* ボタン画像サイズ */
+  height:auto;
+  cursor:pointer;
+}
+#joinBtnImg{
+  flex:1;
+  margin:0 12px;
+}
 .time-bar-wrap{
   width:100%;
   height:16px;
@@ -115,9 +102,9 @@ video{width:100%;height:100%;object-fit:contain;background:black;}
       <h1>ユメの草原</h1>
 
       <div class="button-row">
-        <button onclick="showPage('zukan')">図鑑</button>
-        <button id="joinBtn" disabled>ラジオ体操参加</button>
-        <button onclick="showPage('howto')">遊び方</button>
+        <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zukan.png" alt="図鑑" onclick="showPage('zukan')">
+        <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png" id="joinBtnImg" alt="ラジオ体操参加">
+        <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/howto.png" alt="遊び方" onclick="showPage('howto')">
       </div>
 
       <p class="subtitle">開始可能時間 : 日本時間 <strong>06:00〜06:03</strong></p>
@@ -213,11 +200,13 @@ function getNextStart(){
 function updateRemaining(){
   const j=nowJST();
   const pw=document.getElementById('pw').value===config.bypassPassword;
-  const joinBtn=document.getElementById('joinBtn');
+  const joinBtnImg=document.getElementById('joinBtnImg');
   const tDiv=document.getElementById('remainingTime');
   const bar=document.getElementById('timeBar');
   const allowed=isWithinAllowedWindow()||pw;
-  joinBtn.disabled=!allowed;
+
+  joinBtnImg.style.opacity=allowed?1:0.45;
+  joinBtnImg.style.pointerEvents=allowed?'auto':'none';
 
   if(pw){
     tDiv.textContent='運営モード - いつでも開始できます';
@@ -294,7 +283,7 @@ async function onJoin(){
 }
 
 /* 初期化 */
-document.getElementById('joinBtn').addEventListener('click',onJoin);
+document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 setInterval(updateRemaining,1000);
 updateRemaining();
 </script>
