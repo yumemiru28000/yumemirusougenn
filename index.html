@@ -1,398 +1,241 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ユメミる草原 — プレイヤーUI</title>
+<meta charset="UTF-8">
+<title>ゆめかわゲームUI</title>
 <style>
-:root{
-  --accent:#334155;
-  --pink1:#ffdff4;
-  --pink2:#ffc0e8;
-  --glass: rgba(255,240,250,0.6);
-}
+    body {
+        margin: 0;
+        font-family: "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+        background: #dbeaff;
+    }
 
-/* ベース */
-html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background: linear-gradient(135deg,#fff1fb,#f8fcff);color:var(--accent);display:flex;align-items:center;justify-content:center}
+    /* パスワード画面 */
+    #passwordScreen {
+        position: fixed;
+        inset: 0;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        z-index: 10;
+    }
+    #passwordBox {
+        padding: 20px 30px;
+        border-radius: 20px;
+        background: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    #passwordInput {
+        padding: 10px;
+        font-size: 20px;
+        border-radius: 10px;
+        border: 2px solid #adc7ff;
+        outline: none;
+        width: 150px;
+        text-align: center;
+    }
+    #passwordBtn {
+        margin-top: 10px;
+        padding: 10px 20px;
+        font-size: 18px;
+        border-radius: 12px;
+        background: #b1d0ff;
+        border: none;
+        cursor: pointer;
+    }
 
-/* プレイヤーカード */
-.player-wrap{width:420px;max-width:95vw;padding:18px;border-radius:26px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,250,255,0.55));box-shadow:0 8px 30px rgba(150,120,170,0.12);position:relative;}
+    /* メイン画面全体 */
+    #mainUI {
+        display: none;
+        padding: 20px;
+    }
 
-/* 画像フレーム */
-.frame{
-  width:100%;
-  height:260px;
-  border-radius:16px;
-  border:6px solid rgba(255,255,255,0.9);
-  background: url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
-  position:relative;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
+    /* ゆめかわウィンドウ枠 */
+    .window {
+        width: 90%;
+        max-width: 500px;
+        margin: 20px auto;
+        border-radius: 20px;
+        background: #cbe2ff;
+        padding: 10px;
+        border: 4px solid white;
+        box-shadow: 0 4px 25px rgba(0,0,0,0.1);
+    }
 
-/* 画像要素（差し替え用） — object-fit:contain で常に全体が見える */
-.frame img {
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  background:black;
-  display:block;
-}
+    /* 上のイラスト枠 */
+    #mainImage {
+        width: 100%;
+        border-radius: 15px;
+    }
 
-/* タイトルを画像の上に重ねる */
-.frame .title {
-  position:absolute;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.15));
-  padding:6px 14px;
-  border-radius:14px;
-  font-weight:700;
-  color:#7b4b7a;
-  text-shadow:0 2px 8px rgba(255,255,255,0.8);
-  letter-spacing:0.06em;
-}
+    /* 下の操作パネル */
+    .panel {
+        margin-top: 15px;
+        background: rgba(255,255,255,0.55);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        backdrop-filter: blur(4px);
+    }
 
-/* 残り時間 + プログレス（横並びで表示） */
-.time-row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-top:12px;
-}
+    /* 時間表示 */
+    #timeText {
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: #5a6b88;
+    }
 
-/* テキスト時間 */
-.time-text{
-  min-width:120px;
-  font-weight:700;
-  color:#6b3b6b;
-}
+    /* 時間バー */
+    #timeBar {
+        width: 90%;
+        height: 8px;
+        background: #ffffff;
+        border-radius: 10px;
+        margin: 10px auto;
+        overflow: hidden;
+        border: 2px solid #b1d0ff;
+    }
+    #timeFill {
+        height: 100%;
+        width: 0%;
+        background: #89b7ff;
+        transition: width 1s linear;
+    }
 
-/* 再生バー風（外観） */
-.progress-wrap{
-  flex:1;
-  height:12px;
-  background:rgba(0,0,0,0.08);
-  border-radius:8px;
-  position:relative;
-  overflow:hidden;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.progress-fill{
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:0%;
-  background: linear-gradient(90deg,#fff,#ffe6fb);
-  box-shadow: 0 0 12px rgba(255,200,230,0.6);
-  transition: width 0.3s linear;
-}
+    /* ボタン */
+    .btn {
+        width: 55px;
+        height: 55px;
+        margin: 15px;
+        cursor: pointer;
+    }
 
-/* コントロール部（左・再生・右） */
-.controls{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:22px;
-  margin-top:18px;
-}
-
-/* 丸いボタン */
-.icon-btn{
-  width:66px;height:66px;border-radius:50%;
-  background:linear-gradient(180deg,#fff,#ffeef8);
-  border:3px solid #fff;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 20px rgba(250,200,240,0.25), inset 0 -4px 8px rgba(0,0,0,0.03);
-  cursor:pointer;
-}
-
-/* 大きめの再生（ゲーム開始）ボタン */
-.play-btn{
-  width:86px;height:86px;border-radius:50%;
-  background:linear-gradient(180deg,#ffb7e0,#ffa0d6);
-  box-shadow:0 12px 30px rgba(255,140,200,0.25), inset 0 -6px 10px rgba(255,255,255,0.4);
-  display:flex;align-items:center;justify-content:center;
-  border:4px solid rgba(255,255,255,0.9);
-}
-
-/* アイコン画像を読み込めるように */
-.icon-btn img, .play-btn img { width:36px; height:36px; object-fit:contain; }
-
-/* 説明文（カード外下）*/
-.description{
-  margin-top:14px;
-  text-align:center;
-  color:#5f5770;
-  font-size:13px;
-}
-
-/* ホーム/図鑑/遊び方の画像表示ページ（フル画面） */
-.page-full{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:#000;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-.page-full.active{display:flex;}
-.page-full .fullimg{
-  max-width:95vw;
-  max-height:95vh;
-  object-fit:contain;
-  background:black;
-}
-
-/* 右下ホームボタン（戻る） */
-.page-full .home-btn{
-  position:fixed;
-  right:18px;
-  bottom:18px;
-  padding:10px 16px;
-  background:#ff9bd0;color:white;border-radius:12px;border:0;
-  box-shadow:0 6px 18px rgba(255,140,200,0.3);
-  cursor:pointer;
-  z-index:10000;
-}
+    /* コンテンツ画面 */
+    .contentScreen {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+    .contentScreen img {
+        width: 90%;
+        border: 4px solid black;
+    }
+    .homeBtn {
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: #cbe2ff;
+        border-radius: 12px;
+        border: 2px solid white;
+        cursor: pointer;
+    }
 </style>
 </head>
 <body>
 
-<div class="player-wrap" role="application" aria-label="ユメの草原プレイヤー">
-
-  <!-- 画像フレーム（背景は home.png、img要素により差し替え可能） -->
-  <div class="frame" id="frame">
-    <!-- ここに表示するイラスト。空にしておくとCSS背景(home.png)が見える -->
-    <img id="frameImg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png" alt="イラスト">
-    <div class="title">ユメの草原</div>
-  </div>
-
-  <!-- 残り時間（次の06:00まで） と 再生バー風表示 -->
-  <div class="time-row" aria-hidden="false">
-    <div class="time-text" id="remainText">--:--:--</div>
-    <div class="progress-wrap" aria-hidden="false" title="残り時間の進捗を示します">
-      <div class="progress-fill" id="progressFill"></div>
+<!-- パスワード画面 -->
+<div id="passwordScreen">
+    <div id="passwordBox">
+        <h2>管理パスワード</h2>
+        <input id="passwordInput" type="password" placeholder="••••" />
+        <br>
+        <button id="passwordBtn">決定</button>
+        <p id="passErr" style="color:red;"></p>
     </div>
-  </div>
-
-  <!-- コントロール（図鑑 / 開始 / 遊び方） -->
-  <div class="controls" role="group" aria-label="controls">
-    <div class="icon-btn" id="leftBtn" title="図鑑">
-      <img id="leftIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/left.png" alt="左">
-    </div>
-
-    <div class="play-btn" id="playBtn" title="ゲームを開始">
-      <img id="playIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/play.png" alt="再生">
-    </div>
-
-    <div class="icon-btn" id="rightBtn" title="遊び方">
-      <img id="rightIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/right.png" alt="右">
-    </div>
-  </div>
-
-  <!-- 説明文はカード外（下）に移動 -->
-  <div class="description" id="desc">
-    ラジオ体操参加ボタンは日本時間の <strong>06:00〜06:03</strong> に有効です。運営用のパスワードでいつでも開始できます。
-  </div>
 </div>
 
-<!-- フル表示ページ：図鑑 -->
-<div id="pageZukan" class="page-full" aria-hidden="true">
-  <img class="fullimg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/aaaa.jpg" alt="図鑑">
-  <button class="home-btn" onclick="closeFull()">ホーム</button>
-</div>
+<!-- メイン画面 -->
+<div id="mainUI">
+    <div class="window">
+        <img id="mainImage" src="main.png" alt="Main Image">
+        <div class="panel">
+            <div id="timeText">開始時刻まで 24:00:00</div>
 
-<!-- フル表示ページ：遊び方 -->
-<div id="pageHow" class="page-full" aria-hidden="true">
-  <img class="fullimg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/%E3%82%A4%E3%83%A9%E3%82%B9%E3%83%8811.png" alt="遊び方">
-  <button class="home-btn" onclick="closeFull()">ホーム</button>
-</div>
+            <div id="timeBar"><div id="timeFill"></div></div>
 
-<!-- プレイヤーの既存 video コンテナ（そのまま使用） -->
-<div id="playerContainer" aria-hidden="true"></div>
+            <!-- ボタン：左右・再生 -->
+            <img id="leftBtn" class="btn" src="left.png">
+            <img id="playBtn" class="btn" src="play.png">
+            <img id="rightBtn" class="btn" src="right.png">
+        </div>
+    </div>
+
+    <!-- 図鑑 -->
+    <div id="zukanScreen" class="contentScreen">
+        <h2>図鑑</h2>
+        <img src="zukan.png">
+        <div class="homeBtn" onclick="goHome()">ホームへ戻る</div>
+    </div>
+
+    <!-- 遊び方 -->
+    <div id="helpScreen" class="contentScreen">
+        <h2>遊び方</h2>
+        <img src="howto.png">
+        <div class="homeBtn" onclick="goHome()">ホームへ戻る</div>
+    </div>
+</div>
 
 <script>
-/* -----------------------------
-   時刻に関するユーティリティ
-   ----------------------------- */
-function nowJST(){
-  const d = new Date();
-  return new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + 9*3600*1000);
-}
-
-/* 次の 06:00 を返す（現在が 06:00〜06:03 の場合は当日の 06:00、経過後は翌日の 06:00） */
-function nextSixAMReference(){
-  const j = nowJST();
-  const candidate = new Date(j);
-  candidate.setHours(6,0,0,0);
-  if (j >= candidate) {
-    // if current time >= today 6:00, next 6:00 is tomorrow
-    candidate.setDate(candidate.getDate() + 1);
-  }
-  return candidate;
-}
-
-/* 残り秒数までのフォーマット */
-function formatHMS(sec){
-  const h = Math.floor(sec/3600);
-  const m = Math.floor((sec%3600)/60);
-  const s = Math.floor(sec%60);
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-
-/* -----------------------------
-   残り時間とプログレスの更新
-   - progress: 0% -> 100% as remaining goes 86400 -> 0 (so fills up as time decreases)
-   - we choose denominator 86400 (24h) so the bar behaves like a day-progress fill toward zero.
-   ----------------------------- */
-const remainText = document.getElementById('remainText');
-const progressFill = document.getElementById('progressFill');
-
-function updateRemainAndProgress(){
-  const j = nowJST();
-  // next 6:00 (tomorrow if already past today 6:00) — but user wanted "六時までの残り時間を全て表示"
-  // We'll compute next target as today's 6:00 if in future, else tomorrow's 6:00.
-  let target = new Date(j);
-  target.setHours(6,0,0,0);
-  if (j >= target) {
-    // already past today's 06:00, set to next day's 06:00
-    target = new Date(j.getTime() + 24*3600*1000);
-    target.setHours(6,0,0,0);
-  }
-  const diffMs = target - j;
-  const diffSec = Math.max(0, Math.floor(diffMs/1000));
-
-  // Show hh:mm:ss remaining until next 06:00
-  remainText.textContent = formatHMS(diffSec);
-
-  // progress fill: fraction = 1 - remaining/86400 so it fills as remaining decreases
-  const fraction = 1 - (diffSec / 86400);
-  const pct = Math.max(0, Math.min(1, fraction)) * 100;
-  progressFill.style.width = pct + '%';
-}
-
-// start updating every 1s
-updateRemainAndProgress();
-setInterval(updateRemainAndProgress, 1000);
-
-/* -----------------------------
-   ページ切り替え（図鑑／遊び方のフル表示）
-   ----------------------------- */
-function openZukan(){
-  document.getElementById('pageZukan').classList.add('active');
-  document.getElementById('pageZukan').setAttribute('aria-hidden','false');
-}
-function openHow(){
-  document.getElementById('pageHow').classList.add('active');
-  document.getElementById('pageHow').setAttribute('aria-hidden','false');
-}
-function closeFull(){
-  document.getElementById('pageZukan').classList.remove('active');
-  document.getElementById('pageZukan').setAttribute('aria-hidden','true');
-  document.getElementById('pageHow').classList.remove('active');
-  document.getElementById('pageHow').setAttribute('aria-hidden','true');
-}
-
-/* -----------------------------
-   アイコン差し替え（必要ならここでPNGを差し替える）
-   ----------------------------- */
-/* 既定のアイコンがある場合はそのまま使われます。差し替えたい場合は
-   document.getElementById('leftIcon').src = 'https://.../left_custom.png';
-   のように書き換えてください. */
-
-// wiring the buttons to functions above
-document.getElementById('leftBtn').addEventListener('click', openZukan);
-document.getElementById('rightBtn').addEventListener('click', openHow);
-
-/* -----------------------------
-  再生 (ゲーム開始) ボタン：既存 onJoin() を呼び出す
-  ----------------------------- */
-document.getElementById('playBtn').addEventListener('click', ()=>{
-  // call onJoin() from your original video system
-  if (typeof onJoin === 'function') {
-    onJoin();
-  } else {
-    alert('動画再生システムが準備できていません');
-  }
-});
-
-/* -----------------------------
-  既存のラジオ体操時間ロジックをこちらに統合するための補助
-  （allowed window を 06:00 - 06:03 に設定）
-  ----------------------------- */
-const config = {
-  bypassPassword: '2855',
-  allowedTimes: [{hour:6, startMinute:0, endMinute:3}]
+/* パスワードチェック */
+document.getElementById("passwordBtn").onclick = () => {
+    const v = document.getElementById("passwordInput").value;
+    if (v === "1122") {
+        document.getElementById("passwordScreen").style.display = "none";
+        document.getElementById("mainUI").style.display = "block";
+    } else {
+        document.getElementById("passErr").textContent = "パスワードが違います";
+    }
 };
 
-// 以下はあなたの既存の updateButtonState 系ロジックに合わせるための最小コード
-// （画面左下にある joinBtn を有効 / 無効にする）
-// 既に onJoin(), weightedPick(), config.videos 等は document に存在する前提で作っています。
-function isWithinAllowedWindow() {
-  const j = nowJST();
-  for (const t of config.allowedTimes) {
-    const start = new Date(j); start.setHours(t.hour, t.startMinute, 0, 0);
-    const end = new Date(j); end.setHours(t.hour, t.endMinute, 59, 999);
-    if (j >= start && j <= end) return true;
-  }
-  return false;
+/* 24時間カウントダウン */
+let total = 24 * 60 * 60; // 秒
+
+function updateTimer() {
+    total--;
+    if (total < 0) total = 0;
+
+    let h = String(Math.floor(total / 3600)).padStart(2, "0");
+    let m = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+    let s = String(total % 60).padStart(2, "0");
+
+    document.getElementById("timeText").textContent =
+        `開始時刻まで ${h}:${m}:${s}`;
+
+    let percent = 100 - (total / (24*60*60)) * 100;
+    document.getElementById("timeFill").style.width = percent + "%";
+}
+setInterval(updateTimer, 1000);
+
+/* 画面切り替え */
+function hideAllScreens() {
+    document.getElementById("zukanScreen").style.display = "none";
+    document.getElementById("helpScreen").style.display = "none";
+    document.getElementById("mainUI").querySelector(".window").style.display = "block";
 }
 
-// integrate with the original join button and pw input if present in page
-const joinBtn = document.getElementById('joinBtn');
-const pwInput = document.getElementById('pw');
-const remainingTimeDiv = document.getElementById('remainingTime');
-
-function updateButtonStateForJoin(){
-  if (!joinBtn) return;
-  const pw = pwInput && pwInput.value === config.bypassPassword;
-  const allowed = isWithinAllowedWindow() || pw;
-  joinBtn.disabled = !allowed;
-  joinBtn.textContent = pw ? 'ラジオ体操参加（パス解除）' : (allowed ? 'ラジオ体操参加' : '時間外');
-
-  // show next window or remaining of current window
-  if (remainingTimeDiv) {
-    const j = nowJST();
-    if (isWithinAllowedWindow()) {
-      // show remaining until end of allowed window
-      const t = config.allowedTimes[0];
-      const end = new Date(j); end.setHours(t.hour, t.endMinute, 59, 999);
-      const diff = Math.max(0, Math.floor((end - j) / 1000));
-      const mm = Math.floor(diff / 60);
-      const ss = diff % 60;
-      remainingTimeDiv.textContent = `参加終了まで: ${mm}分 ${ss}秒`;
-    } else {
-      // show next start
-      let next = new Date(j); next.setHours(config.allowedTimes[0].hour, config.allowedTimes[0].startMinute, 0, 0);
-      if (next <= j) {
-        next = new Date(next.getTime() + 24*3600*1000);
-      }
-      const diff = Math.max(0, Math.floor((next - j) / 1000));
-      const h = Math.floor(diff / 3600);
-      const m = Math.floor((diff % 3600) / 60);
-      const s = diff % 60;
-      remainingTimeDiv.textContent = `次の参加まで: ${h}時間 ${m}分 ${s}秒`;
-    }
-  }
+function goHome() {
+    hideAllScreens();
 }
-updateButtonStateForJoin();
-setInterval(updateButtonStateForJoin, 1000);
 
-/* -----------------------------
-  既存の onJoin / 動画プレイのコードはページ下部にある想定です。
-  ここではそのまま呼びます（上部のplayBtnが onJoin を呼ぶ）
-  ----------------------------- */
+/* ボタン動作 */
+document.getElementById("leftBtn").onclick = () => {
+    hideAllScreens();
+    document.getElementById("zukanScreen").style.display = "block";
+    document.getElementById("mainUI").querySelector(".window").style.display = "none";
+};
 
+document.getElementById("rightBtn").onclick = () => {
+    hideAllScreens();
+    document.getElementById("helpScreen").style.display = "block";
+    document.getElementById("mainUI").querySelector(".window").style.display = "none";
+};
+
+document.getElementById("playBtn").onclick = () => {
+    alert("ゲーム開始！（処理をここに追加できます）");
+};
 </script>
-
-<!-- ここから先はあなたの既存の <script>（動画再生ロジック）をそのまま挿入してください。
-     すでにページにある onJoin(), weightedPick(), config.videos 等はそのまま利用されます。
-     ※ もし既にページの上の方で動画ロジックを定義している場合、重複に注意してください。 -->
-
 </body>
 </html>
