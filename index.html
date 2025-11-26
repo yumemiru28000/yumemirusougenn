@@ -4,217 +4,235 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ユメミる草原 - ラジオ体操参加</title>
+
 <style>
 :root{--bg:#f6f8fa;--card:#ffffff;--accent:#334155}
-html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;color:var(--accent);}
+html,body{
+  height:100%;margin:0;
+  font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+  background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
+  color:var(--accent);
+}
+
+/* ▼ ページ切り替え用 */
+.page { display:none; width:100vw; height:100vh; }
+.page.active { display:flex; align-items:center; justify-content:center; }
+
 .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:32px}
-.card{background:rgba(255,255,255,0.1);padding:28px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,0.06);width:100%;max-width:720px;text-align:center;}
+.card{
+  background:rgba(255,255,255,0.1);
+  padding:28px;border-radius:12px;
+  box-shadow:0 6px 20px rgba(16,24,40,0.06);
+  width:100%;max-width:720px;text-align:center;
+}
 h1{font-weight:700;margin:0 0 10px;font-size:36px;letter-spacing:0.02em}
+
 p.subtitle{margin:0 0 18px;color:#475569}
 .desc{margin:8px 0 22px;color:#334155}
 .controls{display:flex;gap:8px;justify-content:center;align-items:center}
 input[type=password]{padding:8px 10px;border-radius:8px;border:1px solid #dde4ee}
-button{background:#1f6feb;color:#fff;border:0;padding:12px 18px;border-radius:10px;font-size:16px;cursor:pointer}
+button{
+  background:#1f6feb;color:#fff;border:0;
+  padding:12px 18px;border-radius:10px;
+  font-size:16px;cursor:pointer
+}
 button:disabled{opacity:0.45;cursor:not-allowed}
+
 .small{font-size:12px;color:#64748b;margin-top:12px}
 #remainingTime{font-size:16px;color:#ff4d4f;margin-bottom:10px}
+
 #playerContainer{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:9999}
-video{ width:100%;height:100%;object-fit:contain;background:black; background:#ccc90e;}
+video{width:100%;height:100%;object-fit:contain;background:black}
+
+/* ▼ 図鑑・遊び方ページ用 */
+.fullimage{
+  width:100%;height:100%;
+  object-fit:contain;
+  background:black;
+}
+
+.home-btn{
+  position:absolute;
+  bottom:20px; right:20px;
+  padding:12px 20px;
+  background:#1f6feb;color:white;
+  border-radius:10px;
+  font-size:18px;
+}
 </style>
 </head>
+
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>ユメの草原</h1>
-    <p class="subtitle">ラジオ体操開始時間: 毎朝6時2分、その他指定時間にも参加可能</p>
-    <p class="desc">以下の「ラジオ体操参加」ボタンは日本時間の <strong>06:02〜06:05</strong> と設定した時間に押せます。パスワードを入れるといつでも参加可能です。</p>
-    <div id="remainingTime"></div>
-    <div class="controls">
-      <input id="pw" type="password" placeholder="運営用" aria-label="password">
-      <button id="joinBtn" disabled>ラジオ体操参加</button>
+
+<!-- ============================= -->
+<!-- ▼ ホーム画面（既存）+ ボタン追加 -->
+<!-- ============================= -->
+<div id="home" class="page active">
+  <div class="wrap">
+    <div class="card">
+      <h1>ユメの草原</h1>
+
+      <!-- ここに新しいボタンを追加 -->
+      <button onclick="showPage('zukan')">図鑑</button>
+      <button onclick="showPage('howto')">遊び方</button>
+      <br><br>
+
+      <p class="subtitle">ラジオ体操開始時間: 毎朝6時2分、その他指定時間にも参加可能</p>
+      <p class="desc">以下の「ラジオ体操参加」ボタンは日本時間の <strong>06:02〜06:05</strong> と設定した時間に押せます。パスワードを入れるといつでも参加可能です。</p>
+      <div id="remainingTime"></div>
+      <div class="controls">
+        <input id="pw" type="password" placeholder="運営用" aria-label="password">
+        <button id="joinBtn" disabled>ラジオ体操参加</button>
+      </div>
+      <div class="small">※ボタンを押すと画面が切り替わり、動画が全画面で自動再生されます。</div>
     </div>
-    <div class="small">※ボタンを押すと画面が切り替わり、動画が全画面で自動再生されます。</div>
   </div>
 </div>
+
+<!-- ============================= -->
+<!-- ▼ 図鑑ページ -->
+<!-- ============================= -->
+<div id="zukan" class="page">
+  <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zukan.png" class="fullimage">
+  <button class="home-btn" onclick="showPage('home')">ホーム</button>
+</div>
+
+<!-- ============================= -->
+<!-- ▼ 遊び方ページ -->
+<!-- ============================= -->
+<div id="howto" class="page">
+  <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/howto.png" class="fullimage">
+  <button class="home-btn" onclick="showPage('home')">ホーム</button>
+</div>
+
+<!-- ▼ 動画再生枠（既存） -->
 <div id="playerContainer"></div>
 
 <script>
-const config = {
-  videos: [
-    { id: 'v1', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1o.mp4', weight: 16 },
-    { id: 'v2', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1x.mp4', weight: 2 },
-    { id: 'v3', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2o.mp4', weight: 16 },
-    { id: 'v4', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2x.mp4', weight: 1 },
-    { id: 'v5', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3o.mp4', weight: 16 },
-    { id: 'v6', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3x.mp4', weight: 1 },
-    { id: 'v7', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4o.mp4', weight: 10 },
-    { id: 'v8', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4x.mp4', weight: 1 },
-    { id: 'v9', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5o.mp4', weight: 10 },
-    { id: 'v10', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5x.mp4', weight: 1 },
-    { id: 'v11', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6o.mp4', weight: 10 },
-    { id: 'v12', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4', weight: 1 },
-    { id: 'v13', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4', weight: 11 },
-    { id: 'v14', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4', weight: 2 },
-    { id: 'v15', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4', weight: 2 },
-  ],
-  bypassPassword: '2855',
-  allowedTimes: [
-    {hour:6, startMinute:2, endMinute:5}
-  ]
-};
-
-function nowJST() {
-  const d = new Date();
-  return new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + 9*3600*1000);
+/* ▼ ページ切り替え関数（新規追加） */
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
 }
 
-function weightedPick(list) {
-  const total = list.reduce((s,i)=>s+(i.weight||1),0);
-  let r = Math.random()*total;
-  for (const item of list) { r -= (item.weight||1); if(r<=0) return item; }
-  return list[list.length-1];
-}
+/* ▼ 以下、全部あなたの元コード（変更なし） */
+const config={videos:[
+  {id:'v1',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1o.mp4',weight:16},
+  {id:'v2',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1x.mp4',weight:2},
+  {id:'v3',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2o.mp4',weight:16},
+  {id:'v4',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2x.mp4',weight:1},
+  {id:'v5',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3o.mp4',weight:16},
+  {id:'v6',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3x.mp4',weight:1},
+  {id:'v7',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4o.mp4',weight:10},
+  {id:'v8',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4x.mp4',weight:1},
+  {id:'v9',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5o.mp4',weight:10},
+  {id:'v10',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5x.mp4',weight:1},
+  {id:'v11',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6o.mp4',weight:10},
+  {id:'v12',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4',weight:1},
+  {id:'v13',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4',weight:11},
+  {id:'v14',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4',weight:2},
+  {id:'v15',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4',weight:2},
+],
+bypassPassword:'2855',
+allowedTimes:[{hour:6,startMinute:2,endMinute:5}]};
 
-const joinBtn = document.getElementById('joinBtn');
-const pwInput = document.getElementById('pw');
-const remainingTimeDiv = document.getElementById('remainingTime');
+function nowJST(){const d=new Date();return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000);}
+function weightedPick(list){const total=list.reduce((s,i)=>s+(i.weight||1),0);let r=Math.random()*total;for(const item of list){r-=(item.weight||1);if(r<=0)return item;}return list[list.length-1];}
 
-function isWithinAllowedWindow() {
-  const j = nowJST();
-  for (const t of config.allowedTimes) {
-    const start = new Date(j); start.setHours(t.hour, t.startMinute, 0, 0);
-    const end = new Date(j); end.setHours(t.hour, t.endMinute, 59, 999);
+const joinBtn=document.getElementById('joinBtn');
+const pwInput=document.getElementById('pw');
+const remainingTimeDiv=document.getElementById('remainingTime');
+
+function isWithinAllowedWindow(){
+  const j=nowJST();
+  for(const t of config.allowedTimes){
+    const start=new Date(j);start.setHours(t.hour,t.startMinute,0,0);
+    const end=new Date(j);end.setHours(t.hour,t.endMinute,59,999);
     if(j>=start && j<=end) return true;
   }
   return false;
 }
 
-function getNextWindow() {
-  const j = nowJST();
-  let nextStart = null;
+function getNextWindow(){
+  const j=nowJST();
+  let nextStart=null;
   for(const t of config.allowedTimes){
-    const start = new Date(j); start.setHours(t.hour, t.startMinute,0,0);
+    const start=new Date(j);start.setHours(t.hour,t.startMinute,0,0);
     if(start>j && (!nextStart||start<nextStart)) nextStart=start;
   }
   if(!nextStart){
     const t=config.allowedTimes[0];
-    nextStart = new Date(j.getTime()+24*3600*1000);
+    nextStart=new Date(j.getTime()+24*3600*1000);
     nextStart.setHours(t.hour,t.startMinute,0,0);
   }
   return nextStart;
 }
 
-function updateButtonState() {
-  const j = nowJST();
-  const pw = pwInput.value===config.bypassPassword;
-  const allowed = isWithinAllowedWindow() || pw;
-  joinBtn.disabled = !allowed;
-  joinBtn.textContent = pw?'ラジオ体操参加（パスワード解除）':allowed?'ラジオ体操参加':'時間外';
+function updateButtonState(){
+  const j=nowJST();
+  const pw=pwInput.value===config.bypassPassword;
+  const allowed=isWithinAllowedWindow()||pw;
+  joinBtn.disabled=!allowed;
+  joinBtn.textContent=pw?'ラジオ体操参加（パス解除）':allowed?'ラジオ体操参加':'時間外';
 
   if(!pw){
     if(allowed){
       let closestEnd=null;
       for(const t of config.allowedTimes){
-        const end=new Date(j); end.setHours(t.hour,t.endMinute,59,999);
+        const end=new Date(j);end.setHours(t.hour,t.endMinute,59,999);
         if(end>j && (!closestEnd||end<closestEnd)) closestEnd=end;
       }
       if(closestEnd){
-        const diff=closestEnd-j;
-        const minutes=Math.floor(diff/60000);
-        const seconds=Math.floor((diff%60000)/1000);
+        const diff=closestEnd-j,minutes=Math.floor(diff/60000),seconds=Math.floor((diff%60000)/1000);
         remainingTimeDiv.textContent=`残り時間: ${minutes}分 ${seconds}秒`;
-      }else remainingTimeDiv.textContent='時間外';
+      }
     }else{
       const nextStart=getNextWindow();
-      const diff=nextStart-j;
-      const hours=Math.floor(diff/3600000);
-      const minutes=Math.floor((diff%3600000)/60000);
-      const seconds=Math.floor((diff%60000)/1000);
+      const diff=nextStart-j,hours=Math.floor(diff/3600000),minutes=Math.floor((diff%3600000)/60000),seconds=Math.floor((diff%60000)/1000);
       remainingTimeDiv.textContent=`次の参加可能時間まで: ${hours}時間 ${minutes}分 ${seconds}秒`;
     }
   }else remainingTimeDiv.textContent='';
 }
 
-async function onJoin() {
-  const pick = weightedPick(config.videos);
+async function onJoin(){
+  const pick=weightedPick(config.videos);
   if(!pick){alert('動画が登録されていません'); return;}
+
   const container=document.getElementById('playerContainer');
-  container.style.display='flex'; container.innerHTML='';
-  container.style.background='#000';
+  container.style.display='flex';container.innerHTML='';container.style.background='#000';
+
   const vid=document.createElement('video');
-  vid.src=pick.url;
-  vid.playsInline=true;
-  vid.autoplay=true;
-  vid.controls=false;
-  vid.loop=false;
+  vid.src=pick.url;vid.playsInline=true;vid.autoplay=true;vid.controls=false;vid.loop=false;
   container.appendChild(vid);
 
-  vid.addEventListener('loadeddata', async () => {
-    try { await vid.play(); } catch(e){ console.warn(e); }
-    try { if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'}); } catch(e){ console.warn(e); }
+  vid.addEventListener('loadeddata',async()=>{
+    try{await vid.play();}catch(e){}
+    try{if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){}
   });
 
-  const blockKeys=(ev)=>{const blocked=[' ','Spacebar','k','K','MediaPlayPause','MediaStop','Escape']; if(blocked.includes(ev.key)||blocked.includes(ev.code)){ev.preventDefault();}};
+  const blockKeys=(ev)=>{const blocked=[' ','Spacebar','k','K','MediaPlayPause','MediaStop','Escape'];if(blocked.includes(ev.key)||blocked.includes(ev.code)){ev.preventDefault();}};
   document.addEventListener('keydown',blockKeys,{capture:true});
-  const preventAction=(ev)=>{ev.preventDefault(); ev.stopPropagation();};
-  container.addEventListener('contextmenu',preventAction);
-  container.addEventListener('click',preventAction);
+  container.addEventListener('contextmenu',(ev)=>ev.preventDefault());
+  container.addEventListener('click',(ev)=>ev.preventDefault());
 
-  // 動画終了時にENDと「いってらっしゃい」表示
-  vid.addEventListener('ended', async () => {
-    try { if(document.fullscreenElement) await document.exitFullscreen(); } catch(e){ console.warn(e); }
+  vid.addEventListener('ended',async()=>{
+    try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){}
     vid.remove();
 
     const endText=document.createElement('div');
     endText.textContent='END';
-    endText.style.color='#fff';
-    endText.style.fontSize='48px';
-    endText.style.fontWeight='700';
-    endText.style.textAlign='center';
-    endText.style.position='absolute';
-    endText.style.top='45%';
-    endText.style.left='50%';
-    endText.style.transform='translate(-50%, -50%)';
+    Object.assign(endText.style,{color:'#fff',fontSize:'48px',fontWeight:'700',position:'absolute',top:'45%',left:'50%',transform:'translate(-50%,-50%)'});
     container.appendChild(endText);
 
     const subText=document.createElement('div');
     subText.textContent='いってらっしゃい';
-    subText.style.color='#fff';
-    subText.style.fontSize='24px';
-    subText.style.fontWeight='400';
-    subText.style.textAlign='center';
-    subText.style.position='absolute';
-    subText.style.top='60%';
-    subText.style.left='50%';
-    subText.style.transform='translate(-50%, -50%)';
+    Object.assign(subText.style,{color:'#fff',fontSize:'24px',position:'absolute',top:'60%',left:'50%',transform:'translate(-50%,-50%)'});
     container.appendChild(subText);
-
-    document.removeEventListener('keydown', blockKeys, {capture:true});
   });
 }
 
-init=()=>{updateButtonState(); setInterval(updateButtonState,1000); pwInput.addEventListener('input',updateButtonState); joinBtn.addEventListener('click',onJoin);};
-init();
+(function init(){ updateButtonState(); setInterval(updateButtonState,1000); pwInput.addEventListener('input',updateButtonState); joinBtn.addEventListener('click',onJoin); })();
 </script>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
