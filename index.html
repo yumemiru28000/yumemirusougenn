@@ -52,8 +52,9 @@ p.desc{margin:0 0 20px;color:#334155;}
   margin-bottom:12px;
 }
 .button-row img{
-  width:100px; /* ボタン画像サイズ */
-  height:auto;
+  width:100px;       /* 横幅固定 */
+  height:100px;      /* 高さも固定 */
+  object-fit: contain; /* 画像を縦横比を保ちながら収める */
   cursor:pointer;
 }
 #joinBtnImg{
@@ -289,5 +290,6 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
