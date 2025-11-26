@@ -246,15 +246,17 @@ function updateRemaining(){
 
     bar.style.width=`${invPercentWindow}%`;
 
-  } else {   
-/* 未開始 */ 
+} else {   
+    /* 未開始 – 次の開始までのカウントダウン */
     const diff=(next-j)/1000; 
     const h=Math.floor(diff/3600); 
     const m=Math.floor((diff%3600)/60); 
-    const s=Math.floor(diff%60); tDiv.textContent=`残り: ${h}時間 ${m}分 ${s}秒`;
-    
-    bar.style.width=${invPercentDay}%; /* 右→左 */ 
-  } 
+    const s=Math.floor(diff%60);
+
+    tDiv.textContent = `残り: ${h}時間 ${m}分 ${s}秒`;
+
+    /* 1日の残り割合 → バーが右→左へ縮む */
+    bar.style.width = `${invPercentDay}%`;
 }
 
 
@@ -311,4 +313,5 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
