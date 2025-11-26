@@ -57,13 +57,7 @@ p.desc{margin:0 0 20px;color:#334155;}
   object-fit: contain;
   cursor: pointer;
   flex: none;
-}
-
-#joinBtnImg {
-  width: 100px;
-  height: 100px;
   margin: 0 12px;
-  flex: none;
 }
 
 .time-bar-wrap{
@@ -75,8 +69,17 @@ p.desc{margin:0 0 20px;color:#334155;}
   margin-bottom:14px;
   overflow:hidden;
   border:2px solid #fff;
+  position: relative;
 }
-.time-bar{height:100%; width:0%; background:var(--bar-fill); transition:width 0.2s linear;}
+.time-bar{
+  height:100%;
+  width:0%;
+  background:var(--bar-fill);
+  position: absolute;
+  right:0; /* 右端から伸びる */
+  top:0;
+  transition: width 0.5s linear;
+}
 #remainingTime{font-size:17px; font-weight:700; margin-bottom:4px; color:#ffffff; text-shadow:0 0 4px #0008;}
 .fullimage{width:100%;height:100%;object-fit:contain;background:black;}
 .home-btn{
@@ -227,17 +230,20 @@ function updateRemaining(){
     const min=Math.floor(diff/60);
     const sec=Math.floor(diff%60);
     tDiv.textContent=`開始可能時間内 : 残り ${min}分 ${sec}秒`;
-    const total=(t.endMinute-t.startMinute)*60;
-    const pass=(j.getMinutes()*60+j.getSeconds())-(t.startMinute*60);
-    bar.style.width=`${(pass/total)*100}%`;
+
+    // バー更新（右から左、時間の経過割合）
+    const totalSec = (t.endMinute-t.startMinute+1)*60; // +1で秒まで含む
+    const elapsedSec = totalSec - diff;
+    const percent = Math.min(Math.max(elapsedSec/totalSec*100,0),100);
+    bar.style.width = `${percent}%`;
+
   }else{
     const next=getNextStart();
-    const diff=(next-j)/1000;
-    const h=Math.floor(diff/3600);
-    const m=Math.floor((diff%3600)/60);
-    const s=Math.floor(diff%60);
-    tDiv.textContent=`次の開始可能時間まで: ${h}時間 ${m}分 ${s}秒`;
-    bar.style.width='0%';
+    const diffSec=(next-j)/1000;
+    const totalSec=(next-j.getTime())/1000; // 本日なら24時間まで
+    const percent = 0; // 未開始は0%
+    tDiv.textContent=`次の開始可能時間まで: ${Math.floor(diffSec/3600)}時間 ${Math.floor(diffSec%3600/60)}分 ${Math.floor(diffSec%60)}秒`;
+    bar.style.width = '0%';
   }
 }
 
@@ -295,7 +301,3 @@ updateRemaining();
 </script>
 </body>
 </html>
-
-
-
-
