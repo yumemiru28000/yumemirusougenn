@@ -247,16 +247,25 @@ function updateRemaining(){
     bar.style.width=`${invPercentWindow}%`;
 
   } else {
-    /* 未開始 */
-    const diff=(next-j)/1000;
-    const h=Math.floor(diff/3600);
-    const m=Math.floor((diff%3600)/60);
-    const s=Math.floor(diff%60);
-    tDiv.textContent=`残り: ${h}時間 ${m}分 ${s}秒`;
+    
+/* 未開始（許可時間外） */
+const startToday = new Date(j); 
+startToday.setHours(0,0,0,0);
 
-    bar.style.width=`${invPercentDay}%`; /* 右→左 */
-  }
-}
+const totalDaySec = 24 * 3600;
+const elapsedSec = (j - startToday) / 1000;
+const remainSec = totalDaySec - elapsedSec;
+
+const h = Math.floor(remainSec / 3600);
+const m = Math.floor((remainSec % 3600) / 60);
+const s = Math.floor(remainSec % 60);
+
+tDiv.textContent = `残り: ${h}時間 ${m}分 ${s}秒`;
+
+/* 割合計算：残り24h → 0h でバーが右→左へ */
+const percent = (remainSec / totalDaySec) * 100;
+bar.style.width = `${percent}%`;
+
 
 /* 重み付きランダム */
 function weightedPick(list){
@@ -311,6 +320,7 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
 
