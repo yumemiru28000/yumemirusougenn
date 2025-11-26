@@ -59,7 +59,6 @@ p.desc{margin:0 0 20px;color:#334155;}
   flex: none;
   margin: 0 12px;
 }
-
 .time-bar-wrap{
   width:100%;
   height:16px;
@@ -76,7 +75,7 @@ p.desc{margin:0 0 20px;color:#334155;}
   width:0%;
   background:var(--bar-fill);
   position: absolute;
-  right:0; /* 右端から伸びる */
+  right:0; /* 右端から左端まで伸びる */
   top:0;
   transition: width 0.5s linear;
 }
@@ -109,19 +108,15 @@ video{width:100%;height:100%;object-fit:contain;background:black;}
   <div class="wrap">
     <div class="card">
       <h1>ユメミる草原</h1>
-
       <div class="button-row">
         <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zukan.png" alt="図鑑" onclick="showPage('zukan')">
         <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png" id="joinBtnImg" alt="ラジオ体操参加">
         <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/howto.png" alt="遊び方" onclick="showPage('howto')">
       </div>
-
       <p class="subtitle">開始可能時間 : 日本時間 <strong>06:00〜06:03</strong></p>
       <p class="desc">この時間帯のみ参加できます。運営用パスワードを入れるといつでも参加可能です。</p>
-
       <div id="remainingTime"></div>
       <div class="time-bar-wrap"><div id="timeBar" class="time-bar"></div></div>
-
       <input id="pw" type="password" placeholder="運営用パスワード ">
     </div>
   </div>
@@ -223,6 +218,12 @@ function updateRemaining(){
     return;
   }
 
+  const next=getNextStart();
+  const startToday = new Date(next); startToday.setHours(0,0,0,0);
+  const totalDaySec = 24*3600; // 1日＝86400秒
+  const elapsedSec = (j - startToday)/1000; // 経過秒
+  const percentDay = Math.min(Math.max(elapsedSec/totalDaySec*100,0),100);
+
   if(isWithinAllowedWindow()){
     const t=config.allowedTimes[0];
     const end=new Date(j); end.setHours(t.hour,t.endMinute,0,0);
@@ -231,19 +232,24 @@ function updateRemaining(){
     const sec=Math.floor(diff%60);
     tDiv.textContent=`開始可能時間内 : 残り ${min}分 ${sec}秒`;
 
-    // バー更新（右から左、時間の経過割合）
-    const totalSec = (t.endMinute-t.startMinute+1)*60; // +1で秒まで含む
-    const elapsedSec = totalSec - diff;
-    const percent = Math.min(Math.max(elapsedSec/totalSec*100,0),100);
-    bar.style.width = `${percent}%`;
+    // 時間経過に応じて右から左にバーを伸ばす
+    const tWindow = config.allowedTimes[0];
+    const startTime = new Date(j); startTime.setHours(tWindow.hour,tWindow.startMinute,0,0);
+    const endTime = new Date(j); endTime.setHours(tWindow.hour,tWindow.endMinute,59,999);
+    const totalSecWindow = (endTime - startTime)/1000;
+    const elapsedWindow = (j - startTime)/1000;
+    const percentWindow = Math.min(Math.max(elapsedWindow/totalSecWindow*100,0),100);
+    bar.style.width = `${percentWindow}%`;
 
-  }else{
-    const next=getNextStart();
-    const diffSec=(next-j)/1000;
-    const totalSec=(next-j.getTime())/1000; // 本日なら24時間まで
-    const percent = 0; // 未開始は0%
-    tDiv.textContent=`次の開始可能時間まで: ${Math.floor(diffSec/3600)}時間 ${Math.floor(diffSec%3600/60)}分 ${Math.floor(diffSec%60)}秒`;
-    bar.style.width = '0%';
+  } else {
+    const diff=(next-j)/1000;
+    const h=Math.floor(diff/3600);
+    const m=Math.floor((diff%3600)/60);
+    const s=Math.floor(diff%60);
+    tDiv.textContent=`次の開始可能時間まで: ${h}時間 ${m}分 ${s}秒`;
+
+    // 未開始でも1日の経過割合でバーを伸ばす（右から左）
+    bar.style.width = `${percentDay}%`;
   }
 }
 
