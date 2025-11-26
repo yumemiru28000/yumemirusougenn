@@ -22,9 +22,17 @@ html,body{
   height:100%;
   margin:0;
   font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
-　background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
-  color:var(--accent);
+  
+  /* ← 全角スペースを修正して整列 */
+  background:
+    #000000 /* ← 外側の色：必要な色に変更してOK */
+    url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png')
+    center/cover
+    no-repeat;
+
+  color: var(--accent);
 }
+
 
 /* ページ共通 */
 .page{display:none;width:100vw;height:100vh;}
@@ -366,6 +374,7 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
 
