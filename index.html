@@ -261,13 +261,20 @@ function updateRemaining(){
 
   const next=getNextStart();
 
-  /* 1日の経過割合 */
-  const startToday=new Date(j);
-  startToday.setHours(0,0,0,0);
-  const totalDaySec=24*3600;
-  const elapsedSec=(j-startToday)/1000;
-  const percentDay=elapsedSec/totalDaySec*100;
-  const invPercentDay=100-percentDay;
+/* 1日の経過（6:00 → 翌日6:00） */
+const startToday = new Date(j);
+startToday.setHours(6,0,0,0);   // ← 朝6:00を基準にする
+
+// もし現在時刻が 0:00〜5:59 なら昨日の6:00を基準にする
+if(j < startToday){
+  startToday.setDate(startToday.getDate() - 1);
+}
+
+const totalDaySec = 24 * 3600;       // 24時間分
+const elapsedSec = (j - startToday) / 1000;
+const percentDay = elapsedSec / totalDaySec * 100;
+const invPercentDay = 100 - percentDay;
+
 
   /* 許可時間内 */
   if(isWithinAllowedWindow()){
@@ -359,3 +366,4 @@ updateRemaining();
 </script>
 </body>
 </html>
+
