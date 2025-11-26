@@ -51,16 +51,21 @@ p.desc{margin:0 0 20px;color:#334155;}
   align-items:center;
   margin-bottom:12px;
 }
-.button-row img{
-  width:100px;       /* 横幅固定 */
-  height:100px;      /* 高さも固定 */
-  object-fit: contain; /* 画像を縦横比を保ちながら収める */
-  cursor:pointer;
+.button-row img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  cursor: pointer;
+  flex: none;
 }
-#joinBtnImg{
-  flex:1;
-  margin:0 12px;
+
+#joinBtnImg {
+  width: 100px;
+  height: 100px;
+  margin: 0 12px;
+  flex: none;
 }
+
 .time-bar-wrap{
   width:100%;
   height:16px;
@@ -290,6 +295,7 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
 
