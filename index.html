@@ -22,16 +22,22 @@ html,body{
   margin:0;
   font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
 
-  /* ▼ここを追加（外側の白を消す色） */
-  background-color:#d2e879;   /* ← 好きな色に変更OK */
-
+  background-color:#d2e879;
   background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
   color:var(--accent);
 }
 
 /* ページ共通 */
-.page{display:none;width:100vw;height:100vh;}
-.page.active{display:flex;align-items:center;justify-content:center;}
+.page{
+  display:none;
+  width:100vw;
+  height:100vh;
+}
+.page.active{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
 /* カード */
 .card{
@@ -57,8 +63,15 @@ h1{
 }
 
 /* 文章 */
-p.subtitle{margin:0 0 12px;color:#475569;font-weight:600;}
-p.desc{margin:0 0 20px;color:#334155;}
+p.subtitle{
+  margin:0 0 12px;
+  color:#475569;
+  font-weight:600;
+}
+p.desc{
+  margin:0 0 20px;
+  color:#334155;
+}
 
 /* 上の3ボタン */
 .button-row{
@@ -81,7 +94,7 @@ p.desc{margin:0 0 20px;color:#334155;}
   font-size:17px;
   font-weight:700;
   margin-bottom:4px;
-  color:#ffffff;          /* ← 水色に設定 */
+  color:#ffffff;
   text-shadow:0 0 4px #0008;
 }
 
@@ -107,12 +120,12 @@ p.desc{margin:0 0 20px;color:#334155;}
   transition:width 0.5s linear;
 }
 
-/* 全画面画像ページ */
+/* 画像ページ（背景白に変更済み）*/
 .fullimage{
   width:100%;
   height:100%;
   object-fit:contain;
-  background:black;
+  background:white;   /* ← ここを黒→白に */
 }
 
 /* ホームボタン */
@@ -186,7 +199,6 @@ video{
   <button class="home-btn" onclick="showPage('home')">ホーム</button>
 </div>
 
-
 <!-- 動画用 -->
 <div id="playerContainer"></div>
 
@@ -199,32 +211,31 @@ function showPage(id){
 }
 
 /* 設定 */
-const config = {
-  videos: [
-    { id: 'v1',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1o.mp4', weight: 16 },
-    { id: 'v2',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1x.mp4', weight: 2 },
-    { id: 'v3',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2o.mp4', weight: 16 },
-    { id: 'v4',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2x.mp4', weight: 1 },
-    { id: 'v5',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3o.mp4', weight: 16 },
-    { id: 'v6',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3x.mp4', weight: 1 },
-    { id: 'v7',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4o.mp4', weight: 10 },
-    { id: 'v8',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4x.mp4', weight: 1 },
-    { id: 'v9',  url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5o.mp4', weight: 10 },
-    { id: 'v10', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5x.mp4', weight: 1 },
-    { id: 'v11', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6o.mp4', weight: 10 },
-    { id: 'v12', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4', weight: 1 },
-    { id: 'v13', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4', weight: 11 },
-    { id: 'v14', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4', weight: 2 },
-    { id: 'v15', url: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4', weight: 2 }
+const config={
+  videos:[
+    {id:'v1',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1o.mp4',weight:16},
+    {id:'v2',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1x.mp4',weight:2},
+    {id:'v3',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2o.mp4',weight:16},
+    {id:'v4',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2x.mp4',weight:1},
+    {id:'v5',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3o.mp4',weight:16},
+    {id:'v6',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3x.mp4',weight:1},
+    {id:'v7',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4o.mp4',weight:10},
+    {id:'v8',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4x.mp4',weight:1},
+    {id:'v9',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5o.mp4',weight:10},
+    {id:'v10',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5x.mp4',weight:1},
+    {id:'v11',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6o.mp4',weight:10},
+    {id:'v12',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4',weight:1},
+    {id:'v13',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4',weight:11},
+    {id:'v14',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4',weight:2},
+    {id:'v15',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4',weight:2}
   ],
 
-  bypassPassword: '1122',
+  bypassPassword:'1122',
 
-  allowedTimes: [
-    { hour: 6, startMinute: 0, endMinute: 3 }
+  allowedTimes:[
+    {hour:6,startMinute:0,endMinute:3}
   ]
 };
-
 
 /* JST */
 function nowJST(){
@@ -271,7 +282,6 @@ function updateRemaining(){
   joinBtnImg.style.opacity=allowed?1:0.45;
   joinBtnImg.style.pointerEvents=allowed?'auto':'none';
 
-  /* 運営モード */
   if(pw){
     tDiv.textContent='運営モード - いつでも開始できます';
     bar.style.width='0%';
@@ -280,22 +290,18 @@ function updateRemaining(){
 
   const next=getNextStart();
 
-/* 1日の経過（6:00 → 翌日6:00） */
-const startToday = new Date(j);
-startToday.setHours(6,0,0,0);   // ← 朝6:00を基準にする
+  const startToday=new Date(j);
+  startToday.setHours(6,0,0,0);
 
-// もし現在時刻が 0:00〜5:59 なら昨日の6:00を基準にする
-if(j < startToday){
-  startToday.setDate(startToday.getDate() - 1);
-}
+  if(j<startToday){
+    startToday.setDate(startToday.getDate()-1);
+  }
 
-const totalDaySec = 24 * 3600;       // 24時間分
-const elapsedSec = (j - startToday) / 1000;
-const percentDay = elapsedSec / totalDaySec * 100;
-const invPercentDay = 100 - percentDay;
+  const totalDaySec=24*3600;
+  const elapsedSec=(j-startToday)/1000;
+  const percentDay=elapsedSec/totalDaySec*100;
+  const invPercentDay=100-percentDay;
 
-
-  /* 許可時間内 */
   if(isWithinAllowedWindow()){
     const t=config.allowedTimes[0];
     const start=new Date(j); start.setHours(t.hour,t.startMinute,0,0);
@@ -313,34 +319,20 @@ const invPercentDay = 100 - percentDay;
     bar.style.width=`${100-percentWindow}%`;
   }
   else{
-    /* 未開始 */
     const diff=(next-j)/1000;
     const h=Math.floor(diff/3600);
     const m=Math.floor((diff%3600)/60);
     const s=Math.floor(diff%60);
 
     tDiv.textContent=`残り : ${h}時間 ${m}分 ${s}秒`;
-
     bar.style.width=`${invPercentDay}%`;
   }
 }
 
-function pickVideo(videos) {
-  const total = videos.reduce((s, v) => s + v.weight, 0);
-  let r = Math.random() * total;
+document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 
-  for (let i = 0; i < videos.length; i++) {
-    r -= videos[i].weight;
-    if (r < 0) return videos[i];
-  }
-
-  return videos[videos.length - 1];
-}
-
-
-/* 動画再生 */
-async function onJoin(){
-  const pick=weightedPick(config.videos);
+function onJoin(){
+  const pick=pickVideo(config.videos);
   const container=document.getElementById('playerContainer');
   container.style.display='flex';
   container.innerHTML='';
@@ -379,36 +371,21 @@ async function onJoin(){
   });
 }
 
-document.getElementById('joinBtnImg').addEventListener('click',onJoin);
+function pickVideo(videos){
+  const total=videos.reduce((s,v)=>s+v.weight,0);
+  let r=Math.random()*total;
+
+  for(const v of videos){
+    r-=v.weight;
+    if(r<0) return v;
+  }
+  return videos[videos.length-1];
+}
 
 setInterval(updateRemaining,1000);
 updateRemaining();
 
 </script>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
