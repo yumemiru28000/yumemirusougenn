@@ -3,431 +3,396 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ユメミる草原 - ゆめかわプレイヤーUI</title>
+<title>ユメミる草原 — プレイヤーUI</title>
 <style>
-  :root{--bg:#f6f8fa;--card:#ffffff;--accent:#334155}
-  html,body{
-    height:100%;margin:0;
-    font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
-    background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
-    color:var(--accent);
-    -webkit-font-smoothing:antialiased;
-  }
+:root{
+  --accent:#334155;
+  --pink1:#ffdff4;
+  --pink2:#ffc0e8;
+  --glass: rgba(255,240,250,0.6);
+}
 
-  /* 全ページラッパー（ページ切替対応） */
-  .page { display:none; width:100vw; height:100vh; }
-  .page.active { display:flex; align-items:center; justify-content:center; }
+/* ベース */
+html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background: linear-gradient(135deg,#fff1fb,#f8fcff);color:var(--accent);display:flex;align-items:center;justify-content:center}
 
-  /* プレイヤーカード */
-  .player {
-    width:380px;
-    background: rgba(255,255,255,0.18);
-    border-radius:20px;
-    padding:16px;
-    box-shadow: 0 8px 30px rgba(16,24,40,0.12);
-    position:relative;
-    backdrop-filter: blur(6px);
-  }
+/* プレイヤーカード */
+.player-wrap{width:420px;max-width:95vw;padding:18px;border-radius:26px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,250,255,0.55));box-shadow:0 8px 30px rgba(150,120,170,0.12);position:relative;}
 
-  /* イラストを入れるフレーム（背景画像をここで指定） */
-  .frame {
-    width:100%;
-    height:220px;
-    border-radius:14px;
-    border: 4px solid rgba(255,255,255,0.8);
-    overflow:hidden;
-    position:relative;
-    background: url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
-  }
+/* 画像フレーム */
+.frame{
+  width:100%;
+  height:260px;
+  border-radius:16px;
+  border:6px solid rgba(255,255,255,0.9);
+  background: url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
-  /* タイトルを画像の上に置く */
-  .frame .title {
-    position:absolute;
-    left:50%; top:12px;
-    transform:translateX(-50%);
-    color:#ffffff;
-    font-weight:700;
-    font-size:20px;
-    text-shadow:0 6px 18px rgba(0,0,0,0.35);
-    padding:6px 14px;
-    border-radius:12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-    backdrop-filter: blur(2px);
-  }
+/* 画像要素（差し替え用） — object-fit:contain で常に全体が見える */
+.frame img {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:black;
+  display:block;
+}
 
-  /* 画像（もし img を差し替えたい場合に使う） */
-  .frame img {
-    width:100%;
-    height:100%;
-    object-fit:contain;
-    display:block;
-  }
+/* タイトルを画像の上に重ねる */
+.frame .title {
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.15));
+  padding:6px 14px;
+  border-radius:14px;
+  font-weight:700;
+  color:#7b4b7a;
+  text-shadow:0 2px 8px rgba(255,255,255,0.8);
+  letter-spacing:0.06em;
+}
 
-  /* 下部の残り時間表示とバー */
-  .time-row {
-    margin-top:12px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    color:#fff;
-    font-size:13px;
-    justify-content:space-between;
-  }
-  .time-left { font-weight:700; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.4); }
+/* 残り時間 + プログレス（横並びで表示） */
+.time-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:12px;
+}
 
-  /* スライダー／バー周り */
-  .progress-wrap{
-    margin-top:8px;
-    position:relative;
-    height:14px;
-    border-radius:10px;
-    background:rgba(255,255,255,0.2);
-    overflow:hidden;
-  }
-  .progress-fill{
-    position:absolute;
-    left:0; top:0; bottom:0;
-    width:0%;
-    background: linear-gradient(90deg,#ffffff,#fff9e6);
-    transition:width 0.12s linear;
-  }
-  /* 見た目スライダー（透明にして代わりに progress-fill を使う） */
-  input[type=range].hidden-range{
-    -webkit-appearance:none;
-    appearance:none;
-    width:100%;
-    height:14px;
-    background:transparent;
-    position:relative;
-  }
-  input[type=range].hidden-range::-webkit-slider-thumb{
-    -webkit-appearance:none;
-    width:14px;height:14px;border-radius:50%;
-    background:#fff;border:3px solid rgba(0,0,0,0.08);
-    box-shadow:0 4px 10px rgba(0,0,0,0.18);
-    cursor:pointer;
-  }
+/* テキスト時間 */
+.time-text{
+  min-width:120px;
+  font-weight:700;
+  color:#6b3b6b;
+}
 
-  /* コントロールボタン */
-  .controls{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:22px;
-    margin-top:16px;
-  }
-  .btn{
-    width:56px;height:56px;border-radius:50%;
-    background:linear-gradient(180deg,#ffd6ef,#ff7acb);
-    border:3px solid rgba(255,255,255,0.8);
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;box-shadow: 0 8px 20px rgba(255,120,200,0.15);
-  }
-  .btn img{ width:28px;height:28px; object-fit:contain; }
+/* 再生バー風（外観） */
+.progress-wrap{
+  flex:1;
+  height:12px;
+  background:rgba(0,0,0,0.08);
+  border-radius:8px;
+  position:relative;
+  overflow:hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.progress-fill{
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:0%;
+  background: linear-gradient(90deg,#fff,#ffe6fb);
+  box-shadow: 0 0 12px rgba(255,200,230,0.6);
+  transition: width 0.3s linear;
+}
 
-  /* 下の補助テキスト（説明文）をカード外に配置 */
-  .explain {
-    margin-top:18px;
-    width:380px;
-    color:#08203a;
-    background: rgba(255,255,255,0.65);
-    padding:10px 14px;
-    border-radius:12px;
-    text-align:left;
-    font-size:13px;
-    box-shadow:0 6px 18px rgba(16,24,40,0.06);
-  }
+/* コントロール部（左・再生・右） */
+.controls{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:22px;
+  margin-top:18px;
+}
 
-  /* 図鑑/遊び方ページのスタイル */
-  .fullpage{
-    width:100vw;height:100vh;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:999;
-  }
-  .fullpage .content{
-    width:90%;max-width:920px;height:80%;background:#fff;border-radius:14px;overflow:auto;position:relative;padding:18px;
-  }
-  .fullpage img{ width:100%; height:100%; object-fit:contain; display:block; }
+/* 丸いボタン */
+.icon-btn{
+  width:66px;height:66px;border-radius:50%;
+  background:linear-gradient(180deg,#fff,#ffeef8);
+  border:3px solid #fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px rgba(250,200,240,0.25), inset 0 -4px 8px rgba(0,0,0,0.03);
+  cursor:pointer;
+}
 
-  .home-btn{
-    position:absolute;
-    bottom:16px; right:16px;
-    padding:10px 14px;background:#ff77c7;color:#fff;border-radius:12px;border:0;cursor:pointer;
-  }
+/* 大きめの再生（ゲーム開始）ボタン */
+.play-btn{
+  width:86px;height:86px;border-radius:50%;
+  background:linear-gradient(180deg,#ffb7e0,#ffa0d6);
+  box-shadow:0 12px 30px rgba(255,140,200,0.25), inset 0 -6px 10px rgba(255,255,255,0.4);
+  display:flex;align-items:center;justify-content:center;
+  border:4px solid rgba(255,255,255,0.9);
+}
 
-  /* レスポンシブ */
-  @media (max-width:420px){
-    .player, .explain { width:92vw; }
-    .frame{ height:180px; }
-  }
+/* アイコン画像を読み込めるように */
+.icon-btn img, .play-btn img { width:36px; height:36px; object-fit:contain; }
+
+/* 説明文（カード外下）*/
+.description{
+  margin-top:14px;
+  text-align:center;
+  color:#5f5770;
+  font-size:13px;
+}
+
+/* ホーム/図鑑/遊び方の画像表示ページ（フル画面） */
+.page-full{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#000;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+.page-full.active{display:flex;}
+.page-full .fullimg{
+  max-width:95vw;
+  max-height:95vh;
+  object-fit:contain;
+  background:black;
+}
+
+/* 右下ホームボタン（戻る） */
+.page-full .home-btn{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  padding:10px 16px;
+  background:#ff9bd0;color:white;border-radius:12px;border:0;
+  box-shadow:0 6px 18px rgba(255,140,200,0.3);
+  cursor:pointer;
+  z-index:10000;
+}
 </style>
 </head>
 <body>
 
-<!-- HOME: プレイヤーUI -->
-<div id="home" class="page active">
-  <div class="player" role="application" aria-label="プレイヤーUI">
-    <!-- イラスト枠（背景は home.png） -->
-    <div class="frame" id="frame">
-      <div class="title" id="frameTitle">ユメの草原</div>
-      <!-- optional <img id="frameImg" src=""> を入れても差し替え可 -->
-      <img id="frameImg" src="" alt="" style="display:none;">
-    </div>
+<div class="player-wrap" role="application" aria-label="ユメの草原プレイヤー">
 
-    <!-- 残り時間 & バー -->
-    <div class="time-row">
-      <div class="time-left" id="remainingPreview">24:00:00</div>
-      <div style="color:rgba(0,0,0,0.6);font-size:13px;" id="previewLabel">残り時間</div>
-    </div>
+  <!-- 画像フレーム（背景は home.png、img要素により差し替え可能） -->
+  <div class="frame" id="frame">
+    <!-- ここに表示するイラスト。空にしておくとCSS背景(home.png)が見える -->
+    <img id="frameImg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png" alt="イラスト">
+    <div class="title">ユメの草原</div>
+  </div>
 
-    <div class="progress-wrap" aria-hidden="false">
+  <!-- 残り時間（次の06:00まで） と 再生バー風表示 -->
+  <div class="time-row" aria-hidden="false">
+    <div class="time-text" id="remainText">--:--:--</div>
+    <div class="progress-wrap" aria-hidden="false" title="残り時間の進捗を示します">
       <div class="progress-fill" id="progressFill"></div>
-      <!-- スライダーは 0〜86400 (秒) を扱う：値が小さい＝残りが少ない -->
-      <input id="previewSlider" class="hidden-range" type="range" min="0" max="86400" value="86400" aria-label="残り時間スライダー">
+    </div>
+  </div>
+
+  <!-- コントロール（図鑑 / 開始 / 遊び方） -->
+  <div class="controls" role="group" aria-label="controls">
+    <div class="icon-btn" id="leftBtn" title="図鑑">
+      <img id="leftIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/left.png" alt="左">
     </div>
 
-    <!-- コントロール（左 = 図鑑 / 中央 = 開始 / 右 = 遊び方） -->
-    <div class="controls" role="group" aria-label="操作ボタン">
-      <div class="btn" id="zukanBtn" title="図鑑（←）">
-        <img id="leftIcon" src="" alt="左アイコン">
-      </div>
-
-      <div class="btn" id="startBtn" title="ゲーム開始（中央）">
-        <img id="playIcon" src="" alt="再生アイコン">
-      </div>
-
-      <div class="btn" id="howBtn" title="遊び方（→）">
-        <img id="rightIcon" src="" alt="右アイコン">
-      </div>
+    <div class="play-btn" id="playBtn" title="ゲームを開始">
+      <img id="playIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/play.png" alt="再生">
     </div>
+
+    <div class="icon-btn" id="rightBtn" title="遊び方">
+      <img id="rightIcon" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/right.png" alt="右">
+    </div>
+  </div>
+
+  <!-- 説明文はカード外（下）に移動 -->
+  <div class="description" id="desc">
+    ラジオ体操参加ボタンは日本時間の <strong>06:00〜06:03</strong> に有効です。運営用のパスワードでいつでも開始できます。
   </div>
 </div>
 
-<!-- 説明文（カードの外、下に配置） -->
-<div style="display:flex; justify-content:center; margin-top:14px;">
-  <div class="explain" id="mainExplain">
-    ラジオ体操は毎朝06:02〜06:05に押せます。運営用パスワードで時間外に参加可能。
-  </div>
+<!-- フル表示ページ：図鑑 -->
+<div id="pageZukan" class="page-full" aria-hidden="true">
+  <img class="fullimg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/aaaa.jpg" alt="図鑑">
+  <button class="home-btn" onclick="closeFull()">ホーム</button>
 </div>
 
-<!-- 図鑑ページ（フルスクリーン） -->
-<div id="zukan" class="page" aria-hidden="true">
-  <div class="fullpage" id="zukanPage" style="display:none;">
-    <div class="content">
-      <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/aaaa.jpg" alt="図鑑">
-      <button class="home-btn" onclick="closeFull('zukan')">ホーム</button>
-    </div>
-  </div>
+<!-- フル表示ページ：遊び方 -->
+<div id="pageHow" class="page-full" aria-hidden="true">
+  <img class="fullimg" src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/%E3%82%A4%E3%83%A9%E3%82%B9%E3%83%8811.png" alt="遊び方">
+  <button class="home-btn" onclick="closeFull()">ホーム</button>
 </div>
 
-<!-- 遊び方ページ（フルスクリーン） -->
-<div id="howto" class="page" aria-hidden="true">
-  <div class="fullpage" id="howPage" style="display:none;">
-    <div class="content">
-      <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/イラスト11.png" alt="遊び方">
-      <button class="home-btn" onclick="closeFull('howto')">ホーム</button>
-    </div>
-  </div>
-</div>
-
-<!-- 動画再生枠（既存の挙動をそのまま利用） -->
-<div id="playerContainer"></div>
+<!-- プレイヤーの既存 video コンテナ（そのまま使用） -->
+<div id="playerContainer" aria-hidden="true"></div>
 
 <script>
-/* ==========================
-   --- カスタム可能な画像 ---
-   ここでアイコンやフレームに使う画像を指定できます。
-   空文字のままだと表示しない（代わりに背景 home.png を使う）。
-   ========================== */
-const ASSETS = {
-  frameImg: '', // 枠内に別のimgを入れたい場合のURL（空なら background home.png を使う）
-  leftIcon: '', // 左矢印（図鑑）PNG URL
-  playIcon: '', // 中央開始ボタンPNG URL
-  rightIcon: '' // 右矢印（遊び方）PNG URL
-};
-
-// アイコンを差し替え（空文字は無視）
-if(ASSETS.leftIcon) document.getElementById('leftIcon').src = ASSETS.leftIcon;
-if(ASSETS.playIcon) document.getElementById('playIcon').src = ASSETS.playIcon;
-if(ASSETS.rightIcon) document.getElementById('rightIcon').src = ASSETS.rightIcon;
-if(ASSETS.frameImg){
-  const fi = document.getElementById('frameImg');
-  fi.src = ASSETS.frameImg;
-  fi.style.display = 'block';
-  // hide background image when using frameImg
-  document.getElementById('frame').style.background = 'none';
+/* -----------------------------
+   時刻に関するユーティリティ
+   ----------------------------- */
+function nowJST(){
+  const d = new Date();
+  return new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + 9*3600*1000);
 }
 
-/* --------------------------
-   ページ切り替え（図鑑・遊び方）
-   -------------------------- */
-function openFull(id){
-  if(id === 'zukan'){
-    document.getElementById('zukanPage').style.display = 'flex';
-  }else if(id === 'howto'){
-    document.getElementById('howPage').style.display = 'flex';
+/* 次の 06:00 を返す（現在が 06:00〜06:03 の場合は当日の 06:00、経過後は翌日の 06:00） */
+function nextSixAMReference(){
+  const j = nowJST();
+  const candidate = new Date(j);
+  candidate.setHours(6,0,0,0);
+  if (j >= candidate) {
+    // if current time >= today 6:00, next 6:00 is tomorrow
+    candidate.setDate(candidate.getDate() + 1);
   }
-  // hide main home area (keeps page active state)
-  document.getElementById('home').classList.remove('active');
-}
-function closeFull(id){
-  if(id === 'zukan'){
-    document.getElementById('zukanPage').style.display = 'none';
-  }else if(id === 'howto'){
-    document.getElementById('howPage').style.display = 'none';
-  }
-  document.getElementById('home').classList.add('active');
+  return candidate;
 }
 
-/* ==========================
-   残り時間スライダー（24時間 = 86400秒）
-   - スライダーの値: 0..86400
-   - value が小さいほど残りが少ない。0秒＝残りゼロ（白線が最大）
-   - progress = 1 - (value/86400) を使って白の進捗幅を決定
-   ========================== */
-const slider = document.getElementById('previewSlider');
-const remainingPreview = document.getElementById('remainingPreview');
+/* 残り秒数までのフォーマット */
+function formatHMS(sec){
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = Math.floor(sec%60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+/* -----------------------------
+   残り時間とプログレスの更新
+   - progress: 0% -> 100% as remaining goes 86400 -> 0 (so fills up as time decreases)
+   - we choose denominator 86400 (24h) so the bar behaves like a day-progress fill toward zero.
+   ----------------------------- */
+const remainText = document.getElementById('remainText');
 const progressFill = document.getElementById('progressFill');
 
-function secToHHMMSS(sec){
-  sec = Number(sec);
-  if(sec < 0) sec = 0;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+function updateRemainAndProgress(){
+  const j = nowJST();
+  // next 6:00 (tomorrow if already past today 6:00) — but user wanted "六時までの残り時間を全て表示"
+  // We'll compute next target as today's 6:00 if in future, else tomorrow's 6:00.
+  let target = new Date(j);
+  target.setHours(6,0,0,0);
+  if (j >= target) {
+    // already past today's 06:00, set to next day's 06:00
+    target = new Date(j.getTime() + 24*3600*1000);
+    target.setHours(6,0,0,0);
+  }
+  const diffMs = target - j;
+  const diffSec = Math.max(0, Math.floor(diffMs/1000));
+
+  // Show hh:mm:ss remaining until next 06:00
+  remainText.textContent = formatHMS(diffSec);
+
+  // progress fill: fraction = 1 - remaining/86400 so it fills as remaining decreases
+  const fraction = 1 - (diffSec / 86400);
+  const pct = Math.max(0, Math.min(1, fraction)) * 100;
+  progressFill.style.width = pct + '%';
 }
 
-function updatePreviewUI(val){
-  // val is 0..86400 (seconds remaining)
-  remainingPreview.textContent = secToHHMMSS(val);
-  const pct = 1 - (val / 86400); // 0..1, 0 => no fill, 1 => full fill
-  progressFill.style.width = `${Math.round(pct * 100)}%`;
+// start updating every 1s
+updateRemainAndProgress();
+setInterval(updateRemainAndProgress, 1000);
+
+/* -----------------------------
+   ページ切り替え（図鑑／遊び方のフル表示）
+   ----------------------------- */
+function openZukan(){
+  document.getElementById('pageZukan').classList.add('active');
+  document.getElementById('pageZukan').setAttribute('aria-hidden','false');
+}
+function openHow(){
+  document.getElementById('pageHow').classList.add('active');
+  document.getElementById('pageHow').setAttribute('aria-hidden','false');
+}
+function closeFull(){
+  document.getElementById('pageZukan').classList.remove('active');
+  document.getElementById('pageZukan').setAttribute('aria-hidden','true');
+  document.getElementById('pageHow').classList.remove('active');
+  document.getElementById('pageHow').setAttribute('aria-hidden','true');
 }
 
-// init
-updatePreviewUI(Number(slider.value));
+/* -----------------------------
+   アイコン差し替え（必要ならここでPNGを差し替える）
+   ----------------------------- */
+/* 既定のアイコンがある場合はそのまま使われます。差し替えたい場合は
+   document.getElementById('leftIcon').src = 'https://.../left_custom.png';
+   のように書き換えてください. */
 
-// hook slider
-slider.addEventListener('input', (e)=> {
-  updatePreviewUI(Number(e.target.value));
+// wiring the buttons to functions above
+document.getElementById('leftBtn').addEventListener('click', openZukan);
+document.getElementById('rightBtn').addEventListener('click', openHow);
+
+/* -----------------------------
+  再生 (ゲーム開始) ボタン：既存 onJoin() を呼び出す
+  ----------------------------- */
+document.getElementById('playBtn').addEventListener('click', ()=>{
+  // call onJoin() from your original video system
+  if (typeof onJoin === 'function') {
+    onJoin();
+  } else {
+    alert('動画再生システムが準備できていません');
+  }
 });
 
-/* ==========================
-   元の動画再生ロジックはそのまま使う（onJoin）
-   startBtn を押すと onJoin() が呼ばれるように繋げる
-   ========================== */
+/* -----------------------------
+  既存のラジオ体操時間ロジックをこちらに統合するための補助
+  （allowed window を 06:00 - 06:03 に設定）
+  ----------------------------- */
+const config = {
+  bypassPassword: '2855',
+  allowedTimes: [{hour:6, startMinute:0, endMinute:3}]
+};
 
-/* ---------- 元の設定（そのまま貼っています） ---------- */
-const config={videos:[
-  {id:'v1',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1o.mp4',weight:16},
-  {id:'v2',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1x.mp4',weight:2},
-  {id:'v3',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2o.mp4',weight:16},
-  {id:'v4',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2x.mp4',weight:1},
-  {id:'v5',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3o.mp4',weight:16},
-  {id:'v6',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3x.mp4',weight:1},
-  {id:'v7',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4o.mp4',weight:10},
-  {id:'v8',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4x.mp4',weight:1},
-  {id:'v9',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5o.mp4',weight:10},
-  {id:'v10',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5x.mp4',weight:1},
-  {id:'v11',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6o.mp4',weight:10},
-  {id:'v12',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4',weight:1},
-  {id:'v13',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4',weight:11},
-  {id:'v14',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4',weight:2},
-  {id:'v15',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4',weight:2},
-],
-bypassPassword:'2855',
-allowedTimes:[{hour:6,startMinute:2,endMinute:5}]};
-
-function nowJST(){const d=new Date();return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000);}
-function weightedPick(list){const total=list.reduce((s,i)=>s+(i.weight||1),0);let r=Math.random()*total;for(const item of list){r-=(item.weight||1);if(r<=0)return item;}return list[list.length-1];}
-
-/* 元の UI 要素への参照を残しておく（説明文は外に出しています） */
-const joinBtn = document.createElement('button'); // dummy placeholder (既存コードが参照するため)
-joinBtn.id = 'joinBtn'; // ただし本来の join ボタンは startBtn が担う
-
-// 既存の運営用パスワード入力要素（画面に残すため DOM 上に作る）
-const pwInput = document.createElement('input');
-pwInput.type = 'password';
-pwInput.id = 'pw';
-pwInput.placeholder = '運営用';
-pwInput.style.display = 'none'; // 今回 UI をシンプルにするため非表示。ただし存在はする。
-document.body.appendChild(pwInput);
-
-/* 既存コードが参照する remainingTime 用要素を移植（画面下の explain の下に表示される形式） */
-const remainingTimeDiv = document.createElement('div');
-remainingTimeDiv.id = 'remainingTime';
-remainingTimeDiv.style.display = 'none'; // 既存のボタン時間表示は不要にしたため非表示だが要素はある
-document.body.appendChild(remainingTimeDiv);
-
-/* --------------------------
-   onJoin: 元の動画再生処理（ほぼそのまま）
-   startBtn を押すとこれが呼ばれる
-   -------------------------- */
-async function onJoin(){
-  const pick = weightedPick(config.videos);
-  if(!pick){ alert('動画が登録されていません'); return; }
-
-  const container = document.getElementById('playerContainer');
-  container.style.display = 'flex'; container.innerHTML = '';
-  container.style.background = '#000';
-  container.style.position = 'fixed';
-  container.style.inset = '0';
-  container.style.zIndex = '9999';
-  container.style.alignItems = 'center';
-  container.style.justifyContent = 'center';
-
-  const vid = document.createElement('video');
-  vid.src = pick.url;
-  vid.playsInline = true;
-  vid.autoplay = true;
-  vid.controls = false;
-  vid.loop = false;
-  container.appendChild(vid);
-
-  vid.addEventListener('loadeddata', async () => {
-    try{ await vid.play(); } catch(e){ console.warn(e); }
-    try{ if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'}); } catch(e){ console.warn(e); }
-  });
-
-  const blockKeys = (ev) => {
-    const blocked=[' ','Spacebar','k','K','MediaPlayPause','MediaStop','Escape'];
-    if(blocked.includes(ev.key) || blocked.includes(ev.code)){ ev.preventDefault(); }
-  };
-  document.addEventListener('keydown', blockKeys, {capture:true});
-  container.addEventListener('contextmenu', (ev)=>ev.preventDefault());
-  container.addEventListener('click', (ev)=>ev.preventDefault());
-
-  vid.addEventListener('ended', async () => {
-    try{ if(document.fullscreenElement) await document.exitFullscreen(); } catch(e){ console.warn(e); }
-    vid.remove();
-
-    const endText = document.createElement('div');
-    endText.textContent = 'END';
-    Object.assign(endText.style, { color:'#fff', fontSize:'48px', fontWeight:'700', position:'absolute', top:'45%', left:'50%', transform:'translate(-50%,-50%)' });
-    container.appendChild(endText);
-
-    const subText = document.createElement('div');
-    subText.textContent = 'いってらっしゃい';
-    Object.assign(subText.style, { color:'#fff', fontSize:'24px', position:'absolute', top:'60%', left:'50%', transform:'translate(-50%,-50%)' });
-    container.appendChild(subText);
-  });
+// 以下はあなたの既存の updateButtonState 系ロジックに合わせるための最小コード
+// （画面左下にある joinBtn を有効 / 無効にする）
+// 既に onJoin(), weightedPick(), config.videos 等は document に存在する前提で作っています。
+function isWithinAllowedWindow() {
+  const j = nowJST();
+  for (const t of config.allowedTimes) {
+    const start = new Date(j); start.setHours(t.hour, t.startMinute, 0, 0);
+    const end = new Date(j); end.setHours(t.hour, t.endMinute, 59, 999);
+    if (j >= start && j <= end) return true;
+  }
+  return false;
 }
 
-/* ================
-   UI イベントバインド
-   ================ */
-document.getElementById('zukanBtn').addEventListener('click', ()=> openFull('zukan'));
-document.getElementById('howBtn').addEventListener('click', ()=> openFull('howto'));
-document.getElementById('startBtn').addEventListener('click', ()=> {
-  // ゲーム開始ボタン(中央) は既存の onJoin を呼ぶ
-  onJoin();
-});
+// integrate with the original join button and pw input if present in page
+const joinBtn = document.getElementById('joinBtn');
+const pwInput = document.getElementById('pw');
+const remainingTimeDiv = document.getElementById('remainingTime');
 
-/* init: 既存の updateButtonState 等を必要に応じて呼び出せるよう最低限用意 */
-(function initOriginally(){
-  // 既存の機能（運営用パスワード等）は元コードを残していますが、
-  // 今回はUIを差し替えているため画面表示関連は上の新UIに任せます。
-  // もし pwInput を visible にして本来の挙動を使いたい場合は表示を切り替えてください。
-})();
+function updateButtonStateForJoin(){
+  if (!joinBtn) return;
+  const pw = pwInput && pwInput.value === config.bypassPassword;
+  const allowed = isWithinAllowedWindow() || pw;
+  joinBtn.disabled = !allowed;
+  joinBtn.textContent = pw ? 'ラジオ体操参加（パス解除）' : (allowed ? 'ラジオ体操参加' : '時間外');
+
+  // show next window or remaining of current window
+  if (remainingTimeDiv) {
+    const j = nowJST();
+    if (isWithinAllowedWindow()) {
+      // show remaining until end of allowed window
+      const t = config.allowedTimes[0];
+      const end = new Date(j); end.setHours(t.hour, t.endMinute, 59, 999);
+      const diff = Math.max(0, Math.floor((end - j) / 1000));
+      const mm = Math.floor(diff / 60);
+      const ss = diff % 60;
+      remainingTimeDiv.textContent = `参加終了まで: ${mm}分 ${ss}秒`;
+    } else {
+      // show next start
+      let next = new Date(j); next.setHours(config.allowedTimes[0].hour, config.allowedTimes[0].startMinute, 0, 0);
+      if (next <= j) {
+        next = new Date(next.getTime() + 24*3600*1000);
+      }
+      const diff = Math.max(0, Math.floor((next - j) / 1000));
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      remainingTimeDiv.textContent = `次の参加まで: ${h}時間 ${m}分 ${s}秒`;
+    }
+  }
+}
+updateButtonStateForJoin();
+setInterval(updateButtonStateForJoin, 1000);
+
+/* -----------------------------
+  既存の onJoin / 動画プレイのコードはページ下部にある想定です。
+  ここではそのまま呼びます（上部のplayBtnが onJoin を呼ぶ）
+  ----------------------------- */
+
 </script>
+
+<!-- ここから先はあなたの既存の <script>（動画再生ロジック）をそのまま挿入してください。
+     すでにページにある onJoin(), weightedPick(), config.videos 等はそのまま利用されます。
+     ※ もし既にページの上の方で動画ロジックを定義している場合、重複に注意してください。 -->
+
 </body>
 </html>
