@@ -252,7 +252,7 @@ function updateRemaining(){
     const h=Math.floor(diff/3600);
     const m=Math.floor((diff%3600)/60);
     const s=Math.floor(diff%60);
-    tDiv.textContent=`次の開始可能時間まで: ${h}時間 ${m}分 ${s}秒`;
+    tDiv.textContent=`残り: ${h}時間 ${m}分 ${s}秒`;
 
     bar.style.width=`${invPercentDay}%`; /* 右→左 */
   }
@@ -311,6 +311,7 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
 
