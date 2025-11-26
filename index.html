@@ -324,16 +324,18 @@ const invPercentDay = 100 - percentDay;
   }
 }
 
-/* 動画選択 */
-function weightedPick(list){
-  const total=list.reduce((s,i)=>s+(i.weight||1),0);
-  let r=Math.random()*total;
-  for(const item of list){
-    r-=(item.weight||1);
-    if(r<=0) return item;
+function pickVideo(videos) {
+  const total = videos.reduce((s, v) => s + v.weight, 0);
+  let r = Math.random() * total;
+
+  for (let i = 0; i < videos.length; i++) {
+    r -= videos[i].weight;
+    if (r < 0) return videos[i];
   }
-  return list[list.length-1];
+
+  return videos[videos.length - 1];
 }
+
 
 /* 動画再生 */
 async function onJoin(){
@@ -384,6 +386,7 @@ updateRemaining();
 </script>
 </body>
 </html>
+
 
 
 
