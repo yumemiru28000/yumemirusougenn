@@ -72,10 +72,10 @@ p.desc{margin:0 0 20px;color:#334155;}
 }
 .time-bar{
   height:100%;
-  width:0%;
+  width:100%;       /* ← 右から左へ減るので初期100% */
   background:var(--bar-fill);
   position: absolute;
-  right:0; /* 右端から左端まで伸びる */
+  right:0;
   top:0;
   transition: width 0.5s linear;
 }
@@ -167,13 +167,13 @@ const config={
   allowedTimes:[{hour:6,startMinute:0,endMinute:3}]
 };
 
-/* 現在時刻取得 */
+/* JST */
 function nowJST(){
   const d=new Date();
   return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000);
 }
 
-/* 制限時間判定 */
+/* 許可時間判定 */
 function isWithinAllowedWindow(){
   const j=nowJST();
   for(const t of config.allowedTimes){
@@ -184,7 +184,7 @@ function isWithinAllowedWindow(){
   return false;
 }
 
-/* 次の開始時間 */
+/* 次開始時間 */
 function getNextStart(){
   const j=nowJST();
   let next=null;
@@ -212,44 +212,49 @@ function updateRemaining(){
   joinBtnImg.style.opacity=allowed?1:0.45;
   joinBtnImg.style.pointerEvents=allowed?'auto':'none';
 
+  /* 運営モード */
   if(pw){
     tDiv.textContent='運営モード - いつでも開始できます';
-    bar.style.width='100%';
+    bar.style.width='0%';   /* 右端固定なので100%満タン＝0% */
     return;
   }
 
   const next=getNextStart();
-  const startToday = new Date(next); startToday.setHours(0,0,0,0);
-  const totalDaySec = 24*3600; // 1日＝86400秒
-  const elapsedSec = (j - startToday)/1000; // 経過秒
-  const percentDay = Math.min(Math.max(elapsedSec/totalDaySec*100,0),100);
 
+  /* 1日の経過 → バーは右→左 */
+  const startToday=new Date(j); startToday.setHours(0,0,0,0);
+  const totalDaySec=24*3600;
+  const elapsedSec=(j-startToday)/1000;
+  const percentDay = elapsedSec/totalDaySec*100;
+  const invPercentDay=100-percentDay;
+
+  /* 許可時間内 */
   if(isWithinAllowedWindow()){
     const t=config.allowedTimes[0];
-    const end=new Date(j); end.setHours(t.hour,t.endMinute,0,0);
+    const start=new Date(j); start.setHours(t.hour,t.startMinute,0,0);
+    const end=new Date(j);   end.setHours(t.hour,t.endMinute,59,999);
+
     const diff=(end-j)/1000;
     const min=Math.floor(diff/60);
     const sec=Math.floor(diff%60);
     tDiv.textContent=`開始可能時間内 : 残り ${min}分 ${sec}秒`;
 
-    // 時間経過に応じて右から左にバーを伸ばす
-    const tWindow = config.allowedTimes[0];
-    const startTime = new Date(j); startTime.setHours(tWindow.hour,tWindow.startMinute,0,0);
-    const endTime = new Date(j); endTime.setHours(tWindow.hour,tWindow.endMinute,59,999);
-    const totalSecWindow = (endTime - startTime)/1000;
-    const elapsedWindow = (j - startTime)/1000;
-    const percentWindow = Math.min(Math.max(elapsedWindow/totalSecWindow*100,0),100);
-    bar.style.width = `${percentWindow}%`;
+    const totalSecWindow=(end-start)/1000;
+    const elapsedWindow=(j-start)/1000;
+    const percentWindow=elapsedWindow/totalSecWindow*100;
+    const invPercentWindow=100-percentWindow;
+
+    bar.style.width=`${invPercentWindow}%`;
 
   } else {
+    /* 未開始 */
     const diff=(next-j)/1000;
     const h=Math.floor(diff/3600);
     const m=Math.floor((diff%3600)/60);
     const s=Math.floor(diff%60);
     tDiv.textContent=`次の開始可能時間まで: ${h}時間 ${m}分 ${s}秒`;
 
-    // 未開始でも1日の経過割合でバーを伸ばす（右から左）
-    bar.style.width = `${percentDay}%`;
+    bar.style.width=`${invPercentDay}%`; /* 右→左 */
   }
 }
 
@@ -300,7 +305,6 @@ async function onJoin(){
   });
 }
 
-/* 初期化 */
 document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 setInterval(updateRemaining,1000);
 updateRemaining();
