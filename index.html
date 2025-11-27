@@ -344,21 +344,18 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
       ★ここから追加処理：QRコード付近を自動トリミング
        （左下 25% を切り出す）
     ------------------------------------------------------*/
-    
-　　const qrW = 200;   // QRの横幅
-　　const qrH = 200;   // QRの高さ
+    const qrW = 200;  // QRの横幅
+    const qrH = 200;  // QRの高さ
 
-　　const sx = 0;           // 左下なので x=0
-　　const sy = h - qrH;     // 下から QR の高さ分上にずらす
-　　const sw = qrW;
-　　const sh = qrH;
+    const sx = 0;           // 左下なので x=0
+    const sy = h - qrH;     // 下から QR の高さ分上にずらす
+    const sw = qrW;
+    const sh = qrH;
 
-    const cutCanvas = document.createElement('canvas');
-    cutCanvas.width = cutW;
-    cutCanvas.height = cutH;
-    const cutCtx = cutCanvas.getContext('2d');
+    cutCanvas.width = qrW;
+    cutCanvas.height = qrH;
+    cutCtx.drawImage(baseCanvas, sx, sy, qrW, qrH, 0, 0, qrW, qrH);
 
-    cutCtx.drawImage(baseCanvas, sx, sy, cutW, cutH, 0, 0, cutW, cutH);
 
     /* -----------------------------------------------------
       ★既存QR解析処理を書き換えず、使う canvas だけ差し替える
@@ -397,6 +394,7 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
 
 </body>
 </html>
+
 
 
 
