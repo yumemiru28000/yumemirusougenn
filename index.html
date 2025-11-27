@@ -60,7 +60,6 @@
       text-align: center;
       border: 3px solid var(--yume-blue);
       box-sizing: border-box;
-      position: relative;
     }
 
     h1 {
@@ -106,7 +105,7 @@
     #remainingTime {
       font-size: 17px;
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       color: #ffffff;
       text-shadow: 0 0 4px #0008;
     }
@@ -151,8 +150,6 @@
       font-size: 18px;
       font-weight: 700;
       box-shadow: 0 3px 6px #0005;
-      cursor: pointer;
-      border: none;
     }
 
     #playerContainer {
@@ -173,20 +170,17 @@
       background: #ccc84b;
     }
 
-    #yumekoDisplay {
-      position: absolute;
-      top: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      color: #fff;
-      z-index: 10000;
+    #yumekoDisplay, #yumekoDisplay2 {
+      position: relative;
+      margin-top: 12px;
+      color: #333;
     }
 
-    #yumekoDisplay img {
-      max-width: 200px;
+    #yumekoDisplay img, #yumekoDisplay2 img {
+      max-width: 160px;
+      border-radius: 10px;
       display: block;
-      margin: 0 auto 10px;
+      margin: 0 auto 8px;
     }
 
     #endScreen {
@@ -203,79 +197,17 @@
       flex-direction: column;
     }
 
-    /* マイユメっ子エリア */
-    .my-yumeko-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .my-yumeko {
-      width: 170px;
-      height: 120px;
-      border-radius: 12px;
-      background: linear-gradient(180deg,#ffffffaa,#ffffff66);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
-      border: 2px dashed rgba(0,0,0,0.08);
-    }
-
-    .my-yumeko.placeholder {
-      filter: saturate(0.7);
-    }
-
-    .my-yumeko img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      display: block;
-    }
-
-    .my-yumeko .inner-btn {
-      position: absolute;
-      bottom: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.55);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      display: none;
-    }
-
-    .my-yumeko.has-image .inner-btn {
-      display: block;
-    }
-
+    /* small helper for myyumeko page layout */
     .small-note {
-      font-size: 12px;
-      color: #fff;
-      text-shadow: 0 0 3px #0008;
+      font-size: 14px;
+      color: #475569;
+      margin-top: 8px;
+      font-weight: 600;
     }
 
-    /* file input visually hidden but accessible */
-    input[type="file"] {
-      display: none;
-    }
+    /* ensure file inputs hidden */
+    input[type="file"] { display: none; }
 
-    /* responsive tweak for small screens */
-    @media (max-width: 480px) {
-      .my-yumeko { width: 140px; height: 100px; }
-      .button-row img { width: 90px; height: 140px; }
-      .button-row img:nth-child(2) { width: 140px; }
-    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -305,20 +237,18 @@
           <div id="timeBar" class="time-bar"></div>
         </div>
 
-        <!-- ここにマイユメっ子エリアを追加 -->
-        <div class="my-yumeko-wrap" aria-hidden="false">
-          <label id="myYumekoLabel" class="my-yumeko placeholder" title="ここをクリックしてPNGを選択（またはドラッグ＆ドロップ）">
-            <span class="small-note">マイユメっ子</span>
-            <button class="inner-btn" id="slotLoadBtn">ユメっ子を読み込む</button>
-          </label>
-          <div class="small-note" style="align-self:center;">（PNGを貼れるよ）</div>
-        </div>
+        <!-- 新規追加: マイユメっ子ボタン -->
+        <button id="myYumekoNavBtn" class="home-btn" style="position:relative; bottom:0; right:auto; margin-bottom:12px; display:inline-block; background:#3d9aff; color:#fff;">
+          マイユメっ子
+        </button>
 
-        <input id="myYumekoUpload" type="file" accept="image/png,image/*">
-        <input id="pw" type="password" placeholder="運営用パスワード ">
+        <br>
+
+        <input id="pw" type="password" placeholder="運営用パスワード " style="margin-top:12px; padding:8px 10px; border-radius:8px; border:1px solid #ddd;">
         <button id="myYumekoBtn" class="home-btn" style="bottom:60px;">ユメっ子</button>
 
-        <input type="file" id="uploadImage" style="display:none;">
+        <!-- 既存のアップロードと表示エリア（ホーム内のユメっ子用） -->
+        <input type="file" id="uploadImage" accept="image/*">
         <div id="yumekoDisplay"></div>
 
       </div>
@@ -335,6 +265,29 @@
   <div id="howto" class="page">
     <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asobi.png" class="fullimage">
     <button class="home-btn" onclick="showPage('home')">ホーム</button>
+  </div>
+
+  <!-- 新規: MY YUMEKO ページ -->
+  <div id="myyumeko" class="page">
+    <div class="card-wrapper">
+      <div class="card">
+        <h1>マイユメっ子</h1>
+        <p class="small-note">ここからあなたのユメっ子QRを読み込めます（ホームと同じ機能）</p>
+
+        <!-- 同じユメっ子ボタン（ホームのものと見た目/動作を揃える） -->
+        <button id="myYumekoBtn2" class="home-btn" style="position:static; margin-top:18px; background:#f7d9ec; color:#333; box-shadow:none;">
+          ユメっ子
+        </button>
+
+        <!-- ファイル入力（myyumeko専用・IDが異なる） -->
+        <input type="file" id="uploadImage2" accept="image/*">
+
+        <!-- 表示エリア（myyumeko専用） -->
+        <div id="yumekoDisplay2"></div>
+
+        <button class="home-btn" onclick="showPage('home')" style="background:#fff; color:#333; margin-top:16px;">ホームに戻る</button>
+      </div>
+    </div>
   </div>
 
   <div id="playerContainer"></div>
@@ -366,11 +319,15 @@
     ==================================== */
     function showPage(id) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('active');
+      // 読み込み後にカードフィットを再計算
+      setTimeout(fitCard, 50);
     }
 
     /* ====================================
-       設定（既存のまま）
+       設定
     ==================================== */
     const config = {
       videos: [
@@ -396,7 +353,7 @@
     };
 
     /* ====================================
-       時間管理（既存のまま）
+       時間管理
     ==================================== */
     function nowJST() {
       const d = new Date();
@@ -496,7 +453,7 @@
     updateRemaining();
 
     /* ====================================
-       ランダム動画選択（既存）
+       ランダム動画選択
     ==================================== */
     document.getElementById('joinBtnImg').addEventListener('click', onJoin);
 
@@ -513,7 +470,7 @@
     }
 
     /* ====================================
-       キャラマップ（既存）
+       キャラマップ
     ==================================== */
     const characterMap = {
       v1: { img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char1.jpg', id: 'CHARA001' },
@@ -526,7 +483,7 @@
     };
 
     /* ====================================
-       キャラステ生成（既存）
+       キャラステ生成
     ==================================== */
     function generateStatus() {
       function rnd() {
@@ -546,7 +503,7 @@
     }
 
     /* ====================================
-       キャラカード生成（既存）
+       キャラカード生成
     ==================================== */
     function generateCharacterCard(charInfo, status) {
       const canvas = document.createElement('canvas');
@@ -597,7 +554,7 @@
     }
 
     /* ====================================
-       ラジオ体操参加（既存）
+       ラジオ体操参加
     ==================================== */
     function onJoin() {
       const pick = pickVideo(config.videos);
@@ -636,252 +593,91 @@
     }
 
     /* ====================================
-       既存: ユメっ子読み込み（QR解析） - ファイル選択での挙動
+       ユメっ子読み込み（QR解析）共通処理
+       - ファイルと表示先要素IDを渡すとQRを解析して表示する
+    ==================================== */
+    async function processUploadedFile(file, displayElementId) {
+      if (!file) return;
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+          if (!code) {
+            alert("QRコードが見つかりません");
+            return;
+          }
+
+          const data = JSON.parse(code.data);
+          const d = document.getElementById(displayElementId);
+
+          // 簡単に見栄えよく整形して差し替え
+          d.innerHTML = `
+            <img src="${data.img}" alt="ユメっ子画像">
+            <div>ID: ${data.id}</div>
+            <div>あざとさ: ${data.azatosa}</div>
+            <div>体力: ${data.health}</div>
+            <div>かわいさ: ${data.sweetness}</div>
+          `;
+        } catch (err) {
+          console.error(err);
+          alert("QR解析でエラーが発生しました");
+        }
+      };
+
+      img.onerror = () => {
+        alert("画像を読み込めませんでした");
+      };
+    }
+
+    /* ====================================
+       ホーム側：ユメっ子 ボタンとアップロード（既存動作を維持）
     ==================================== */
     document.getElementById('myYumekoBtn').addEventListener('click', () => {
-      // 既存の挙動：ユーザーが手動で画像を選ぶ（既存のアップロード input を開く）
       document.getElementById('uploadImage').click();
     });
 
     document.getElementById('uploadImage').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      try {
-        const dataURL = await fileToDataURL(file);
-        await parseYumekoFromDataURL(dataURL);
-      } catch (err) {
-        alert('画像の読み込みに失敗しました');
-        console.error(err);
-      }
+      // ホームの表示エリアに出す
+      await processUploadedFile(file, 'yumekoDisplay');
+      // 使い終わったら file input をリセットして同じファイルを再選択できるようにする
+      e.target.value = '';
     });
 
     /* ====================================
-       新規: マイユメっ子領域 - PNG貼り付け / ドラッグ＆ドロップ / 登録した画像を解析
+       マイユメっ子ページ側：同じ仕組みを複製
     ==================================== */
-    const myYumekoLabel = document.getElementById('myYumekoLabel');
-    const myYumekoUpload = document.getElementById('myYumekoUpload');
-    const slotLoadBtn = document.getElementById('slotLoadBtn');
-
-    // 保持するデータURL（登録されたPNG）
-    let myYumekoDataURL = null;
-
-    // クリックでファイル選択
-    myYumekoLabel.addEventListener('click', (e) => {
-      // クリックでアップロードを開く
-      myYumekoUpload.click();
+    // ナビゲートボタン（ホームから myyumeko へ）
+    document.getElementById('myYumekoNavBtn').addEventListener('click', () => {
+      showPage('myyumeko');
     });
 
-    // ドラッグ＆ドロップ対応
-    myYumekoLabel.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      myYumekoLabel.style.opacity = '0.85';
+    document.getElementById('myYumekoBtn2').addEventListener('click', () => {
+      document.getElementById('uploadImage2').click();
     });
 
-    myYumekoLabel.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      myYumekoLabel.style.opacity = '1';
+    document.getElementById('uploadImage2').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processUploadedFile(file, 'yumekoDisplay2');
+      e.target.value = '';
     });
-
-    myYumekoLabel.addEventListener('drop', (e) => {
-      e.preventDefault();
-      myYumekoLabel.style.opacity = '1';
-      const dt = e.dataTransfer;
-      if (!dt) return;
-      const f = dt.files && dt.files[0];
-      if (!f) return;
-      handleMyYumekoFile(f);
-    });
-
-    myYumekoUpload.addEventListener('change', (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      handleMyYumekoFile(f);
-      // reset so same file can be chosen again if needed
-      myYumekoUpload.value = '';
-    });
-
-    async function handleMyYumekoFile(file) {
-      // PNG推奨だが image/* を受ける
-      if (!file.type.startsWith('image/')) {
-        alert('画像ファイルを選択してください (PNG 等)');
-        return;
-      }
-      try {
-        const dataURL = await fileToDataURL(file);
-        registerMyYumekoDataURL(dataURL);
-      } catch (err) {
-        console.error(err);
-        alert('ファイル読み込みに失敗しました');
-      }
-    }
-
-    function registerMyYumekoDataURL(dataURL) {
-      myYumekoDataURL = dataURL;
-      // 表示を差し替え
-      myYumekoLabel.classList.remove('placeholder');
-      myYumekoLabel.classList.add('has-image');
-      myYumekoLabel.innerHTML = ''; // 中身クリア
-      const img = document.createElement('img');
-      img.src = dataURL;
-      img.alt = 'マイユメっ子';
-      myYumekoLabel.appendChild(img);
-
-      // inner button は再追加
-      const innerBtn = document.createElement('button');
-      innerBtn.className = 'inner-btn';
-      innerBtn.id = 'slotLoadBtnInner';
-      innerBtn.textContent = 'ユメっ子を読み込む';
-      innerBtn.addEventListener('click', async (ev) => {
-        ev.stopPropagation(); // 親ラベルのクリックでファイル選択が開かないように
-        if (!myYumekoDataURL) { alert('まず画像を登録してください'); return; }
-        await parseYumekoFromDataURL(myYumekoDataURL);
-      });
-
-      myYumekoLabel.appendChild(innerBtn);
-
-      // 右下小さな削除アイコン（任意）
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '削除';
-      delBtn.title = '登録画像を削除';
-      delBtn.style.position = 'absolute';
-      delBtn.style.top = '6px';
-      delBtn.style.right = '6px';
-      delBtn.style.background = 'rgba(0,0,0,0.45)';
-      delBtn.style.color = '#fff';
-      delBtn.style.border = 'none';
-      delBtn.style.borderRadius = '6px';
-      delBtn.style.padding = '4px 6px';
-      delBtn.style.cursor = 'pointer';
-      delBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        clearMyYumekoSlot();
-      });
-      myYumekoLabel.appendChild(delBtn);
-    }
-
-    function clearMyYumekoSlot() {
-      myYumekoDataURL = null;
-      myYumekoLabel.classList.remove('has-image');
-      myYumekoLabel.classList.add('placeholder');
-      myYumekoLabel.innerHTML = '<span class="small-note">マイユメっ子</span><button class="inner-btn" id="slotLoadBtn">ユメっ子を読み込む</button>';
-      // 再バインド inner btn (ただし placeholder の時は非表示のまま)
-      const b = document.getElementById('slotLoadBtn');
-      if (b) b.style.display = 'none';
-    }
-
-    // 初期化：placeholder の inner ボタンは非表示にしておく
-    (function initSlot() {
-      const b = document.getElementById('slotLoadBtn');
-      if (b) b.style.display = 'none';
-    })();
 
     /* ====================================
-       ユーティリティ: File -> DataURL
+       追加：myYumekoNavBtn を押したときの戻り挙動は home にする（homeへ戻るボタンは myyumeko 内にあり）
     ==================================== */
-    function fileToDataURL(file) {
-      return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-    }
-
-    /* ====================================
-       QR解析: DataURLを使って既存の表示（yumekoDisplay）へ
-       （uploadImage の流れと同様の出力）
-    ==================================== */
-    async function parseYumekoFromDataURL(dataURL) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = dataURL;
-
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-            if (!code) {
-              alert("QRコードが見つかりません");
-              return resolve(null);
-            }
-
-            let data;
-            try {
-              data = JSON.parse(code.data);
-            } catch (err) {
-              alert("QRの内容が不正です");
-              return resolve(null);
-            }
-
-            const d = document.getElementById('yumekoDisplay');
-            d.innerHTML = `
-              <img src="${data.img}">
-              <div style="color:#fff">ID: ${escapeHtml(String(data.id || ''))}</div>
-              <div style="color:#fff">あざとさ: ${escapeHtml(String(data.azatosa || ''))}</div>
-              <div style="color:#fff">体力: ${escapeHtml(String(data.health || ''))}</div>
-              <div style="color:#fff">かわいさ: ${escapeHtml(String(data.sweetness || ''))}</div>
-            `;
-            return resolve(data);
-          } catch (err) {
-            console.error(err);
-            alert('画像解析中にエラーが発生しました');
-            return resolve(null);
-          }
-        };
-
-        img.onerror = (e) => {
-          console.error('Image load error', e);
-          alert('画像を読み込めませんでした');
-          return resolve(null);
-        };
-      });
-    }
-
-    // 簡易エスケープ（XSS対策）
-    function escapeHtml(s) {
-      return s.replace(/[&<>"'`=\/]/g, function (c) {
-        return ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-          '/': '&#47;',
-          '`': '&#96;',
-          '=': '&#61;'
-        })[c];
-      });
-    }
-
-    /* ====================================
-       （既存）ページ外クリックで playerContainer を閉じる等の補助
-    ==================================== */
-    document.getElementById('playerContainer').addEventListener('click', (e) => {
-      // クリックで閉じる（ただし中の画像やリンクをクリックしたいなら無効化）
-      if (e.target === e.currentTarget) {
-        e.currentTarget.style.display = 'none';
-      }
-    });
-
-    // ESC でフルスクを抜ける等の簡易処理
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        try { if (document.fullscreenElement) document.exitFullscreen(); } catch (err) {}
-        const container = document.getElementById('playerContainer');
-        container.style.display = 'none';
-      }
-    });
-
-    // ページ読み込み時の初期スロットクリア
-    clearMyYumekoSlot();
+    // （必要ならここに追加ロジック）
 
   </script>
 
