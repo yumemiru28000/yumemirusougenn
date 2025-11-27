@@ -75,12 +75,13 @@ p.desc{
 
 /* 上の3ボタン */
 .button-row{
-  gap: 3px; /* ← ここを小さくすれば間隔が狭くなる */
   display:flex;
-  justify-content:space-between;
+  justify-content:center; /* ← space-between をやめる */
   align-items:center;
   margin-bottom:1px;
+  gap: 3px; /* ← 間の隙間をこれで調整 */
 }
+
 .button-row img{
   width:130px;
   height:200px;
@@ -90,12 +91,11 @@ p.desc{
   margin:0;
 }
 
-/* ★ 真ん中のボタン（2番目）だけ横長にする ★ */
+/* 真ん中だけ横長 */
 .button-row img:nth-child(2){
-  width:160px; /* ← 好きな横幅に変更してOK */
-  height:200px; /* ← 高さはそのまま */
-  margin: 0 2px;
+  width:160px;
 }
+
   
 
 /* 残り時間 */ 
@@ -401,6 +401,7 @@ updateRemaining();
 
 </body>
 </html>
+
 
 
 
