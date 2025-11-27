@@ -60,6 +60,7 @@
       text-align: center;
       border: 3px solid var(--yume-blue);
       box-sizing: border-box;
+      position: relative;
     }
 
     h1 {
@@ -105,7 +106,7 @@
     #remainingTime {
       font-size: 17px;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       color: #ffffff;
       text-shadow: 0 0 4px #0008;
     }
@@ -150,6 +151,8 @@
       font-size: 18px;
       font-weight: 700;
       box-shadow: 0 3px 6px #0005;
+      cursor: pointer;
+      border: none;
     }
 
     #playerContainer {
@@ -199,6 +202,80 @@
       text-align: center;
       flex-direction: column;
     }
+
+    /* マイユメっ子エリア */
+    .my-yumeko-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .my-yumeko {
+      width: 170px;
+      height: 120px;
+      border-radius: 12px;
+      background: linear-gradient(180deg,#ffffffaa,#ffffff66);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px dashed rgba(0,0,0,0.08);
+    }
+
+    .my-yumeko.placeholder {
+      filter: saturate(0.7);
+    }
+
+    .my-yumeko img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .my-yumeko .inner-btn {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .my-yumeko.has-image .inner-btn {
+      display: block;
+    }
+
+    .small-note {
+      font-size: 12px;
+      color: #fff;
+      text-shadow: 0 0 3px #0008;
+    }
+
+    /* file input visually hidden but accessible */
+    input[type="file"] {
+      display: none;
+    }
+
+    /* responsive tweak for small screens */
+    @media (max-width: 480px) {
+      .my-yumeko { width: 140px; height: 100px; }
+      .button-row img { width: 90px; height: 140px; }
+      .button-row img:nth-child(2) { width: 140px; }
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -228,6 +305,16 @@
           <div id="timeBar" class="time-bar"></div>
         </div>
 
+        <!-- ここにマイユメっ子エリアを追加 -->
+        <div class="my-yumeko-wrap" aria-hidden="false">
+          <label id="myYumekoLabel" class="my-yumeko placeholder" title="ここをクリックしてPNGを選択（またはドラッグ＆ドロップ）">
+            <span class="small-note">マイユメっ子</span>
+            <button class="inner-btn" id="slotLoadBtn">ユメっ子を読み込む</button>
+          </label>
+          <div class="small-note" style="align-self:center;">（PNGを貼れるよ）</div>
+        </div>
+
+        <input id="myYumekoUpload" type="file" accept="image/png,image/*">
         <input id="pw" type="password" placeholder="運営用パスワード ">
         <button id="myYumekoBtn" class="home-btn" style="bottom:60px;">ユメっ子</button>
 
@@ -283,7 +370,7 @@
     }
 
     /* ====================================
-       設定
+       設定（既存のまま）
     ==================================== */
     const config = {
       videos: [
@@ -309,7 +396,7 @@
     };
 
     /* ====================================
-       時間管理
+       時間管理（既存のまま）
     ==================================== */
     function nowJST() {
       const d = new Date();
@@ -409,7 +496,7 @@
     updateRemaining();
 
     /* ====================================
-       ランダム動画選択
+       ランダム動画選択（既存）
     ==================================== */
     document.getElementById('joinBtnImg').addEventListener('click', onJoin);
 
@@ -426,7 +513,7 @@
     }
 
     /* ====================================
-       キャラマップ
+       キャラマップ（既存）
     ==================================== */
     const characterMap = {
       v1: { img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char1.jpg', id: 'CHARA001' },
@@ -439,7 +526,7 @@
     };
 
     /* ====================================
-       キャラステ生成
+       キャラステ生成（既存）
     ==================================== */
     function generateStatus() {
       function rnd() {
@@ -459,7 +546,7 @@
     }
 
     /* ====================================
-       キャラカード生成
+       キャラカード生成（既存）
     ==================================== */
     function generateCharacterCard(charInfo, status) {
       const canvas = document.createElement('canvas');
@@ -510,7 +597,7 @@
     }
 
     /* ====================================
-       ラジオ体操参加
+       ラジオ体操参加（既存）
     ==================================== */
     function onJoin() {
       const pick = pickVideo(config.videos);
@@ -549,46 +636,253 @@
     }
 
     /* ====================================
-       ユメっ子読み込み（QR解析）
+       既存: ユメっ子読み込み（QR解析） - ファイル選択での挙動
     ==================================== */
     document.getElementById('myYumekoBtn').addEventListener('click', () => {
+      // 既存の挙動：ユーザーが手動で画像を選ぶ（既存のアップロード input を開く）
       document.getElementById('uploadImage').click();
     });
 
     document.getElementById('uploadImage').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-        if (!code) {
-          alert("QRコードが見つかりません");
-          return;
-        }
-
-        const data = JSON.parse(code.data);
-
-        const d = document.getElementById('yumekoDisplay');
-        d.innerHTML = `
-          <img src="${data.img}">
-          <div>ID: ${data.id}</div>
-          <div>あざとさ: ${data.azatosa}</div>
-          <div>体力: ${data.health}</div>
-          <div>かわいさ: ${data.sweetness}</div>
-        `;
-      };
+      try {
+        const dataURL = await fileToDataURL(file);
+        await parseYumekoFromDataURL(dataURL);
+      } catch (err) {
+        alert('画像の読み込みに失敗しました');
+        console.error(err);
+      }
     });
+
+    /* ====================================
+       新規: マイユメっ子領域 - PNG貼り付け / ドラッグ＆ドロップ / 登録した画像を解析
+    ==================================== */
+    const myYumekoLabel = document.getElementById('myYumekoLabel');
+    const myYumekoUpload = document.getElementById('myYumekoUpload');
+    const slotLoadBtn = document.getElementById('slotLoadBtn');
+
+    // 保持するデータURL（登録されたPNG）
+    let myYumekoDataURL = null;
+
+    // クリックでファイル選択
+    myYumekoLabel.addEventListener('click', (e) => {
+      // クリックでアップロードを開く
+      myYumekoUpload.click();
+    });
+
+    // ドラッグ＆ドロップ対応
+    myYumekoLabel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      myYumekoLabel.style.opacity = '0.85';
+    });
+
+    myYumekoLabel.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      myYumekoLabel.style.opacity = '1';
+    });
+
+    myYumekoLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      myYumekoLabel.style.opacity = '1';
+      const dt = e.dataTransfer;
+      if (!dt) return;
+      const f = dt.files && dt.files[0];
+      if (!f) return;
+      handleMyYumekoFile(f);
+    });
+
+    myYumekoUpload.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      handleMyYumekoFile(f);
+      // reset so same file can be chosen again if needed
+      myYumekoUpload.value = '';
+    });
+
+    async function handleMyYumekoFile(file) {
+      // PNG推奨だが image/* を受ける
+      if (!file.type.startsWith('image/')) {
+        alert('画像ファイルを選択してください (PNG 等)');
+        return;
+      }
+      try {
+        const dataURL = await fileToDataURL(file);
+        registerMyYumekoDataURL(dataURL);
+      } catch (err) {
+        console.error(err);
+        alert('ファイル読み込みに失敗しました');
+      }
+    }
+
+    function registerMyYumekoDataURL(dataURL) {
+      myYumekoDataURL = dataURL;
+      // 表示を差し替え
+      myYumekoLabel.classList.remove('placeholder');
+      myYumekoLabel.classList.add('has-image');
+      myYumekoLabel.innerHTML = ''; // 中身クリア
+      const img = document.createElement('img');
+      img.src = dataURL;
+      img.alt = 'マイユメっ子';
+      myYumekoLabel.appendChild(img);
+
+      // inner button は再追加
+      const innerBtn = document.createElement('button');
+      innerBtn.className = 'inner-btn';
+      innerBtn.id = 'slotLoadBtnInner';
+      innerBtn.textContent = 'ユメっ子を読み込む';
+      innerBtn.addEventListener('click', async (ev) => {
+        ev.stopPropagation(); // 親ラベルのクリックでファイル選択が開かないように
+        if (!myYumekoDataURL) { alert('まず画像を登録してください'); return; }
+        await parseYumekoFromDataURL(myYumekoDataURL);
+      });
+
+      myYumekoLabel.appendChild(innerBtn);
+
+      // 右下小さな削除アイコン（任意）
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '削除';
+      delBtn.title = '登録画像を削除';
+      delBtn.style.position = 'absolute';
+      delBtn.style.top = '6px';
+      delBtn.style.right = '6px';
+      delBtn.style.background = 'rgba(0,0,0,0.45)';
+      delBtn.style.color = '#fff';
+      delBtn.style.border = 'none';
+      delBtn.style.borderRadius = '6px';
+      delBtn.style.padding = '4px 6px';
+      delBtn.style.cursor = 'pointer';
+      delBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        clearMyYumekoSlot();
+      });
+      myYumekoLabel.appendChild(delBtn);
+    }
+
+    function clearMyYumekoSlot() {
+      myYumekoDataURL = null;
+      myYumekoLabel.classList.remove('has-image');
+      myYumekoLabel.classList.add('placeholder');
+      myYumekoLabel.innerHTML = '<span class="small-note">マイユメっ子</span><button class="inner-btn" id="slotLoadBtn">ユメっ子を読み込む</button>';
+      // 再バインド inner btn (ただし placeholder の時は非表示のまま)
+      const b = document.getElementById('slotLoadBtn');
+      if (b) b.style.display = 'none';
+    }
+
+    // 初期化：placeholder の inner ボタンは非表示にしておく
+    (function initSlot() {
+      const b = document.getElementById('slotLoadBtn');
+      if (b) b.style.display = 'none';
+    })();
+
+    /* ====================================
+       ユーティリティ: File -> DataURL
+    ==================================== */
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    /* ====================================
+       QR解析: DataURLを使って既存の表示（yumekoDisplay）へ
+       （uploadImage の流れと同様の出力）
+    ==================================== */
+    async function parseYumekoFromDataURL(dataURL) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = dataURL;
+
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (!code) {
+              alert("QRコードが見つかりません");
+              return resolve(null);
+            }
+
+            let data;
+            try {
+              data = JSON.parse(code.data);
+            } catch (err) {
+              alert("QRの内容が不正です");
+              return resolve(null);
+            }
+
+            const d = document.getElementById('yumekoDisplay');
+            d.innerHTML = `
+              <img src="${data.img}">
+              <div style="color:#fff">ID: ${escapeHtml(String(data.id || ''))}</div>
+              <div style="color:#fff">あざとさ: ${escapeHtml(String(data.azatosa || ''))}</div>
+              <div style="color:#fff">体力: ${escapeHtml(String(data.health || ''))}</div>
+              <div style="color:#fff">かわいさ: ${escapeHtml(String(data.sweetness || ''))}</div>
+            `;
+            return resolve(data);
+          } catch (err) {
+            console.error(err);
+            alert('画像解析中にエラーが発生しました');
+            return resolve(null);
+          }
+        };
+
+        img.onerror = (e) => {
+          console.error('Image load error', e);
+          alert('画像を読み込めませんでした');
+          return resolve(null);
+        };
+      });
+    }
+
+    // 簡易エスケープ（XSS対策）
+    function escapeHtml(s) {
+      return s.replace(/[&<>"'`=\/]/g, function (c) {
+        return ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+          '/': '&#47;',
+          '`': '&#96;',
+          '=': '&#61;'
+        })[c];
+      });
+    }
+
+    /* ====================================
+       （既存）ページ外クリックで playerContainer を閉じる等の補助
+    ==================================== */
+    document.getElementById('playerContainer').addEventListener('click', (e) => {
+      // クリックで閉じる（ただし中の画像やリンクをクリックしたいなら無効化）
+      if (e.target === e.currentTarget) {
+        e.currentTarget.style.display = 'none';
+      }
+    });
+
+    // ESC でフルスクを抜ける等の簡易処理
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        try { if (document.fullscreenElement) document.exitFullscreen(); } catch (err) {}
+        const container = document.getElementById('playerContainer');
+        container.style.display = 'none';
+      }
+    });
+
+    // ページ読み込み時の初期スロットクリア
+    clearMyYumekoSlot();
+
   </script>
 
 </body>
