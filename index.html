@@ -563,57 +563,30 @@
       img.src = URL.createObjectURL(file);
 
       img.onload = () => {
-        let w = img.width;
-        let h = img.height;
-        const maxSize = 500;
-
-        if (w > h && w > maxSize) {
-          h *= maxSize / w;
-          w = maxSize;
-        } else if (h > w && h > maxSize) {
-          w *= maxSize / h;
-          h = maxSize;
-        } else if (w > maxSize) {
-          h *= maxSize / w;
-          w = maxSize;
-        }
-
         const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
 
-        const imageData = ctx.getImageData(0, 0, w, h);
-        const code = jsQR(imageData.data, w, h);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
 
-        if (code) {
-          try {
-            const data = JSON.parse(code.data);
-            const disp = document.getElementById('yumekoDisplay');
-            disp.innerHTML = '';
-
-            const charImg = new Image();
-            charImg.src = data.img || characterMap[data.id]?.img || '';
-            charImg.style.maxWidth = '200px';
-
-            disp.appendChild(charImg);
-
-            const stats = document.createElement('div');
-            stats.textContent = `あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
-
-            disp.appendChild(stats);
-
-          } catch (e) {
-            alert('QR解析失敗');
-            console.error(e);
-          }
-        } else {
-          alert('QRコードが見つかりません');
+        if (!code) {
+          alert("QRコードが見つかりません");
+          return;
         }
 
-        URL.revokeObjectURL(img.src);
+        const data = JSON.parse(code.data);
+
+        const d = document.getElementById('yumekoDisplay');
+        d.innerHTML = `
+          <img src="${data.img}">
+          <div>ID: ${data.id}</div>
+          <div>あざとさ: ${data.azatosa}</div>
+          <div>体力: ${data.health}</div>
+          <div>かわいさ: ${data.sweetness}</div>
+        `;
       };
     });
   </script>
