@@ -304,9 +304,96 @@ document.getElementById('uploadImage').addEventListener('change',async(e)=>{
   }
 });
 </script>
+<script>
+/* --- 自動トリミング機能を追加（既存コードは一切変更なし） --- */
+
+document.getElementById('uploadImage').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+
+    /* ■■■ まずは元の縮小処理をそのまま実施（既存コード） ■■■ */
+    let w = img.width;
+    let h = img.height;
+    const maxSize = 500;
+
+    if (w > h && w > maxSize) {
+      h *= maxSize / w;
+      w = maxSize;
+    } else if (h > w && h > maxSize) {
+      w *= maxSize / h;
+      h = maxSize;
+    } else if (w > maxSize) {
+      h *= maxSize / w;
+      w = maxSize;
+    }
+
+    /* ■■■ 元画像を 500px 以下に収める（既存処理）■■■ */
+    const baseCanvas = document.createElement('canvas');
+    baseCanvas.width = w;
+    baseCanvas.height = h;
+    const baseCtx = baseCanvas.getContext('2d');
+    baseCtx.drawImage(img, 0, 0, w, h);
+
+    /* -----------------------------------------------------
+      ★ここから追加処理：QRコード付近を自動トリミング
+       （左下 25% を切り出す）
+    ------------------------------------------------------*/
+    
+    const cutW = Math.floor(w * 0.25);   // 幅25%
+    const cutH = Math.floor(h * 0.25);   // 高さ25%
+    const sx = 0;                        // 左端
+  
+
+    const cutCanvas = document.createElement('canvas');
+    cutCanvas.width = cutW;
+    cutCanvas.height = cutH;
+    const cutCtx = cutCanvas.getContext('2d');
+
+    cutCtx.drawImage(baseCanvas, sx, sy, cutW, cutH, 0, 0, cutW, cutH);
+
+    /* -----------------------------------------------------
+      ★既存QR解析処理を書き換えず、使う canvas だけ差し替える
+    ------------------------------------------------------*/
+
+    const imageData = cutCtx.getImageData(0, 0, cutW, cutH);
+    const code = jsQR(imageData.data, cutW, cutH);
+
+    if (code) {
+      try {
+        const data = JSON.parse(code.data);
+        const disp = document.getElementById('yumekoDisplay');
+        disp.innerHTML = "";
+
+        const charImg = new Image();
+        charImg.src = data.img || characterMap[data.id]?.img || "";
+        charImg.style.maxWidth = "200px";
+        disp.appendChild(charImg);
+
+        const stats = document.createElement("div");
+        stats.textContent = `あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
+        disp.appendChild(stats);
+
+      } catch (e) {
+        alert("QR解析失敗");
+        console.error(e);
+      }
+    } else {
+      alert("QRコードが見つかりません");
+    }
+
+    URL.revokeObjectURL(img.src);
+  };
+});
+</script>
 
 </body>
 </html>
+
 
 
 
