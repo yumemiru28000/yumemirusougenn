@@ -42,14 +42,16 @@ html,body{
 /* カード */
 .card{
   background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(6px);
+  backdrop-filter:blur(3px);
   padding:28px;
   border-radius:18px;
-  box-shadow:0 6px 20px rgba(16,24,40,0.12);
+  box-shadow:0 6px 20px rgba(16,24,40,0.30);
   width:100%;
-  max-width:600px;
+  max-width:720px;
   text-align:center;
   border:3px solid var(--yume-blue);
+  
+  box-sizing: border-box;  /* ← これが重要！ */
 }
 
 /* タイトル */
@@ -397,6 +399,7 @@ updateRemaining();
 
 </body>
 </html>
+
 
 
 
