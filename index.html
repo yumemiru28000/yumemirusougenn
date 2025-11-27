@@ -29,6 +29,24 @@ html,body{
   center/cover no-repeat fixed;
 }
 
+/* ここから追加：画面内に必ず収める -------------------------------------------------- */
+.wrap{
+  width:100vw;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:16px;
+  box-sizing:border-box;
+}
+
+/* カードの縮小を許可（画面からはみ出さない） */
+.card{
+  transform-origin:center top;
+  max-height:100%;
+}
+/* ここまで追加 ----------------------------------------------------------------------- */
+
 /* ページ共通 */
 .page{
   display:none;
@@ -52,9 +70,7 @@ html,body{
   max-width:720px;
   text-align:center;
   border:3px solid var(--yume-blue);
-  
-  box-sizing: border-box;  /* ← これが重要！ */
-
+  box-sizing: border-box;
 }
 
 /* タイトル */
@@ -81,12 +97,11 @@ p.desc{
 /* 上の3ボタン */
 .button-row{
   display:flex;
-  justify-content:center; /* ← space-between をやめる */
+  justify-content:center;
   align-items:center;
   margin-bottom:1px;
-  gap: 3px; /* ← 間の隙間をこれで調整 */
+  gap: 3px;
 }
-
 .button-row img{
   width:130px;
   height:200px;
@@ -95,8 +110,6 @@ p.desc{
   flex:none;
   margin:0;
 }
-
-/* 真ん中だけ横長 */
 .button-row img:nth-child(2){
   width:200px;
 }
@@ -132,12 +145,12 @@ p.desc{
   transition:width 0.5s linear;
 }
 
-/* 画像ページ（背景白に変更済み）*/
+/* 画像ページ */
 .fullimage{
   width:100%;
   height:100%;
   object-fit:contain;
-  background:white;   /* ← ここを黒→白に */
+  background:white;
 }
 
 /* ホームボタン */
@@ -283,7 +296,7 @@ function getNextStart(){
   return next;
 }
 
-/* UI更新 */
+/* UI 更新 */
 function updateRemaining(){
   const j=nowJST();
   const pw=document.getElementById('pw').value===config.bypassPassword;
@@ -402,22 +415,3 @@ updateRemaining();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
