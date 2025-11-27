@@ -20,32 +20,13 @@
 html,body{
   height:100%;
   margin:0;
-  overflow: hidden;
+  overflow:hidden;
   font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
 
   background-color:#d2e879;
   background:url('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/home.png') center/cover no-repeat;
   color:var(--accent);
-  center/cover no-repeat fixed;
 }
-
-/* ここから追加：画面内に必ず収める -------------------------------------------------- */
-.wrap{
-  width:100vw;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  padding:16px;
-  box-sizing:border-box;
-}
-
-/* カードの縮小を許可（画面からはみ出さない） */
-.card{
-  transform-origin:center top;
-  max-height:100%;
-}
-/* ここまで追加 ----------------------------------------------------------------------- */
 
 /* ページ共通 */
 .page{
@@ -59,7 +40,18 @@ html,body{
   justify-content:center;
 }
 
-/* カード */
+/* 追加：カードを縮小するためのラッパー */
+.card-wrapper{
+  transform-origin: top center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+/* カード本体 */
 .card{
   background:rgba(255,255,255,0.05);
   backdrop-filter:blur(3px);
@@ -70,7 +62,7 @@ html,body{
   max-width:720px;
   text-align:center;
   border:3px solid var(--yume-blue);
-  box-sizing: border-box;
+  box-sizing:border-box;
 }
 
 /* タイトル */
@@ -100,7 +92,7 @@ p.desc{
   justify-content:center;
   align-items:center;
   margin-bottom:1px;
-  gap: 3px;
+  gap:3px;
 }
 .button-row img{
   width:130px;
@@ -108,7 +100,6 @@ p.desc{
   object-fit:contain;
   cursor:pointer;
   flex:none;
-  margin:0;
 }
 .button-row img:nth-child(2){
   width:200px;
@@ -190,7 +181,7 @@ video{
 
 <!-- ホーム -->
 <div id="home" class="page active">
-  <div class="wrap">
+  <div class="card-wrapper">
     <div class="card">
 
       <h1>ユメミる草原</h1>
@@ -229,11 +220,30 @@ video{
 
 <script>
 
+/* カード自動縮小：画面に絶対収まる */
+function fitCard(){
+  const wrap = document.querySelector('.card-wrapper');
+  const card = document.querySelector('.card');
+
+  const wh = window.innerHeight;
+  const cw = card.offsetWidth;
+  const ch = card.offsetHeight;
+
+  const scale = Math.min(1, wh / (ch + 20));
+
+  wrap.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener('resize', fitCard);
+window.addEventListener('load', fitCard);
+
 /* ページ切替 */
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+
+/* 以下はあなたの元コード（変更なし） */
 
 /* 設定 */
 const config={
@@ -296,7 +306,7 @@ function getNextStart(){
   return next;
 }
 
-/* UI 更新 */
+/* UI更新 */
 function updateRemaining(){
   const j=nowJST();
   const pw=document.getElementById('pw').value===config.bypassPassword;
@@ -415,3 +425,4 @@ updateRemaining();
 
 </body>
 </html>
+
