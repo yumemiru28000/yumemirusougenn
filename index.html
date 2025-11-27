@@ -27,172 +27,35 @@ html,body{
   color:var(--accent);
 }
 
-.page{
-  display:none;
-  width:100vw;
-  height:100vh;
-}
-.page.active{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
+.page{ display:none; width:100vw; height:100vh; }
+.page.active{ display:flex; align-items:center; justify-content:center; }
 
-.card-wrapper{
-  transform-origin: top center;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-}
+.card-wrapper{ transform-origin: top center; display:flex; align-items:center; justify-content:center; width:100%; height:100%; overflow:hidden; }
+.card{ background:rgba(255,255,255,0.05); backdrop-filter:blur(3px); padding:28px; border-radius:18px; box-shadow:0 6px 20px rgba(16,24,40,0.30); width:100%; max-width:720px; text-align:center; border:3px solid var(--yume-blue); box-sizing:border-box; }
+h1{ font-weight:700; margin:0 0 10px; font-size:38px; letter-spacing:0.02em; color:#67b337; text-shadow:0 0 6px #ffffffaa; }
+p.subtitle{ margin:0 0 12px; color:#475569; font-weight:600; }
+p.desc{ margin:0 0 20px; color:#334155; }
 
-.card{
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(3px);
-  padding:28px;
-  border-radius:18px;
-  box-shadow:0 6px 20px rgba(16,24,40,0.30);
-  width:100%;
-  max-width:720px;
-  text-align:center;
-  border:3px solid var(--yume-blue);
-  box-sizing:border-box;
-}
+.button-row{ display:flex; justify-content:center; align-items:center; margin-bottom:1px; gap:3px; }
+.button-row img{ width:130px; height:200px; object-fit:contain; cursor:pointer; flex:none; }
+.button-row img:nth-child(2){ width:200px; }
 
-h1{
-  font-weight:700;
-  margin:0 0 10px;
-  font-size:38px;
-  letter-spacing:0.02em;
-  color:#67b337;
-  text-shadow:0 0 6px #ffffffaa;
-}
+#remainingTime{ font-size:17px; font-weight:700; margin-bottom:4px; color:#ffffff; text-shadow:0 0 4px #0008; }
 
-p.subtitle{
-  margin:0 0 12px;
-  color:#475569;
-  font-weight:600;
-}
-p.desc{
-  margin:0 0 20px;
-  color:#334155;
-}
+.time-bar-wrap{ width:100%; height:16px; background:var(--bar-bg); border-radius:20px; margin-top:6px; margin-bottom:14px; overflow:hidden; border:2px solid #fff; position:relative; }
+.time-bar{ height:100%; width:100%; background:var(--bar-fill); position:absolute; right:0; top:0; transition:width 0.5s linear; }
 
-.button-row{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin-bottom:1px;
-  gap:3px;
-}
-.button-row img{
-  width:130px;
-  height:200px;
-  object-fit:contain;
-  cursor:pointer;
-  flex:none;
-}
-.button-row img:nth-child(2){
-  width:200px;
-}
+.fullimage{ width:100%; height:100%; object-fit:contain; background:white; }
 
-#remainingTime{
-  font-size:17px;
-  font-weight:700;
-  margin-bottom:4px;
-  color:#ffffff;
-  text-shadow:0 0 4px #0008;
-}
+.home-btn{ position:absolute; bottom:20px; right:20px; padding:12px 20px; background:#f7d9ec; color:#333; border-radius:12px; font-size:18px; font-weight:700; box-shadow:0 3px 6px #0005; }
 
-.time-bar-wrap{
-  width:100%;
-  height:16px;
-  background:var(--bar-bg);
-  border-radius:20px;
-  margin-top:6px;
-  margin-bottom:14px;
-  overflow:hidden;
-  border:2px solid #fff;
-  position:relative;
-}
-.time-bar{
-  height:100%;
-  width:100%;
-  background:var(--bar-fill);
-  position:absolute;
-  right:0;
-  top:0;
-  transition:width 0.5s linear;
-}
+#playerContainer{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#000000; z-index:9999; flex-direction:column; }
+video{ width:100%; height:100%; object-fit:contain; background:#ccc84b; }
 
-.fullimage{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  background:white;
-}
+#yumekoDisplay{ position:absolute; top:10%; left:50%; transform:translateX(-50%); text-align:center; color:#fff; z-index:10000; }
+#yumekoDisplay img{ max-width:200px; display:block; margin:0 auto 10px; }
 
-.home-btn{
-  position:absolute;
-  bottom:20px;
-  right:20px;
-  padding:12px 20px;
-  background:#f7d9ec;
-  color:#333;
-  border-radius:12px;
-  font-size:18px;
-  font-weight:700;
-  box-shadow:0 3px 6px #0005;
-}
-
-#playerContainer{
-  position:fixed;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:#000000;
-  z-index:9999;
-  flex-direction:column;
-}
-video{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  background:#ccc84b;
-}
-
-#yumekoDisplay{
-  position:absolute;
-  top:10%;
-  left:50%;
-  transform:translateX(-50%);
-  text-align:center;
-  color:#fff;
-  z-index:10000;
-}
-#yumekoDisplay img{
-  max-width:200px;
-  display:block;
-  margin:0 auto 10px;
-}
-
-/* END画面 */
-#endScreen{
-  display:none;
-  width:100%;
-  height:100%;
-  background:#334155;
-  color:#fff;
-  font-size:36px;
-  font-weight:bold;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  flex-direction:column;
-}
+#endScreen{ display:none; width:100%; height:100%; background:#334155; color:#fff; font-size:36px; font-weight:bold; align-items:center; justify-content:center; text-align:center; flex-direction:column; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -205,7 +68,6 @@ video{
 <div id="home" class="page active">
   <div class="card-wrapper">
     <div class="card">
-
       <h1>ユメミる草原</h1>
 
       <div class="button-row">
@@ -215,7 +77,7 @@ video{
       </div>
 
       <p class="subtitle">出撃可能時間 : （Local Time) <strong>06:00〜06:03</strong></p>
-      <p class="desc">　ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー　</p>
+      <p class="desc">ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
 
       <div id="remainingTime"></div>
       <div class="time-bar-wrap"><div id="timeBar" class="time-bar"></div></div>
@@ -260,8 +122,7 @@ window.addEventListener('load',fitCard);
 
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const page=document.getElementById(id);
-  page.classList.add('active');
+  document.getElementById(id).classList.add('active');
 }
 
 const config={
@@ -279,31 +140,8 @@ const config={
 };
 
 function nowJST(){ const d=new Date(); return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000); }
-
-function isWithinAllowedWindow(){
-  const j=nowJST();
-  for(const t of config.allowedTimes){
-    const s=new Date(j); s.setHours(t.hour,t.startMinute,0,0);
-    const e=new Date(j); e.setHours(t.hour,t.endMinute,59,999);
-    if(j>=s && j<=e) return true;
-  }
-  return false;
-}
-
-function getNextStart(){
-  const j=nowJST();
-  let next=null;
-  for(const t of config.allowedTimes){
-    const s=new Date(j); s.setHours(t.hour,t.startMinute,0,0);
-    if(s>j && (!next||s<next)) next=s;
-  }
-  if(!next){
-    const t=config.allowedTimes[0];
-    next=new Date(j.getTime()+24*3600*1000);
-    next.setHours(t.hour,t.startMinute,0,0);
-  }
-  return next;
-}
+function isWithinAllowedWindow(){ const j=nowJST(); for(const t of config.allowedTimes){ const s=new Date(j); s.setHours(t.hour,t.startMinute,0,0); const e=new Date(j); e.setHours(t.hour,t.endMinute,59,999); if(j>=s && j<=e) return true; } return false; }
+function getNextStart(){ const j=nowJST(); let next=null; for(const t of config.allowedTimes){ const s=new Date(j); s.setHours(t.hour,t.startMinute,0,0); if(s>j && (!next||s<next)) next=s; } if(!next){ const t=config.allowedTimes[0]; next=new Date(j.getTime()+24*3600*1000); next.setHours(t.hour,t.startMinute,0,0); } return next; }
 
 function updateRemaining(){
   const j=nowJST();
@@ -316,56 +154,24 @@ function updateRemaining(){
   joinBtnImg.style.opacity=allowed?1:0.45;
   joinBtnImg.style.pointerEvents=allowed?'auto':'none';
 
-  if(pw){
-    tDiv.textContent='運営モード - いつでも開始できます';
-    bar.style.width='0%';
-    return;
-  }
+  if(pw){ tDiv.textContent='運営モード - いつでも開始できます'; bar.style.width='0%'; return; }
 
   const next=getNextStart();
-  const startToday=new Date(j);
-  startToday.setHours(6,0,0,0);
-  if(j<startToday) startToday.setDate(startToday.getDate()-1);
-
-  const totalDaySec=24*3600;
-  const elapsedSec=(j-startToday)/1000;
-  const percentDay=elapsedSec/totalDaySec*100;
-  const invPercentDay=100-percentDay;
+  const startToday=new Date(j); startToday.setHours(6,0,0,0); if(j<startToday) startToday.setDate(startToday.getDate()-1);
+  const totalDaySec=24*3600; const elapsedSec=(j-startToday)/1000; const percentDay=elapsedSec/totalDaySec*100; const invPercentDay=100-percentDay;
 
   if(isWithinAllowedWindow()){
-    const t=config.allowedTimes[0];
-    const start=new Date(j); start.setHours(t.hour,t.startMinute,0,0);
-    const end=new Date(j);   end.setHours(t.hour,t.endMinute,59,999);
-    const diff=(end-j)/1000;
-    const min=Math.floor(diff/60);
-    const sec=Math.floor(diff%60);
+    const t=config.allowedTimes[0]; const start=new Date(j); start.setHours(t.hour,t.startMinute,0,0); const end=new Date(j); end.setHours(t.hour,t.endMinute,59,999); const diff=(end-j)/1000; const min=Math.floor(diff/60); const sec=Math.floor(diff%60);
     tDiv.textContent=`開始可能時間内 : 残り ${min}分 ${sec}秒`;
-
-    const totalSecWindow=(end-start)/1000;
-    const elapsedWindow=(j-start)/1000;
-    const percentWindow=elapsedWindow/totalSecWindow*100;
+    const totalSecWindow=(end-start)/1000; const elapsedWindow=(j-start)/1000; const percentWindow=elapsedWindow/totalSecWindow*100;
     bar.style.width=`${100-percentWindow}%`;
-  }
-  else{
-    const diff=(next-j)/1000;
-    const h=Math.floor(diff/3600);
-    const m=Math.floor((diff%3600)/60);
-    const s=Math.floor(diff%60);
-    tDiv.textContent=`残り : ${h}時間 ${m}分 ${s}秒`;
-    bar.style.width=`${invPercentDay}%`;
-  }
+  } else { const diff=(next-j)/1000; const h=Math.floor(diff/3600); const m=Math.floor((diff%3600)/60); const s=Math.floor(diff%60); tDiv.textContent=`残り : ${h}時間 ${m}分 ${s}秒`; bar.style.width=`${invPercentDay}%`; }
 }
-setInterval(updateRemaining,1000);
-updateRemaining();
+setInterval(updateRemaining,1000); updateRemaining();
 
 document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 
-function pickVideo(videos){
-  const total=videos.reduce((s,v)=>s+v.weight,0);
-  let r=Math.random()*total;
-  for(const v of videos){ r-=v.weight; if(r<0) return v; }
-  return videos[videos.length-1];
-}
+function pickVideo(videos){ const total=videos.reduce((s,v)=>s+v.weight,0); let r=Math.random()*total; for(const v of videos){ r-=v.weight; if(r<0) return v; } return videos[videos.length-1]; }
 
 const characterMap = {
   v1:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char1.jpg',id:'CHARA001'},
@@ -377,19 +183,8 @@ const characterMap = {
   v13:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char7.jpg',id:'CHARA007'}
 };
 
-function generateStatus(){
-  function rnd(){
-    const r=Math.random()*100;
-    if(r<0.1) return 100;
-    if(r<5) return Math.floor(90+Math.random()*9);
-    if(r<10) return Math.floor(80+Math.random()*10);
-    if(r<20) return Math.floor(70+Math.random()*10);
-    return Math.floor(Math.random()*70);
-  }
-  return {azatosa:rnd(),health:rnd(),sweetness:rnd()};
-}
+function generateStatus(){ function rnd(){ const r=Math.random()*100; if(r<0.1) return 100; if(r<5) return Math.floor(90+Math.random()*9); if(r<10) return Math.floor(80+Math.random()*10); if(r<20) return Math.floor(70+Math.random()*10); return Math.floor(Math.random()*70); } return {azatosa:rnd(),health:rnd(),sweetness:rnd()}; }
 
-/* --- 動画終了後キャラカード生成 --- */
 function generateCharacterCard(charInfo,status){
   const canvas=document.createElement('canvas');
   const ctx=canvas.getContext('2d');
@@ -402,9 +197,9 @@ function generateCharacterCard(charInfo,status){
     canvas.height=img.height;
     ctx.drawImage(img,0,0);
 
-    const qrSize=Math.min(180,canvas.width/3); // QR大きめ
+    const qrSize=Math.min(180,canvas.width/3);
     ctx.fillStyle='white';
-    ctx.fillRect(10,canvas.height-qrSize-10,qrSize,qrSize); // 左下に変更
+    ctx.fillRect(10,canvas.height-qrSize-10,qrSize,qrSize);
 
     const qrCanvas=document.createElement('canvas');
     const qrData=JSON.stringify({id:charInfo.id,img:charInfo.img,...status});
@@ -440,32 +235,20 @@ function onJoin(){
   container.innerHTML='';
 
   const vid=document.createElement('video');
-  vid.src=pick.url;
-  vid.playsInline=true;
-  vid.autoplay=true;
-  vid.controls=false;
+  vid.src=pick.url; vid.playsInline=true; vid.autoplay=true; vid.controls=false;
   container.appendChild(vid);
 
-  vid.addEventListener('loadeddata',async()=>{
-    try{await vid.play();}catch(e){}
-    try{if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){}
-  });
+  vid.addEventListener('loadeddata',async()=>{ try{await vid.play();}catch(e){} try{if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){} });
 
   vid.addEventListener('ended',async()=>{
     try{if(document.fullscreenElement) await document.exitFullscreen();}catch(e){}
     container.innerHTML='';
-
     const charInfo=characterMap[pick.id];
-    if(charInfo){
-      const status=generateStatus();
-      generateCharacterCard(charInfo,status);
-    }else{
-      showPage('endScreen');
-    }
+    if(charInfo){ const status=generateStatus(); generateCharacterCard(charInfo,status); }else{ showPage('endScreen'); }
   });
 }
 
-/* --- ユメっ子読み込み --- */
+/* --- ユメっ子読み込み改善 --- */
 document.getElementById('myYumekoBtn').addEventListener('click',()=>{
   document.getElementById('uploadImage').click();
 });
@@ -476,33 +259,38 @@ document.getElementById('uploadImage').addEventListener('change',async(e)=>{
 
   const img=new Image();
   img.src=URL.createObjectURL(file);
-  img.onload=()=>URL.revokeObjectURL(img.src);
+  img.onload=()=>{
+    // 安定のため最大500pxに縮小
+    let w=img.width; let h=img.height;
+    const maxSize=500;
+    if(w>h && w>maxSize){ h*=maxSize/w; w=maxSize; }
+    else if(h>w && h>maxSize){ w*=maxSize/h; h=maxSize; }
+    else if(w>maxSize){ h*=maxSize/w; w=maxSize; }
 
-  const canvas=document.createElement('canvas');
-  const ctx=canvas.getContext('2d');
-  canvas.width=img.width;
-  canvas.height=img.height;
-  ctx.drawImage(img,0,0);
+    const canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
 
-  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-  const code=jsQR(imageData.data,canvas.width,canvas.height);
-  if(code){
-    try{
-      const data=JSON.parse(code.data);
-      const disp=document.getElementById('yumekoDisplay');
-      disp.innerHTML='';
+    const imageData=ctx.getImageData(0,0,w,h);
+    const code=jsQR(imageData.data,w,h);
+    if(code){
+      try{
+        const data=JSON.parse(code.data);
+        const disp=document.getElementById('yumekoDisplay');
+        disp.innerHTML='';
 
-      const charImg=new Image();
-      charImg.src=data.img||characterMap[data.id]?.img||'';
-      charImg.style.maxWidth='200px';
-      disp.appendChild(charImg);
+        const charImg=new Image();
+        charImg.src=data.img||characterMap[data.id]?.img||'';
+        charImg.style.maxWidth='200px';
+        disp.appendChild(charImg);
 
-      const stats=document.createElement('div');
-      stats.textContent=`あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
-      disp.appendChild(stats);
-    }catch(e){alert('QR解析失敗');}
-  }else{
-    alert('QRコードが見つかりません');
+        const stats=document.createElement('div');
+        stats.textContent=`あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
+        disp.appendChild(stats);
+      }catch(e){ alert('QR解析失敗'); console.error(e); }
+    }else{ alert('QRコードが見つかりません'); }
+    URL.revokeObjectURL(img.src);
   }
 });
 </script>
