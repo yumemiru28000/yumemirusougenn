@@ -307,7 +307,6 @@ document.getElementById('uploadImage').addEventListener('change',async(e)=>{
   
 <script>
 /* --- 自動トリミング機能を追加（既存コードは一切変更なし） --- */
-
 document.getElementById('uploadImage').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -317,23 +316,15 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
 
   img.onload = () => {
 
-    /* ■■■ まずは元の縮小処理をそのまま実施（既存コード） ■■■ */
+    // 既存の縮小処理
     let w = img.width;
     let h = img.height;
     const maxSize = 500;
 
-    if (w > h && w > maxSize) {
-      h *= maxSize / w;
-      w = maxSize;
-    } else if (h > w && h > maxSize) {
-      w *= maxSize / h;
-      h = maxSize;
-    } else if (w > maxSize) {
-      h *= maxSize / w;
-      w = maxSize;
-    }
+    if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; }
+    else if (h > w && h > maxSize) { w *= maxSize / h; h = maxSize; }
+    else if (w > maxSize) { h *= maxSize / w; w = maxSize; }
 
-    /* ■■■ 元画像を 500px 以下に収める（既存処理）■■■ */
     const baseCanvas = document.createElement('canvas');
     baseCanvas.width = w;
     baseCanvas.height = h;
@@ -341,28 +332,36 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
     baseCtx.drawImage(img, 0, 0, w, h);
 
     /* -----------------------------------------------------
-      ★ここから追加処理：QRコード付近を自動トリミング
-       （左下 25% を切り出す）
+      ★追加処理：左下200x200を切り取る
     ------------------------------------------------------*/
-    const qrW = 200;  // QRの横幅
-    const qrH = 200;  // QRの高さ
 
-    const sx = 0;           // 左下なので x=0
-    const sy = h - qrH;     // 下から QR の高さ分上にずらす
-    const sw = qrW;
-    const sh = qrH;
+    // 元画像が1920x1080に対してQRは左下200x200
+    const qrOriginalW = 200;
+    const qrOriginalH = 200;
 
+    // 縮小率
+    const scaleX = w / img.width;
+    const scaleY = h / img.height;
+
+    const qrW = qrOriginalW * scaleX;
+    const qrH = qrOriginalH * scaleY;
+
+    const sx = 0;          // 左端
+    const sy = h - qrH;    // 下から上に
+
+    // 切り取り用キャンバス
+    const cutCanvas = document.createElement('canvas');
     cutCanvas.width = qrW;
     cutCanvas.height = qrH;
+    const cutCtx = cutCanvas.getContext('2d');
     cutCtx.drawImage(baseCanvas, sx, sy, qrW, qrH, 0, 0, qrW, qrH);
 
-
     /* -----------------------------------------------------
-      ★既存QR解析処理を書き換えず、使う canvas だけ差し替える
+      ★既存QR解析処理は書き換えず、切り取ったcanvasを使う
     ------------------------------------------------------*/
 
-    const imageData = cutCtx.getImageData(0, 0, cutW, cutH);
-    const code = jsQR(imageData.data, cutW, cutH);
+    const imageData = cutCtx.getImageData(0, 0, qrW, qrH);
+    const code = jsQR(imageData.data, qrW, qrH);
 
     if (code) {
       try {
@@ -394,6 +393,7 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
 
 </body>
 </html>
+
 
 
 
