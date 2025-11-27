@@ -257,9 +257,42 @@ function onJoin(){
     if(charInfo){ const status=generateStatus(); generateCharacterCard(charInfo,status); }else{ showPage('endScreen'); }
   });
 }
+/* --- ユメっ子読み込み改善 --- */
+document.getElementById('myYumekoBtn').addEventListener('click',()=>{
+  document.getElementById('uploadImage').click();
+});
 
+document.getElementById('uploadImage').addEventListener('change',async(e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
 
-disp.appendChild(charImg);
+  const img=new Image();
+  img.src=URL.createObjectURL(file);
+  img.onload=()=>{
+    // 安定のため最大500pxに縮小
+    let w=img.width; let h=img.height;
+    const maxSize=500;
+    if(w>h && w>maxSize){ h*=maxSize/w; w=maxSize; }
+    else if(h>w && h>maxSize){ w*=maxSize/h; h=maxSize; }
+    else if(w>maxSize){ h*=maxSize/w; w=maxSize; }
+
+    const canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+
+    const imageData=ctx.getImageData(0,0,w,h);
+    const code=jsQR(imageData.data,w,h);
+    if(code){
+      try{
+        const data=JSON.parse(code.data);
+        const disp=document.getElementById('yumekoDisplay');
+        disp.innerHTML='';
+
+        const charImg=new Image();
+        charImg.src=data.img||characterMap[data.id]?.img||'';
+        charImg.style.maxWidth='200px';
+        disp.appendChild(charImg);
 
         const stats=document.createElement('div');
         stats.textContent=`あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
@@ -270,6 +303,7 @@ disp.appendChild(charImg);
   }
 });
 </script>
+
   
 <script>
 /* --- 自動トリミング機能を追加（既存コードは一切変更なし） --- */
@@ -359,6 +393,7 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
 
 </body>
 </html>
+
 
 
 
