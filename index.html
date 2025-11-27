@@ -174,7 +174,28 @@ video{
   object-fit:contain;
   background:#ccc84b;
 }
+
+/* マイユメっ子表示用 */
+#yumekoDisplay{
+  position:absolute;
+  top:10%;
+  left:50%;
+  transform:translateX(-50%);
+  text-align:center;
+  color:#fff;
+  z-index:10000;
+}
+#yumekoDisplay img{
+  max-width:200px;
+  display:block;
+  margin:0 auto 10px;
+}
 </style>
+
+<!-- QRコードライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+
 </head>
 
 <body>
@@ -199,6 +220,10 @@ video{
       <div class="time-bar-wrap"><div id="timeBar" class="time-bar"></div></div>
 
       <input id="pw" type="password" placeholder="運営用パスワード ">
+      <!-- マイユメっ子ボタン -->
+      <button id="myYumekoBtn" class="home-btn" style="bottom:60px;">マイユメっ子</button>
+      <input type="file" id="uploadImage" style="display:none;">
+      <div id="yumekoDisplay"></div>
     </div>
   </div>
 </div>
@@ -219,21 +244,17 @@ video{
 <div id="playerContainer"></div>
 
 <script>
+/* --- 既存コードそのまま --- */
 
-/* カード自動縮小：画面に絶対収まる */
+/* カード自動縮小 */
 function fitCard(){
   const wrap = document.querySelector('.card-wrapper');
   const card = document.querySelector('.card');
-
   const wh = window.innerHeight;
-  const cw = card.offsetWidth;
   const ch = card.offsetHeight;
-
   const scale = Math.min(1, wh / (ch + 20));
-
   wrap.style.transform = `scale(${scale})`;
 }
-
 window.addEventListener('resize', fitCard);
 window.addEventListener('load', fitCard);
 
@@ -242,8 +263,6 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
-/* 以下はあなたの元コード（変更なし） */
 
 /* 設定 */
 const config={
@@ -265,19 +284,12 @@ const config={
     {id:'v15',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4',weight:2},
     {id:'v16',url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4',weight:2}
   ],
-
   bypassPassword:'1122',
-
-  allowedTimes:[
-    {hour:6,startMinute:0,endMinute:3}
-  ]
+  allowedTimes:[ {hour:6,startMinute:0,endMinute:3} ]
 };
 
 /* JST */
-function nowJST(){
-  const d=new Date();
-  return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000);
-}
+function nowJST(){ const d=new Date(); return new Date(d.getTime()+d.getTimezoneOffset()*60000+9*3600*1000); }
 
 /* 許可時間判定 */
 function isWithinAllowedWindow(){
@@ -365,8 +377,78 @@ function updateRemaining(){
   }
 }
 
+setInterval(updateRemaining,1000);
+updateRemaining();
+
+/* --- 動画選択 --- */
 document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 
+function pickVideo(videos){
+  const total=videos.reduce((s,v)=>s+v.weight,0);
+  let r=Math.random()*total;
+  for(const v of videos){ r-=v.weight; if(r<0) return v; }
+  return videos[videos.length-1];
+}
+
+/* --- キャラ設定 --- */
+const characterMap = {
+  v1:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char1.png',id:'CHARA001'},
+  v2:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char2.png',id:'CHARA002'},
+  v3:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char3.png',id:'CHARA003'},
+  v4:{img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/char4.png',id:'CHARA004'},
+  // 以降動画IDに応じて追加可能
+};
+
+/* --- ステータス生成 --- */
+function generateStatus(){
+  function rnd(){
+    const r=Math.random()*100;
+    if(r<0.1) return 100;
+    if(r<5) return Math.floor(90+Math.random()*9);
+    if(r<10) return Math.floor(80+Math.random()*10);
+    if(r<20) return Math.floor(70+Math.random()*10);
+    return Math.floor(Math.random()*70);
+  }
+  return {azatosa:rnd(),health:rnd(),sweetness:rnd()};
+}
+
+/* --- キャラカード生成 --- */
+function generateCharacterCard(charInfo,status){
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.src=charInfo.img;
+
+  img.onload=()=>{
+    canvas.width=img.width;
+    canvas.height=img.height;
+    ctx.drawImage(img,0,0);
+
+    // QRコード用白四角
+    const qrSize=120;
+    ctx.fillStyle='white';
+    ctx.fillRect(canvas.width-qrSize-10,canvas.height-qrSize-10,qrSize,qrSize);
+
+    // QRコード生成
+    const qrCanvas=document.createElement('canvas');
+    const qrData=JSON.stringify({id:charInfo.id,...status});
+    QRCode.toCanvas(qrCanvas,qrData,{width:qrSize},()=>{
+      ctx.drawImage(qrCanvas,canvas.width-qrSize-10,canvas.height-qrSize-10);
+      // 保存リンク
+      const dataUrl=canvas.toDataURL('image/png');
+      const link=document.createElement('a');
+      link.href=dataUrl;
+      link.download=`${charInfo.id}.png`;
+      link.textContent='画像を保存';
+      link.style.display='block';
+      link.style.marginTop='20px';
+      document.body.appendChild(link);
+    });
+  }
+}
+
+/* --- 動画開始・終了 --- */
 function onJoin(){
   const pick=pickVideo(config.videos);
   const container=document.getElementById('playerContainer');
@@ -378,49 +460,66 @@ function onJoin(){
   vid.playsInline=true;
   vid.autoplay=true;
   vid.controls=false;
-
   container.appendChild(vid);
 
   vid.addEventListener('loadeddata',async()=>{
     try{await vid.play();}catch(e){}
-    try{
-      if(container.requestFullscreen)
-        await container.requestFullscreen({navigationUI:'hide'});
-    }catch(e){}
+    try{if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){}
   });
 
   vid.addEventListener('ended',async()=>{
-    try{
-      if(document.fullscreenElement)
-        await document.exitFullscreen();
-    }catch(e){}
+    try{if(document.fullscreenElement) await document.exitFullscreen();}catch(e){}
+    container.style.display='none';
+    container.innerHTML='';
 
-    vid.remove();
-    const endText=document.createElement('div');
-    endText.textContent='END';
-    Object.assign(endText.style,{
-      color:'#fff',fontSize:'48px',fontWeight:'700',
-      position:'absolute',top:'45%',left:'50%',
-      transform:'translate(-50%,-50%)'
-    });
-    container.appendChild(endText);
+    // ここでキャラ画像＋QR生成
+    const charInfo=characterMap[pick.id];
+    if(charInfo){
+      const status=generateStatus();
+      generateCharacterCard(charInfo,status);
+    }
   });
 }
 
-function pickVideo(videos){
-  const total=videos.reduce((s,v)=>s+v.weight,0);
-  let r=Math.random()*total;
+/* --- マイユメっ子 --- */
+document.getElementById('myYumekoBtn').addEventListener('click',()=>{
+  document.getElementById('uploadImage').click();
+});
 
-  for(const v of videos){
-    r-=v.weight;
-    if(r<0) return v;
+document.getElementById('uploadImage').addEventListener('change',async(e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+
+  const img=new Image();
+  img.src=URL.createObjectURL(file);
+  img.onload=()=>URL.revokeObjectURL(img.src);
+
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=img.width;
+  canvas.height=img.height;
+  ctx.drawImage(img,0,0);
+
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const code=jsQR(imageData.data,canvas.width,canvas.height);
+  if(code){
+    try{
+      const data=JSON.parse(code.data);
+      const disp=document.getElementById('yumekoDisplay');
+      disp.innerHTML='';
+
+      const charImg=new Image();
+      charImg.src=characterMap[data.id]?.img||'';
+      disp.appendChild(charImg);
+
+      const stats=document.createElement('div');
+      stats.textContent=`あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
+      disp.appendChild(stats);
+    }catch(e){alert('QR解析失敗');}
+  }else{
+    alert('QRコードが見つかりません');
   }
-  return videos[videos.length-1];
-}
-
-setInterval(updateRemaining,1000);
-updateRemaining();
-
+});
 </script>
 
 </body>
