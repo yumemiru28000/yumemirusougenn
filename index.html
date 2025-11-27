@@ -164,7 +164,7 @@ function updateRemaining(){
   joinBtnImg.style.opacity=allowed?1:0.45;
   joinBtnImg.style.pointerEvents=allowed?'auto':'none';
 
-  if(pw){ tDiv.textContent='運営モード - いつでも開始できます'; bar.style.width='0%'; return; }
+  if(pw){ tDiv.textContent='運営モード - いつでも開始可'; bar.style.width='0%'; return; }
 
   const next=getNextStart();
   const startToday=new Date(j); startToday.setHours(6,0,0,0); if(j<startToday) startToday.setDate(startToday.getDate()-1);
@@ -393,6 +393,7 @@ document.getElementById('uploadImage').addEventListener('change', async (e) => {
 
 </body>
 </html>
+
 
 
 
