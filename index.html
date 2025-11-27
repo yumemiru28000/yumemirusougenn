@@ -410,14 +410,18 @@ function generateCharacterCard(charInfo,status){
     canvas.height=img.height;
     ctx.drawImage(img,0,0);
 
-    const qrSize=120;
-    ctx.fillStyle='white';
-    ctx.fillRect(canvas.width-qrSize-10,canvas.height-qrSize-10,qrSize,qrSize);
+    // QRコードサイズ大きめ
+    const qrSize=Math.max(150, Math.min(canvas.width, canvas.height)/4);
 
+    // 左下に白い四角
+    ctx.fillStyle='white';
+    ctx.fillRect(10, canvas.height-qrSize-10, qrSize, qrSize);
+
+    // QRコード生成
     const qrCanvas=document.createElement('canvas');
     const qrData=JSON.stringify({id:charInfo.id,...status});
-    QRCode.toCanvas(qrCanvas,qrData,{width:qrSize},()=>{
-      ctx.drawImage(qrCanvas,canvas.width-qrSize-10,canvas.height-qrSize-10);
+    QRCode.toCanvas(qrCanvas, qrData,{width:qrSize},()=>{
+      ctx.drawImage(qrCanvas,10, canvas.height-qrSize-10);
 
       // 表示
       const container=document.getElementById('playerContainer');
@@ -445,43 +449,7 @@ function generateCharacterCard(charInfo,status){
   }
 }
 
-function onJoin(){
-  const pick=pickVideo(config.videos);
-  const container=document.getElementById('playerContainer');
-  container.style.display='flex';
-  container.innerHTML='';
-
-  const vid=document.createElement('video');
-  vid.src=pick.url;
-  vid.playsInline=true;
-  vid.autoplay=true;
-  vid.controls=false;
-  container.appendChild(vid);
-
-  vid.addEventListener('loadeddata',async()=>{
-    try{await vid.play();}catch(e){}
-    try{if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){}
-  });
-
-  vid.addEventListener('ended',async()=>{
-    try{if(document.fullscreenElement) await document.exitFullscreen();}catch(e){}
-    container.innerHTML='';
-
-    const charInfo=characterMap[pick.id];
-    if(charInfo){
-      const status=generateStatus();
-      generateCharacterCard(charInfo,status);
-    }else{
-      // キャラがなければEND画面表示
-      showPage('endScreen');
-    }
-  });
-}
-
-document.getElementById('myYumekoBtn').addEventListener('click',()=>{
-  document.getElementById('uploadImage').click();
-});
-
+/* --- ユメっ子画像読み込み改善 --- */
 document.getElementById('uploadImage').addEventListener('change',async(e)=>{
   const file=e.target.files[0];
   if(!file) return;
@@ -497,27 +465,40 @@ document.getElementById('uploadImage').addEventListener('change',async(e)=>{
   ctx.drawImage(img,0,0);
 
   const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-  const code=jsQR(imageData.data,canvas.width,canvas.height);
+  const code=jsQR(imageData.data,canvas.width,canvas.height,{inversionAttempts:"dontInvert"});
   if(code){
     try{
       const data=JSON.parse(code.data);
       const disp=document.getElementById('yumekoDisplay');
       disp.innerHTML='';
 
+      // キャラ画像
       const charImg=new Image();
-      charImg.src=characterMap[data.id]?.img||'';
+      if(characterMap[data.id]) charImg.src=characterMap[data.id].img;
+      else charImg.src=''; // 画像無ければ空
+      charImg.style.maxWidth='150px';
+      charImg.style.display='block';
+      charImg.style.margin='0 auto 10px';
       disp.appendChild(charImg);
 
+      // ステータス
       const stats=document.createElement('div');
-      stats.textContent=`あざとさ:${data.azatosa} 健康:${data.health} 甘えん坊:${data.sweetness}`;
+      stats.style.color='#fff';
+      stats.style.fontWeight='600';
+      stats.textContent=`あざとさ:${data.azatosa||0} 健康:${data.health||0} 甘えん坊:${data.sweetness||0}`;
       disp.appendChild(stats);
-    }catch(e){alert('QR解析失敗');}
+    }catch(e){
+      alert('QR解析失敗');
+    }
   }else{
     alert('QRコードが見つかりません');
   }
 });
+
+
 </script>
 
 </body>
 </html>
+
 
