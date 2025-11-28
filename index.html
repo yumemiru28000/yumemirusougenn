@@ -466,12 +466,12 @@ ctx.drawImage(qrImgEl, qrX, qrY, qrSize, qrSize);
 
 // --- 右側テキスト -------------------
 const textX = leftColWidth + padding + textAreaPadding;
-let currentY = padding + 20;
+let currentY = padding + 30;
 
 ctx.fillStyle = '#fff';
 ctx.font = '52px sans-serif';
 ctx.fillText(nameText, textX, currentY);
-currentY += 70;
+currentY += 60;
 
 ctx.fillStyle = '#ddd';
 ctx.font = '36px sans-serif';
@@ -491,7 +491,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
         ctx.font = '28px sans-serif';
         ctx.fillStyle = '#bbb';
         ctx.fillText('ユメミる草原 ', textX, currentY);
-        currentY += 46;
+        currentY += 56;
 
         // ダウンロード
         canvas.toBlob((blob) => {
@@ -595,5 +595,6 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
