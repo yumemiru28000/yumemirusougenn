@@ -397,7 +397,7 @@
 
     // QRコードを生成してqrThumbキャンバスに描画
     const qrData = JSON.stringify({id:charInfo.id, img:charInfo.img, ...status});
-    QRCode.toCanvas(qrThumb, qrData, { width: Math.min(160, 120) }, (err) => {
+    QRCode.toCanvas(qrThumb, qrData, { width: 300 }, (err) => {
       if(err) console.error('QR作成エラー', err);
     });
 
@@ -428,7 +428,8 @@
         const charW = Math.round(charImgEl.width * scale);
         const charH = Math.round(charImgEl.height * scale);
 
-        const qrSize = Math.round(Math.min(260, qrImgEl.width * scale, charW * 0.6));
+        const qrSize = Math.round(Math.min(300, qrImgEl.width * 1.0, charW * 0.7));
+
 
         const textAreaWidth = 360;
         const textAreaPadding = 12;
@@ -600,6 +601,7 @@
   </script>
 </body>
 </html>
+
 
 
 
