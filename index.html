@@ -424,11 +424,11 @@
 
         // レイアウト計算（詰めて小さく）
         const padding = 16;
-        const scale = 0.6; // 画像縮小率（詰める）
+        const scale = 0.8; // 画像縮小率（詰める）
         const charW = Math.round(charImgEl.width * scale);
         const charH = Math.round(charImgEl.height * scale);
 
-        const qrSize = Math.round(Math.min(300, qrImgEl.width * scale));
+        const qrSize = Math.round(Math.min(260, qrImgEl.width * scale, charW * 0.6));
 
         const textAreaWidth = 360;
         const textAreaPadding = 12;
@@ -600,4 +600,5 @@
   </script>
 </body>
 </html>
+
 
