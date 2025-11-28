@@ -335,6 +335,8 @@
     leftArea.appendChild(previewImg);
     leftArea.appendChild(qrThumb);
 
+    qrThumb.style.display = 'none';
+
     const rightArea=document.createElement('div');
     rightArea.className='right-area';
 
@@ -591,6 +593,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
