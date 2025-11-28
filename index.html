@@ -424,9 +424,10 @@
 
         // レイアウト計算（詰めて小さく）
         const padding = 16;
-        const scale = 0.8; // 画像縮小率（詰める）
-        const charW = Math.round(charImgEl.width * scale);
-        const charH = Math.round(charImgEl.height * scale);
+        // キャラ画像を 1920x1080 に強制
+        const charW = 1920;
+        const charH = 1080;
+
 
         const qrSize = Math.round(Math.min(300, qrImgEl.width * 1.0, charW * 0.7));
 
@@ -439,8 +440,8 @@
         const canvasWidth = leftColWidth + padding + textAreaWidth + padding*1;
         // 高さ：キャラ高さ + qrを下に並べた場合の高さ or テキスト領域の高さ
         const leftColHeight = charH + padding + qrSize;
-        const textAreaHeight = 220;
-        const canvasHeight = Math.max(leftColHeight, textAreaHeight) + padding*1;
+        const textAreaHeight = 20;
+        const canvasHeight = textAreaHeight + padding * 2;
 
         // キャンバス作成
         const canvas = document.createElement('canvas');
@@ -453,8 +454,7 @@
         ctx.fillRect(0,0,canvas.width,canvas.height);
 
         // 左列背景（少し暗めの枠）
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillRect(padding/2, padding/2, leftColWidth + padding/2, canvas.height - padding);
+        
 
         // キャラ画像描画（左上、詰めて表示）
         const charX = padding;
@@ -601,6 +601,7 @@
   </script>
 </body>
 </html>
+
 
 
 
