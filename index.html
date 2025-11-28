@@ -32,13 +32,27 @@
     .time-bar { height:100%; width:100%; background:var(--bar-fill); position:absolute; right:0; top:0; transition: width 0.5s linear; }
     .fullimage { width:100%; height:100%; object-fit:contain; background:white; }
     .home-btn { position:absolute; bottom:20px; right:20px; padding:12px 20px; background:#f7d9ec; color:#333; border-radius:12px; font-size:18px; font-weight:700; box-shadow:0 3px 6px #0005; }
-    #playerContainer { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#000000; z-index:9999; flex-direction:column; }
+    #playerContainer { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#000000; z-index:9999; flex-direction:column; padding:20px; box-sizing:border-box; }
     video { width:100%; height:100%; object-fit:contain; background:#ccc84b; }
     #yumekoDisplay, #yumekoDisplay2 { position:relative; margin-top:12px; color:#333; }
     #yumekoDisplay img, #yumekoDisplay2 img { max-width:160px; border-radius:10px; display:block; margin:0 auto 8px; }
     #endScreen { display:none; width:100%; height:100%; background:#334155; color:#fff; font-size:36px; font-weight:bold; align-items:center; justify-content:center; text-align:center; flex-direction:column; }
     .small-note { font-size:14px; color:#475569; margin-top:8px; font-weight:600; }
     input[type="file"] { display:none; }
+
+    /* 新UI：保存領域 */
+    .card-preview { display:flex; gap:12px; align-items:flex-start; color:#fff; }
+    .left-area { display:flex; flex-direction:column; gap:8px; align-items:center; }
+    .preview-img { max-width:220px; border-radius:8px; box-shadow:0 2px 8px #0008; background:#fff; }
+    .qr-thumb { width:120px; height:120px; background:#fff; display:block; }
+    .right-area { background:#000; color:#fff; padding:12px; border-radius:8px; min-width:260px; max-width:360px; box-sizing:border-box; }
+    .status-line { margin:6px 0; font-weight:700; }
+    .name-input-row { display:flex; gap:8px; margin-top:8px; align-items:center; }
+    .name-input-row input[type="text"] { flex:1; padding:8px 10px; border-radius:8px; border:1px solid #444; background:rgba(255,255,255,0.02); color:#fff; }
+    .name-input-row input::placeholder { color:#ddd; }
+    .save-btn { padding:8px 12px; border-radius:8px; background:#3d9aff; color:#fff; border:none; font-weight:800; cursor:pointer; }
+    .small-muted { font-size:12px; color:#bbb; margin-top:6px; }
+    .hidden { display:none !important; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -292,41 +306,216 @@
     return { azatosa:rnd(), health:rnd(), sweetness:rnd() };
   }
 
+  /**
+   *  generateCharacterCard
+   *  - 既存の合成を壊さず、詰めて小さく画像を配置
+   *  - 右側にステータス（白文字）を表示
+   *  - 名前を入力する欄（placeholder: ユメっ子に名前を付ける）と保存ボタンを配置
+   *  - 保存時は入力名をファイル名にして1枚のPNGを生成してダウンロード
+   */
   function generateCharacterCard(charInfo,status){
-    const canvas=document.createElement('canvas');
-    const ctx=canvas.getContext('2d');
-    const img=new Image();
-    img.crossOrigin='anonymous';
-    img.src=charInfo.img;
-    img.onload=()=>{
-      canvas.width=img.width;
-      canvas.height=img.height;
-      ctx.drawImage(img,0,0);
-      const qrSize=Math.min(180,canvas.width/3);
-      ctx.fillStyle='white';
-      ctx.fillRect(10,canvas.height-qrSize-10,qrSize,qrSize);
-      const qrCanvas=document.createElement('canvas');
-      const qrData=JSON.stringify({id:charInfo.id,img:charInfo.img,...status});
-      QRCode.toCanvas(qrCanvas,qrData,{width:qrSize},()=>{
-        ctx.drawImage(qrCanvas,10,canvas.height-qrSize-10);
-        const container=document.getElementById('playerContainer');
-        container.innerHTML='';
-        container.style.display='flex';
-        const resultImg=new Image();
-        resultImg.src=canvas.toDataURL('image/png');
-        resultImg.style.maxWidth='80%';
-        resultImg.style.maxHeight='80%';
-        container.appendChild(resultImg);
-        const link=document.createElement('a');
-        link.href=resultImg.src;
-        link.download=`${charInfo.id}.png`;
-        link.textContent='画像を保存';
-        link.style.display='block';
-        link.style.color='#fff';
-        link.style.marginTop='10px';
-        container.appendChild(link);
-      });
-    };
+    const container=document.getElementById('playerContainer');
+    container.innerHTML='';
+
+    // プレビュー領域作成
+    const previewWrap=document.createElement('div');
+    previewWrap.className='card-preview';
+
+    const leftArea=document.createElement('div');
+    leftArea.className='left-area';
+
+    const previewImg=document.createElement('img');
+    previewImg.className='preview-img';
+    previewImg.crossOrigin='anonymous';
+    previewImg.src=charInfo.img;
+
+    const qrThumb=document.createElement('canvas');
+    qrThumb.className='qr-thumb';
+
+    leftArea.appendChild(previewImg);
+    leftArea.appendChild(qrThumb);
+
+    const rightArea=document.createElement('div');
+    rightArea.className='right-area';
+
+    // ステータス表示
+    const idLine=document.createElement('div');
+    idLine.className='status-line';
+    idLine.textContent = `ID: ${charInfo.id}`;
+
+    const azLine=document.createElement('div');
+    azLine.className='status-line';
+    azLine.textContent = `あざとさ: ${status.azatosa}`;
+
+    const hpLine=document.createElement('div');
+    hpLine.className='status-line';
+    hpLine.textContent = `体力: ${status.health}`;
+
+    const swLine=document.createElement('div');
+    swLine.className='status-line';
+    swLine.textContent = `かわいさ: ${status.sweetness}`;
+
+    rightArea.appendChild(idLine);
+    rightArea.appendChild(azLine);
+    rightArea.appendChild(hpLine);
+    rightArea.appendChild(swLine);
+
+    // 名前入力欄と保存ボタン
+    const nameRow=document.createElement('div');
+    nameRow.className='name-input-row';
+
+    const nameInput=document.createElement('input');
+    nameInput.type='text';
+    nameInput.placeholder='ユメっ子に名前を付ける';
+    nameInput.value = ''; // 初期は空。必要ならここに既定値を入れる
+
+    const saveBtn=document.createElement('button');
+    saveBtn.className='save-btn';
+    saveBtn.textContent='保存';
+
+    nameRow.appendChild(nameInput);
+    nameRow.appendChild(saveBtn);
+
+    rightArea.appendChild(nameRow);
+    rightArea.appendChild(document.createElement('div')).className='small-muted';
+    const note=document.createElement('div');
+    note.className='small-muted';
+    note.textContent='保存すると入力した名前で1枚の画像がダウンロードされます';
+    rightArea.appendChild(note);
+
+    previewWrap.appendChild(leftArea);
+    previewWrap.appendChild(rightArea);
+
+    // 追加UIをcontainerに表示
+    container.appendChild(previewWrap);
+
+    // 表示調整
+    container.style.display='flex';
+    container.style.justifyContent='center';
+    container.style.alignItems='center';
+    container.style.flexDirection='column';
+
+    // QRコードを生成してqrThumbキャンバスに描画
+    const qrData = JSON.stringify({id:charInfo.id, img:charInfo.img, ...status});
+    QRCode.toCanvas(qrThumb, qrData, { width: Math.min(160, 120) }, (err) => {
+      if(err) console.error('QR作成エラー', err);
+    });
+
+    // 保存処理（名前を使って画像を合成してダウンロード）
+    saveBtn.addEventListener('click', async ()=> {
+      const nameText = (nameInput.value || '').trim() || charInfo.id;
+      // 画像とQRを使って最終キャンバス作成
+      try {
+        const charImgEl = new Image();
+        charImgEl.crossOrigin='anonymous';
+        charImgEl.src = charInfo.img;
+        await new Promise((res, rej) => {
+          charImgEl.onload = res;
+          charImgEl.onerror = rej;
+        });
+
+        // QRは既にqrThumbキャンバスに描かれている -> これを画像化
+        const qrImgEl = new Image();
+        qrImgEl.src = qrThumb.toDataURL('image/png');
+        await new Promise((res, rej) => {
+          qrImgEl.onload = res;
+          qrImgEl.onerror = rej;
+        });
+
+        // レイアウト計算（詰めて小さく）
+        const padding = 16;
+        const scale = 0.6; // 画像縮小率（詰める）
+        const charW = Math.round(charImgEl.width * scale);
+        const charH = Math.round(charImgEl.height * scale);
+
+        const qrSize = Math.round(Math.min(180, qrImgEl.width * scale, charW * 0.6));
+
+        const textAreaWidth = 360;
+        const textAreaPadding = 12;
+
+        // 横幅：左側の最大(キャラ幅 or qr幅) + padding + テキスト領域
+        const leftColWidth = Math.max(charW, qrSize);
+        const canvasWidth = leftColWidth + padding + textAreaWidth + padding*1;
+        // 高さ：キャラ高さ + qrを下に並べた場合の高さ or テキスト領域の高さ
+        const leftColHeight = charH + padding + qrSize;
+        const textAreaHeight = 220;
+        const canvasHeight = Math.max(leftColHeight, textAreaHeight) + padding*1;
+
+        // キャンバス作成
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+
+        // 背景：黒系（右側は黒、左側少し明るめに）
+        ctx.fillStyle = '#0b0b0b';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        // 左列背景（少し暗めの枠）
+        ctx.fillStyle = '#0f0f0f';
+        ctx.fillRect(padding/2, padding/2, leftColWidth + padding/2, canvas.height - padding);
+
+        // キャラ画像描画（左上、詰めて表示）
+        const charX = padding;
+        const charY = padding;
+        ctx.drawImage(charImgEl, charX, charY, charW, charH);
+
+        // QR描画（キャラの下、左寄せ）
+        const qrX = padding;
+        const qrY = charY + charH + 8;
+        ctx.fillStyle = '#fff';
+        // 背景白の小枠を作ってからQRを描画（見栄え）
+        ctx.fillRect(qrX-6, qrY-6, qrSize+12, qrSize+12);
+        ctx.drawImage(qrImgEl, qrX, qrY, qrSize, qrSize);
+
+        // 右側：ステータステキスト（白）
+        const textX = leftColWidth + padding + textAreaPadding;
+        let currentY = padding + 28;
+        ctx.fillStyle = '#fff';
+        // 名前（大きめ）
+        ctx.font = '26px sans-serif';
+        ctx.fillText(nameText, textX, currentY);
+        currentY += 36;
+
+        // ID
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#ddd';
+        ctx.fillText(`ID: ${charInfo.id}`, textX, currentY);
+        currentY += 28;
+
+        // ステータス
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px sans-serif';
+        ctx.fillText(`あざとさ: ${status.azatosa}`, textX, currentY);
+        currentY += 28;
+        ctx.fillText(`体力: ${status.health}`, textX, currentY);
+        currentY += 28;
+        ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
+        currentY += 34;
+
+        // 小さな注記
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#bbb';
+        ctx.fillText('ユメミる草原 ', textX, currentY);
+
+        // ダウンロード
+        canvas.toBlob((blob) => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          // ファイル名は入力名（拡張子付け）
+          const safeName = nameText.replace(/[\\\/:*?"<>|]/g, '_') || charInfo.id;
+          a.download = `${safeName}.png`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }, 'image/png');
+
+      } catch (err) {
+        console.error('保存処理でエラー', err);
+        alert('画像の保存に失敗しました');
+      }
+    });
+
+    // クリックでプレビューの画像を拡大して閉じるなどの動作を追加しても良い
   }
 
   document.getElementById('joinBtnImg').addEventListener('click',onJoin);
@@ -411,5 +600,3 @@
   </script>
 </body>
 </html>
-
-
