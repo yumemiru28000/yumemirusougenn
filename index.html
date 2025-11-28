@@ -65,7 +65,7 @@
   <div id="home" class="page active">
     <div class="card-wrapper">
       <div class="card">
-        <h1>ユメミる草原</h1>
+        <h1>ユメミる草原1</h1>
         <div class="button-row">
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zukan.png" alt="図鑑" onclick="showPage('zukan')">
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png" id="joinBtnImg" alt="ラジオ体操参加">
@@ -422,80 +422,73 @@
           qrImgEl.onerror = rej;
         });
 
-        // レイアウト計算（詰めて小さく）
-        const padding = 16;
-        const scale = 0.8; // 画像縮小率（詰める）
-        const charW = Math.round(charImgEl.width * scale);
-        const charH = Math.round(charImgEl.height * scale);
+// レイアウト計算（詰めて小さく）
+const padding = 16;
+// キャラ画像を 1920x1080 に強制
+const charW = 1920;
+const charH = 1080;
 
-        const qrSize = Math.round(Math.min(300, qrImgEl.width * 1.0, charW * 0.7));
+const qrSize = Math.round(Math.min(300, qrImgEl.width));
+
+// テキストエリア（幅だけ固定）
+const textAreaWidth = 360;
+const textAreaPadding = 12;
+
+// 左カラムの幅（キャラ画像基準）
+const leftColWidth = charW;
+
+// ★ ここが最重要！キャンバスの高さを正しく計算
+const canvasWidth = leftColWidth + padding + textAreaWidth + padding;
+
+// ▼保存画像の高さは「キャラ画像の高さ」で固定する
+const canvasHeight = charH + padding * 2;
 
 
-        const textAreaWidth = 360;
-        const textAreaPadding = 12;
+// キャンバス作成
+const canvas = document.createElement('canvas');
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
+const ctx = canvas.getContext('2d');
 
-        // 横幅：左側の最大(キャラ幅 or qr幅) + padding + テキスト領域
-        const leftColWidth = Math.max(charW, qrSize);
-        const canvasWidth = leftColWidth + padding + textAreaWidth + padding*1;
-        // 高さ：キャラ高さ + qrを下に並べた場合の高さ or テキスト領域の高さ
-        const leftColHeight = charH + padding + qrSize;
-        const textAreaHeight = 220;
-        const canvasHeight = Math.max(leftColHeight, textAreaHeight) + padding*1;
+// 背景真っ黒
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // キャンバス作成
-        const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
+// --- 左側 ------------------------
+const charX = padding;
+const charY = padding;
+ctx.drawImage(charImgEl, charX, charY, charW, charH);
 
-        // 背景：黒系（右側は黒、左側少し明るめに）
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+// QR：黒い下地を消して白枠なしで描く
+const qrX = charX + charW - qrSize - 20;
+const qrY = charY + charH - qrSize - 20;
+ctx.drawImage(qrImgEl, qrX, qrY, qrSize, qrSize);
 
-        // 左列背景（少し暗めの枠）
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillRect(padding/2, padding/2, leftColWidth + padding/2, canvas.height - padding);
+// --- 右側テキスト -------------------
+const textX = leftColWidth + padding + textAreaPadding;
+let currentY = padding + 20;
 
-        // キャラ画像描画（左上、詰めて表示）
-        const charX = padding;
-        const charY = padding;
-        ctx.drawImage(charImgEl, charX, charY, charW, charH);
+ctx.fillStyle = '#fff';
+ctx.font = '52px sans-serif';
+ctx.fillText(nameText, textX, currentY);
+currentY += 40;
 
-        // QR描画（キャラの下、左寄せ）
-        const qrX = padding;
-        const qrY = charY + charH + 8;
-        ctx.fillStyle = '#fff';
-        // 背景白の小枠を作ってからQRを描画（見栄え）
-        ctx.fillRect(qrX-6, qrY-6, qrSize+12, qrSize+12);
-        ctx.drawImage(qrImgEl, qrX, qrY, qrSize, qrSize);
+ctx.fillStyle = '#ddd';
+ctx.font = '36px sans-serif';
+ctx.fillText(`ID: ${charInfo.id}`, textX, currentY);
+currentY += 28;
 
-        // 右側：ステータステキスト（白）
-        const textX = leftColWidth + padding + textAreaPadding;
-        let currentY = padding + 28;
-        ctx.fillStyle = '#fff';
-        // 名前（大きめ）
-        ctx.font = '26px sans-serif';
-        ctx.fillText(nameText, textX, currentY);
-        currentY += 36;
+ctx.fillStyle = '#fff';
+ctx.font = '40px sans-serif';
+ctx.fillText(`あざとさ: ${status.azatosa}`, textX, currentY);
+currentY += 28;
+ctx.fillText(`体力: ${status.health}`, textX, currentY);
+currentY += 28;
+ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
 
-        // ID
-        ctx.font = '18px sans-serif';
-        ctx.fillStyle = '#ddd';
-        ctx.fillText(`ID: ${charInfo.id}`, textX, currentY);
-        currentY += 28;
-
-        // ステータス
-        ctx.fillStyle = '#fff';
-        ctx.font = '20px sans-serif';
-        ctx.fillText(`あざとさ: ${status.azatosa}`, textX, currentY);
-        currentY += 28;
-        ctx.fillText(`体力: ${status.health}`, textX, currentY);
-        currentY += 28;
-        ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
-        currentY += 34;
 
         // 小さな注記
-        ctx.font = '14px sans-serif';
+        ctx.font = '28px sans-serif';
         ctx.fillStyle = '#bbb';
         ctx.fillText('ユメミる草原 ', textX, currentY);
 
@@ -601,10 +594,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
