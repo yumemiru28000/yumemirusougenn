@@ -460,7 +460,7 @@ const charY = padding;
 ctx.drawImage(charImgEl, charX, charY, charW, charH);
 
 // QR：黒い下地を消して白枠なしで描く
-const qrX = charX + charW - qrSize - 20;
+const qrX = leftColWidth + padding + 20; // ←ここを変更！
 const qrY = charY + charH - qrSize - 20;
 ctx.drawImage(qrImgEl, qrX, qrY, qrSize, qrSize);
 
@@ -591,6 +591,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
