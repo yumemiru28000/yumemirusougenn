@@ -471,19 +471,19 @@ let currentY = padding + 20;
 ctx.fillStyle = '#fff';
 ctx.font = '52px sans-serif';
 ctx.fillText(nameText, textX, currentY);
-currentY += 40;
+currentY += 70;
 
 ctx.fillStyle = '#ddd';
 ctx.font = '36px sans-serif';
 ctx.fillText(`ID: ${charInfo.id}`, textX, currentY);
-currentY += 28;
+currentY += 46;
 
 ctx.fillStyle = '#fff';
 ctx.font = '40px sans-serif';
 ctx.fillText(`あざとさ: ${status.azatosa}`, textX, currentY);
-currentY += 28;
+currentY += 46;
 ctx.fillText(`体力: ${status.health}`, textX, currentY);
-currentY += 28;
+currentY += 46;
 ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
 
 
@@ -491,6 +491,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
         ctx.font = '28px sans-serif';
         ctx.fillStyle = '#bbb';
         ctx.fillText('ユメミる草原 ', textX, currentY);
+        currentY += 46;
 
         // ダウンロード
         canvas.toBlob((blob) => {
@@ -594,3 +595,4 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
