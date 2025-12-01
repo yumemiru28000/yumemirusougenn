@@ -260,26 +260,72 @@
   /* =========================
      複数タブ制御＋リロード防止
   ========================= */
-  const TAB_KEY='myYumekoTabLock';
-  const TIMEOUT_MIN=5;
-  function checkTabLock(){
-    const j=nowJST();
-    if(!isWithinAllowedWindow()) return; // 制御時間外は無効
-    const lock=localStorage.getItem(TAB_KEY);
-    if(lock){
-      const data=JSON.parse(lock);
-      const expire=new Date(data.time);
-      if(j<expire){
-        alert('このサイトは他のタブで開かれています。5分後に解除されます');
-        document.body.innerHTML='<h1 style="text-align:center;margin-top:40vh;color:red;">別タブで利用中です</h1>';
-        throw new Error('Tab locked');
-      }
+ /* =========================
+   複数タブ制御＋リロード防止（完全版）
+========================= */
+const TAB_KEY = 'myYumekoTabLock';
+const TAB_ID = crypto.randomUUID(); // このタブ固有ID
+const TIMEOUT_MS = 5 * 60 * 1000;   // 5分
+
+function checkTabLock(){
+  const j = nowJST();
+  if(!isWithinAllowedWindow()) return;
+
+  const now = j.getTime();
+  const lockRaw = localStorage.getItem(TAB_KEY);
+
+  if(lockRaw){
+    const lock = JSON.parse(lockRaw);
+
+    // 他タブが生存していたらブロック
+    if(lock.tabId !== TAB_ID && now - lock.time < TIMEOUT_MS){
+      alert('このサイトはすでに別タブで開かれています。\n5分後に解除されます。');
+      document.body.innerHTML =
+        '<h1 style="text-align:center;margin-top:40vh;color:red;">別タブで利用中です</h1>';
+      throw new Error('TAB LOCKED');
     }
-    const expire=new Date(j.getTime()+TIMEOUT_MIN*60*1000);
-    localStorage.setItem(TAB_KEY,JSON.stringify({time:expire.toISOString()}));
   }
-  window.addEventListener('load',checkTabLock);
-  window.addEventListener('beforeunload',()=>{ localStorage.removeItem(TAB_KEY); });
+
+  // 自分のタブでロック登録
+  localStorage.setItem(TAB_KEY, JSON.stringify({
+    tabId: TAB_ID,
+    time: now
+  }));
+}
+
+window.addEventListener('load', checkTabLock);
+
+// 自分のタブだけ解除
+window.addEventListener('beforeunload', () => {
+  const lockRaw = localStorage.getItem(TAB_KEY);
+  if(!lockRaw) return;
+
+  const lock = JSON.parse(lockRaw);
+  if(lock.tabId === TAB_ID){
+    localStorage.removeItem(TAB_KEY);
+  }
+});
+
+// 30秒ごとに生存更新（クラッシュ対策）
+setInterval(() => {
+  if(!isWithinAllowedWindow()) return;
+
+  const now = nowJST().getTime();
+  const lockRaw = localStorage.getItem(TAB_KEY);
+  if(!lockRaw) return;
+
+  const lock = JSON.parse(lockRaw);
+
+  if(lock.tabId === TAB_ID){
+    localStorage.setItem(TAB_KEY, JSON.stringify({
+      tabId: TAB_ID,
+      time: now
+    }));
+  }
+}, 30000);
+
+
+
 
   /* =========================
      動画選択
@@ -604,9 +650,33 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
     e.target.value='';
   });
 
+
+// 生存信号（30秒ごとに更新）
+setInterval(() => {
+  if(!isWithinAllowedWindow()) return;
+
+  const now = nowJST().getTime();
+  const lockRaw = localStorage.getItem(TAB_KEY);
+  if(!lockRaw) return;
+
+  const lock = JSON.parse(lockRaw);
+
+  // 自分のタブなら更新
+  if(lock.tabId === TAB_ID){
+    localStorage.setItem(TAB_KEY, JSON.stringify({
+      tabId: TAB_ID,
+      time: now
+    }));
+  }
+}, 30000);
+
+
+
+    
   </script>
 </body>
 </html>
+
 
 
 
