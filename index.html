@@ -79,33 +79,7 @@
         </div>
 
 
-        // --- QR差し込みUIを右下に追加（既存DOMに影響しない） ---
-const qrSlotWrap = document.createElement('div');
-qrSlotWrap.style.position = 'fixed';
-qrSlotWrap.style.right = '20px';
-qrSlotWrap.style.bottom = '20px';
-qrSlotWrap.style.width = '140px';
-qrSlotWrap.style.height = '140px';
-qrSlotWrap.style.border = '2px dashed #fff';
-qrSlotWrap.style.cursor = 'pointer';
-qrSlotWrap.style.zIndex = '9999';
-qrSlotWrap.style.background = '#000';
 
-const qrSlotImg = document.createElement('img');
-qrSlotImg.style.width = '100%';
-qrSlotImg.style.height = '100%';
-qrSlotImg.style.objectFit = 'contain';
-
-const qrSlotInput = document.createElement('input');
-qrSlotInput.type = 'file';
-qrSlotInput.accept = 'image/*';
-qrSlotInput.style.display = 'none';
-
-qrSlotWrap.appendChild(qrSlotImg);
-qrSlotWrap.appendChild(qrSlotInput);
-document.body.appendChild(qrSlotWrap);
-
-qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
 
         
         <!-- マイユメっ子ボタン -->
@@ -293,7 +267,33 @@ qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
 
 
 
+        // --- QR差し込みUIを右下に追加（既存DOMに影響しない） ---
+const qrSlotWrap = document.createElement('div');
+qrSlotWrap.style.position = 'fixed';
+qrSlotWrap.style.right = '20px';
+qrSlotWrap.style.bottom = '20px';
+qrSlotWrap.style.width = '140px';
+qrSlotWrap.style.height = '140px';
+qrSlotWrap.style.border = '2px dashed #fff';
+qrSlotWrap.style.cursor = 'pointer';
+qrSlotWrap.style.zIndex = '9999';
+qrSlotWrap.style.background = '#000';
 
+const qrSlotImg = document.createElement('img');
+qrSlotImg.style.width = '100%';
+qrSlotImg.style.height = '100%';
+qrSlotImg.style.objectFit = 'contain';
+
+const qrSlotInput = document.createElement('input');
+qrSlotInput.type = 'file';
+qrSlotInput.accept = 'image/*';
+qrSlotInput.style.display = 'none';
+
+qrSlotWrap.appendChild(qrSlotImg);
+qrSlotWrap.appendChild(qrSlotInput);
+document.body.appendChild(qrSlotWrap);
+
+qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
 
 
 
@@ -783,6 +783,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
