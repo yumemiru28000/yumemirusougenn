@@ -461,6 +461,12 @@ boostText.style.fontWeight = 'bold';
 boostText.style.textShadow = '0 0 6px #00ffff';
 document.body.appendChild(boostText);
 
+
+    function showBoostText(rate){
+  const label = globalStatusBoost.parity === 'odd' ? '奇数' : '偶数';
+  boostText.textContent = `${label}との遭遇【 ${rate.toFixed(2)} 倍】`;
+}
+
 function showBoostText(rate){
   boostText.textContent = `レアキャラ遭遇【 ${rate.toFixed(2)} 倍】`;
 }
@@ -789,6 +795,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
