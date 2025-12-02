@@ -172,15 +172,15 @@
       { id:'v12', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6x.mp4', weight:1 },
       { id:'v13', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7o.mp4', weight:8 },
       { id:'v14', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7x.mp4', weight:1 },
-      { id:'v15', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4', weight:2 },
-      { id:'v16', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4', weight:2 },
-      { id:'v17', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1oc.mp4', weight:1 },
-      { id:'v18', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2oc.mp4', weight:1 },
-      { id:'v19', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3oc.mp4', weight:1 },
-      { id:'v20', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4oc.mp4', weight:1 },
-      { id:'v21', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5oc.mp4', weight:1 },
-      { id:'v22', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6oc.mp4', weight:1 },
-      { id:'v23', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7oc.mp4', weight:1 }
+      { id:'v15', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/8x.mp4', weight:2,frame: "odd"},
+      { id:'v16', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/9x.mp4', weight:2,frame: "odd"},
+      { id:'v17', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/1oc.mp4', weight:1, frame: "even"},
+      { id:'v18', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/2oc.mp4', weight:1, frame: "even"},
+      { id:'v19', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/3oc.mp4', weight:1, frame: "even"},
+      { id:'v20', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/4oc.mp4', weight:1, frame: "even"},
+      { id:'v21', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/5oc.mp4', weight:1, frame: "even" },
+      { id:'v22', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/6oc.mp4', weight:1, frame: "even"},
+      { id:'v23', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7oc.mp4', weight:1, frame: "even" }
     ],
     bypassPassword:'1122',
     allowedTimes:[{hour:6, startMinute:0, endMinute:3}]
@@ -462,7 +462,7 @@ boostText.style.textShadow = '0 0 6px #00ffff';
 document.body.appendChild(boostText);
 
 function showBoostText(rate){
-  boostText.textContent = `レアキャラとの遭遇が ${rate.toFixed(2)} 倍`;
+  boostText.textContent = `レアキャラ遭遇【 ${rate.toFixed(2)} 倍】`;
 }
 
 const _originalPickVideo = pickVideo;
@@ -482,6 +482,12 @@ pickVideo = function(videos){
     }
   });
 
+
+
+
+
+
+  
   // 自動正規化（合計100%に戻す）
   let total = boosted.reduce((s,v)=>s+v.weight,0);
   boosted.forEach(v => v.weight = v.weight / total);
@@ -783,6 +789,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
