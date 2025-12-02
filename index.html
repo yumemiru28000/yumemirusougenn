@@ -309,8 +309,6 @@ qrSlotWrap.appendChild(qrSlotImg);
 qrSlotWrap.appendChild(qrSlotInput);
 document.body.appendChild(qrSlotWrap);
 
-qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
-
 // --- ホーム画面以外では非表示にする ---
 qrSlotWrap.style.display = 'none';
 
@@ -328,6 +326,12 @@ window.showPage = function(pageId){
     boostText.style.display = 'none';
   }
 };
+
+    
+
+qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
+
+
 
 
     
@@ -826,6 +830,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
