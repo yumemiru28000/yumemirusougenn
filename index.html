@@ -277,7 +277,7 @@ qrSlotWrap.style.height = '140px';
 qrSlotWrap.style.border = '2px dashed #fff';
 qrSlotWrap.style.cursor = 'pointer';
 qrSlotWrap.style.zIndex = '9999';
-qrSlotWrap.style.background = '#000';
+qrSlotWrap.style.background = '#9ae6e2';
 
 const qrSlotImg = document.createElement('img');
 qrSlotImg.style.width = '100%';
@@ -455,14 +455,14 @@ const boostText = document.createElement('div');
 boostText.style.position = 'fixed';
 boostText.style.bottom = '170px';
 boostText.style.right = '20px';
-boostText.style.color = '#0ff';
+boostText.style.color = '#008787';
 boostText.style.fontSize = '16px';
 boostText.style.fontWeight = 'bold';
 boostText.style.textShadow = '0 0 6px #00ffff';
 document.body.appendChild(boostText);
 
 function showBoostText(rate){
-  boostText.textContent = `特定のキャラの確率が ${rate.toFixed(2)} 倍されました`;
+  boostText.textContent = `レアキャラとの遭遇が ${rate.toFixed(2)} 倍`;
 }
 
 const _originalPickVideo = pickVideo;
@@ -783,6 +783,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
