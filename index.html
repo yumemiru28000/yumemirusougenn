@@ -280,6 +280,23 @@ partnerLabel.style.textShadow = '0 0 6px #ffffff';
 partnerLabel.style.zIndex = '10000';
 
 document.body.appendChild(partnerLabel);
+// --- ホーム画面以外では非表示にする ---
+qrSlotWrap.style.display = 'none';
+
+// showPageを横取りして監視（既存関数は変更しない）
+const _originalShowPage = window.showPage;
+
+window.showPage = function(pageId){
+  if (_originalShowPage) _originalShowPage(pageId);
+
+  if (pageId === 'home') {
+    qrSlotWrap.style.display = 'block';
+    boostText.style.display = 'block';
+  } else {
+    qrSlotWrap.style.display = 'none';
+    boostText.style.display = 'none';
+  }
+};
 
 
 
@@ -809,6 +826,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
