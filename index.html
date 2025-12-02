@@ -260,6 +260,42 @@
   /* =========================
      複数タブ制御＋リロード防止
   ========================= */
+
+
+// --- QR差し込みUIを右下に追加（既存DOMに影響しない） ---
+const qrSlotWrap = document.createElement('div');
+qrSlotWrap.style.position = 'fixed';
+qrSlotWrap.style.right = '20px';
+qrSlotWrap.style.bottom = '20px';
+qrSlotWrap.style.width = '140px';
+qrSlotWrap.style.height = '140px';
+qrSlotWrap.style.border = '2px dashed #fff';
+qrSlotWrap.style.cursor = 'pointer';
+qrSlotWrap.style.zIndex = '9999';
+qrSlotWrap.style.background = '#000';
+
+const qrSlotImg = document.createElement('img');
+qrSlotImg.style.width = '100%';
+qrSlotImg.style.height = '100%';
+qrSlotImg.style.objectFit = 'contain';
+
+const qrSlotInput = document.createElement('input');
+qrSlotInput.type = 'file';
+qrSlotInput.accept = 'image/*';
+qrSlotInput.style.display = 'none';
+
+qrSlotWrap.appendChild(qrSlotImg);
+qrSlotWrap.appendChild(qrSlotInput);
+document.body.appendChild(qrSlotWrap);
+
+qrSlotWrap.addEventListener('click', () => qrSlotInput.click());
+
+
+
+
+
+
+    
  /* =========================
    複数タブ制御＋リロード防止（完全版）
 ========================= */
@@ -366,6 +402,92 @@ setInterval(() => {
     return { azatosa:rnd(), health:rnd(), sweetness:rnd() };
   }
 
+let globalStatusBoost = {
+  rate: 1,
+  parity: null // 'odd' or 'even'
+};
+
+qrSlotInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+    qrSlotImg.src = img.src;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if (!code) {
+      alert('QRが読み取れません');
+      return;
+    }
+
+    const data = JSON.parse(code.data);
+    const total = data.azatosa + data.health + data.sweetness;
+
+    const percent = Math.round((total / 300) * 100);
+    const isOdd = total % 2 === 1;
+
+    const boost = 2 * (percent / 100);
+
+    globalStatusBoost.rate = boost;
+    globalStatusBoost.parity = isOdd ? 'odd' : 'even';
+
+    showBoostText(boost);
+  };
+
+  e.target.value = '';
+});
+
+
+const boostText = document.createElement('div');
+boostText.style.position = 'fixed';
+boostText.style.bottom = '170px';
+boostText.style.right = '20px';
+boostText.style.color = '#0ff';
+boostText.style.fontSize = '16px';
+boostText.style.fontWeight = 'bold';
+boostText.style.textShadow = '0 0 6px #00ffff';
+document.body.appendChild(boostText);
+
+function showBoostText(rate){
+  boostText.textContent = `特定のキャラの確率が ${rate.toFixed(2)} 倍されました`;
+}
+
+const _originalPickVideo = pickVideo;
+
+pickVideo = function(videos){
+  const boosted = videos.map(v => ({ ...v }));
+
+  boosted.forEach(v => {
+    const isOdd = v.frame === 'odd';
+    const isEven = v.frame === 'even';
+
+    if (
+      (globalStatusBoost.parity === 'odd' && isOdd) ||
+      (globalStatusBoost.parity === 'even' && isEven)
+    ){
+      v.weight *= globalStatusBoost.rate;
+    }
+  });
+
+  // 自動正規化（合計100%に戻す）
+  let total = boosted.reduce((s,v)=>s+v.weight,0);
+  boosted.forEach(v => v.weight = v.weight / total);
+
+  return _originalPickVideo(boosted);
+};
+
+    
   /**
    *  generateCharacterCard
    *  - 既存の合成を壊さず、詰めて小さく画像を配置
@@ -659,6 +781,7 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
   </script>
 </body>
 </html>
+
 
 
 
