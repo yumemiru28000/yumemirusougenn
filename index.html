@@ -71,7 +71,7 @@
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png" id="joinBtnImg" alt="ラジオ体操参加">
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/howto.png" alt="遊び方" onclick="showPage('howto')">
         </div>
-        <p class="subtitle">出撃可能時間 : （Local Time) <strong>06:00〜06:03</strong></p>
+        <p class="subtitle">出撃可能時間 : （Local Time) <strong>06:00〜06:02</strong></p>
         <p class="desc">ーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
         <div id="remainingTime"></div>
         <div class="time-bar-wrap">
@@ -183,7 +183,8 @@
       { id:'v23', url:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/7oc.mp4', weight:6, frame: "even" }
     ],
     bypassPassword:'1122',
-    allowedTimes:[{hour:6, startMinute:0, endMinute:3}]
+    allowedTimes:[{hour:6, startMinute:0, endMinute:2},
+    {hour:22, startMinute:0, endMinute:2}]
   };
 
   function nowJST() {
@@ -833,6 +834,7 @@ if(document.getElementById('home').classList.contains('active')){
   </script>
 </body>
 </html>
+
 
 
 
