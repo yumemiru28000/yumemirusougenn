@@ -59,6 +59,60 @@
   <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
 </head>
 
+
+
+<script>
+// =====================
+// クリック効果音
+// =====================
+
+// 効果音のURL（差し替え可能）
+const clickSoundUrl = "https://freesound.org/data/previews/64/64937_634166-lq.mp3";
+
+// Audioオブジェクトを使い回し（高速）
+const clickSound = new Audio(clickSoundUrl);
+clickSound.volume = 0.9; // 音量調整（0〜1）
+
+// すべてのボタン・img・a クリックで音を鳴らす
+function setupClickSound() {
+  document.body.addEventListener("click", function(e) {
+    const tag = e.target.tagName.toLowerCase();
+
+    if (["button", "img", "a", "input"].includes(tag)) {
+      // 音を毎回最初から再生できるようにする
+      clickSound.currentTime = 0;
+      clickSound.play().catch(()=>{});
+    }
+  });
+}
+
+// ページ読み込み後にセットアップ
+window.addEventListener("DOMContentLoaded", setupClickSound);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 <body>
 
   <!-- HOME -->
@@ -834,6 +888,7 @@ if(document.getElementById('home').classList.contains('active')){
   </script>
 </body>
 </html>
+
 
 
 
