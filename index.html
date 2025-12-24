@@ -1116,12 +1116,7 @@ function buildOsiraseList(){
     img.loading = "lazy";
 
     // NEWアイコン
-    if(data.new){
-      const badge = document.createElement("img");
-      badge.src = OSIRASE_NEW_ICON;
-      badge.className = "osirase-new";
-      item.appendChild(badge);
-    }
+    if(data.new)
 
     const text = document.createElement("div");
     text.className = "osirase-text";
@@ -1149,6 +1144,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
