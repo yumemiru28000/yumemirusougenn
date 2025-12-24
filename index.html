@@ -40,6 +40,23 @@
     .small-note { font-size:14px; color:#475569; margin-top:8px; font-weight:600; }
     input[type="file"] { display:none; }
 
+
+#versionLabel {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  font-size: 11px;
+  color: rgba(0,0,0,0.45);
+  background: rgba(255,255,255,0.35);
+  padding: 2px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+
+
+    
     /* 新UI：保存領域 */
     .card-preview { display:flex; gap:12px; align-items:flex-start; color:#fff; }
     .left-area { display:flex; flex-direction:column; gap:8px; align-items:center; }
@@ -219,6 +236,11 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
     <button class="home-btn" onclick="showPage('home')">ホームに戻る</button>
   </div>
 
+
+
+
+
+  
   <script>
   /* =========================
      共通関数・カードフィット
@@ -987,11 +1009,11 @@ window.addEventListener("load", ()=>{
     
   </script>
 
-  <!-- バージョン表示 -->
-<div id="versionLabel">ver 1.0.0</div>
+
 
 </body>
 </html>
+
 
 
 
