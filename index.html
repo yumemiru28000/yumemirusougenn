@@ -125,6 +125,30 @@
   border-radius: 8px;
   display: block;
 }
+.osirase-item{
+  background: rgba(255,255,255,0.9);
+  border-radius: 14px;
+  padding: 8px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+/* 画像 */
+.osirase-item img{
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+
+/* 画像下の文字 */
+.osirase-text{
+  margin-top: 6px;
+  padding: 6px 4px;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}
 
     
     /* 新UI：保存領域 */
@@ -1026,9 +1050,16 @@ if(document.getElementById('home').classList.contains('active')){
 ========================= */
 
 const OSIRASE_IMAGES = [
-  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg",
-  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase3.png",
+  {
+    img: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg",
+    text: "『限定イベント』【2025 12/25～27】"
+  },
+  {
+    img: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase3.png",
+    text: "『新キャラ』【2025 12/25～】"
+  }
 ];
+
 
 const OSIRASE_BTN_EMPTY =
   "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase1.png";
@@ -1060,14 +1091,20 @@ function buildOsiraseList(){
 
   list.innerHTML = "";
 
-  OSIRASE_IMAGES.forEach(url => {
+  OSIRASE_IMAGES.forEach(data => {
     const item = document.createElement("div");
     item.className = "osirase-item";
 
     const img = document.createElement("img");
-    img.src = url;
+    img.src = data.img;
+    img.loading = "lazy";
+
+    const text = document.createElement("div");
+    text.className = "osirase-text";
+    text.textContent = data.text;
 
     item.appendChild(img);
+    item.appendChild(text);
     list.appendChild(item);
   });
 }
@@ -1087,6 +1124,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
