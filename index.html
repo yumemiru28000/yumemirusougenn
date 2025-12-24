@@ -136,10 +136,25 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 
         
-        <!-- マイユメっ子ボタン -->
-        <button id="myYumekoNavBtn" class="home-btn" style="position:relative; bottom:0; right:auto; margin-bottom:12px; display:inline-block; background:#3d9aff; color:#fff;">
-          MYユメっこ
-        </button>
+       <!-- お知らせ ＋ マイユメっ子 -->
+<div style="display:flex; gap:12px; justify-content:center; margin-bottom:12px;">
+  
+  <!-- お知らせボタン -->
+  <img
+    id="osiraseBtn"
+    src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase1.jpg"
+    style="width:140px; cursor:pointer;"
+    onclick="onOsiraseClick()"
+  >
+
+  <!-- マイユメっ子 -->
+  <button
+    id="myYumekoNavBtn"
+    class="home-btn"
+    style="position:relative; bottom:0; right:auto; background:#3d9aff; color:#fff;"
+  >
+    MYユメっこ
+  </button>
 
         <br>
         <input id="pw" type="password" placeholder="運営用パスワード " style="margin-top:12px; padding:8px 10px; border-radius:8px; border:1px solid #ddd;">
@@ -151,12 +166,29 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
     </div>
   </div>
 
+
+
+    
   <!-- ZUKAN -->
   <div id="zukan" class="page">
     <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zu.png" class="fullimage">
     <button class="home-btn" onclick="showPage('home')">ホーム</button>
   </div>
 
+
+<!-- OSIRASE -->
+<div id="osirase" class="page">
+  <img
+    src=""
+    id="osiraseImage"
+    class="fullimage"
+  >
+  <button class="home-btn" onclick="showPage('home')">
+    ホームに戻る
+  </button>
+</div>
+
+    
   <!-- HOWTO -->
   <div id="howto" class="page">
     <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asobi.png" class="fullimage">
@@ -887,11 +919,60 @@ if(document.getElementById('home').classList.contains('active')){
 
 
 
+/* =========================
+   お知らせ設定
+========================= */
+
+// ▼ お知らせ本文画像（ある時だけURLを入れる）
+const OSIRASE_IMAGE_URL = ""; 
+// 例：
+// const OSIRASE_IMAGE_URL = "https://raw.githubusercontent.com/xxxxx/osirase0.png";
+
+// ▼ ボタン画像
+const OSIRASE_BTN_EMPTY =
+  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase1.png";
+const OSIRASE_BTN_EXIST =
+  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase2.png";
+
+// ▼ 状態判定
+function hasOsirase(){
+  return OSIRASE_IMAGE_URL && OSIRASE_IMAGE_URL.trim() !== "";
+}
+
+// ▼ ボタン画像更新
+function updateOsiraseButton(){
+  const btn = document.getElementById("osiraseBtn");
+  if(!btn) return;
+  btn.src = hasOsirase() ? OSIRASE_BTN_EXIST : OSIRASE_BTN_EMPTY;
+}
+
+// ▼ 押した時
+function onOsiraseClick(){
+  if(hasOsirase()){
+    showPage("osirase");
+  }else{
+    alert("現在お知らせはございません");
+  }
+}
+
+window.addEventListener("load", updateOsiraseButton);
+
+
+
+/* お知らせ画像反映 */
+window.addEventListener("load", ()=>{
+  const img = document.getElementById("osiraseImage");
+  if(img && hasOsirase()){
+    img.src = OSIRASE_IMAGE_URL;
+  }
+});
+
 
     
   </script>
 </body>
 </html>
+
 
 
 
