@@ -1025,17 +1025,11 @@ if(document.getElementById('home').classList.contains('active')){
    お知らせ設定
 ========================= */
 
-// ▼ お知らせ本文画像（ある時だけURLを入れる）
-// ▼ お知らせ画像（何枚でもOK）
 const OSIRASE_IMAGES = [
   "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg",
-  // 追加するだけ！
   "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase3.png",
-  // "https://raw.githubusercontent.com/xxx/osirase2.png",
 ];
 
-
-// ▼ ボタン画像
 const OSIRASE_BTN_EMPTY =
   "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase1.png";
 const OSIRASE_BTN_EXIST =
@@ -1045,7 +1039,6 @@ function hasOsirase(){
   return Array.isArray(OSIRASE_IMAGES) && OSIRASE_IMAGES.length > 0;
 }
 
-// ▼ ボタン画像更新
 function updateOsiraseButton(){
   const btn = document.getElementById("osiraseBtn");
   if(!btn) return;
@@ -1061,8 +1054,7 @@ function onOsiraseClick(){
   }
 }
 
-
-    function buildOsiraseList(){
+function buildOsiraseList(){
   const list = document.getElementById("osiraseList");
   if(!list) return;
 
@@ -1080,18 +1072,11 @@ function onOsiraseClick(){
   });
 }
 
-
 window.addEventListener("load", updateOsiraseButton);
 
 
 
-/* お知らせ画像反映 */
-window.addEventListener("load", ()=>{
-  const img = document.getElementById("osiraseImage");
-  if(img && hasOsirase()){
-    img.src = OSIRASE_IMAGE_URL;
-  }
-});
+
 
 
     
@@ -1102,6 +1087,7 @@ window.addEventListener("load", ()=>{
 
 </body>
 </html>
+
 
 
 
