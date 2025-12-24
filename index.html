@@ -1106,17 +1106,14 @@ function buildOsiraseList(){
     const item = document.createElement("div");
     item.className = "osirase-item";
 
+    // NEW判定はクラス付与だけ
     if(data.new){
-  item.classList.add("is-new");
-}
-
+      item.classList.add("is-new");
+    }
 
     const img = document.createElement("img");
     img.src = data.img;
     img.loading = "lazy";
-
-    // NEWアイコン
-    if(data.new)
 
     const text = document.createElement("div");
     text.className = "osirase-text";
@@ -1127,6 +1124,7 @@ function buildOsiraseList(){
     list.appendChild(item);
   });
 }
+
 
 
 window.addEventListener("load", updateOsiraseButton);
@@ -1144,6 +1142,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
