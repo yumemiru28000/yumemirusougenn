@@ -184,10 +184,16 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png" id="joinBtnImg" alt="ラジオ体操参加">
           <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/howto.png" alt="遊び方" onclick="showPage('howto')">
         </div>
-        <p class="desc">ーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
-         <p class="highlight-time">
-        06:00〜06:02 <span class="ampersand">&</span> 22:00〜22:02 </p>
-        <p class="desc">ーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
+<div class="time-panel">
+  <p class="desc line">ーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
+
+  <p class="highlight-time game-time">
+    06:00〜06:02 <span class="ampersand">&</span> 22:00〜22:02
+  </p>
+
+  <p class="desc line">ーーーーーーーーーーーーーーーーーーーーーーーーーー</p>
+
+
         <div id="remainingTime"></div>
         <div class="time-bar-wrap">
           <div id="timeBar" class="time-bar"></div>
@@ -1046,6 +1052,7 @@ window.addEventListener("load", ()=>{
 
 </body>
 </html>
+
 
 
 
