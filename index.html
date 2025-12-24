@@ -98,6 +98,34 @@
 }
 
 
+
+
+    /* お知らせ一覧 */
+.osirase-list{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.osirase-item{
+  background: rgba(255,255,255,0.85);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+.osirase-item img{
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
     
     /* 新UI：保存領域 */
     .card-preview { display:flex; gap:12px; align-items:flex-start; color:#fff; }
@@ -247,11 +275,8 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 <!-- OSIRASE -->
 <div id="osirase" class="page">
-  <img
-    src=""
-    id="osiraseImage"
-    class="fullimage"
-  >
+  <div id="osiraseList" class="osirase-list"></div>
+
   <button class="home-btn" onclick="showPage('home')">
     ホームに戻る
   </button>
@@ -1001,9 +1026,14 @@ if(document.getElementById('home').classList.contains('active')){
 ========================= */
 
 // ▼ お知らせ本文画像（ある時だけURLを入れる）
-const OSIRASE_IMAGE_URL = "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg"; 
-// 例：
-// const OSIRASE_IMAGE_URL = "https://raw.githubusercontent.com/xxxxx/osirase0.png";
+// ▼ お知らせ画像（何枚でもOK）
+const OSIRASE_IMAGES = [
+  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg",
+  // 追加するだけ！
+  // "https://raw.githubusercontent.com/xxx/osirase1.jpg",
+  // "https://raw.githubusercontent.com/xxx/osirase2.png",
+];
+
 
 // ▼ ボタン画像
 const OSIRASE_BTN_EMPTY =
@@ -1011,9 +1041,8 @@ const OSIRASE_BTN_EMPTY =
 const OSIRASE_BTN_EXIST =
   "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase2.png";
 
-// ▼ 状態判定
 function hasOsirase(){
-  return OSIRASE_IMAGE_URL && OSIRASE_IMAGE_URL.trim() !== "";
+  return Array.isArray(OSIRASE_IMAGES) && OSIRASE_IMAGES.length > 0;
 }
 
 // ▼ ボタン画像更新
@@ -1023,14 +1052,34 @@ function updateOsiraseButton(){
   btn.src = hasOsirase() ? OSIRASE_BTN_EXIST : OSIRASE_BTN_EMPTY;
 }
 
-// ▼ 押した時
 function onOsiraseClick(){
   if(hasOsirase()){
+    buildOsiraseList();
     showPage("osirase");
   }else{
     alert("現在お知らせはございません");
   }
 }
+
+
+    function buildOsiraseList(){
+  const list = document.getElementById("osiraseList");
+  if(!list) return;
+
+  list.innerHTML = "";
+
+  OSIRASE_IMAGES.forEach(url => {
+    const item = document.createElement("div");
+    item.className = "osirase-item";
+
+    const img = document.createElement("img");
+    img.src = url;
+
+    item.appendChild(img);
+    list.appendChild(item);
+  });
+}
+
 
 window.addEventListener("load", updateOsiraseButton);
 
@@ -1053,6 +1102,7 @@ window.addEventListener("load", ()=>{
 
 </body>
 </html>
+
 
 
 
