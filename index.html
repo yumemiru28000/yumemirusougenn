@@ -1120,21 +1120,6 @@ function buildOsiraseList(){
     img.src = data.img;
     img.loading = "lazy";
 
-    const text = document.createElement("div");
-    text.className = "osirase-text";
-    text.textContent = data.text;
-
-    item.appendChild(img);
-    item.appendChild(text);
-    list.appendChild(item);
-
-
-    OSIRASE_IMAGES.forEach(data => {
-  const item = document.createElement("div");
-  item.className = "osirase-item";
-
-  const img = document.createElement("img");
-  img.src = data.img;
     // NEWアイコン
     if(data.new){
       const badge = document.createElement("img");
@@ -1143,8 +1128,16 @@ function buildOsiraseList(){
       item.appendChild(badge);
     }
 
+    const text = document.createElement("div");
+    text.className = "osirase-text";
+    text.textContent = data.text;
+
+    item.appendChild(img);
+    item.appendChild(text);
+    list.appendChild(item);
   });
 }
+
 
 window.addEventListener("load", updateOsiraseButton);
 
@@ -1161,5 +1154,6 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
