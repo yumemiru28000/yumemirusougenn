@@ -126,6 +126,7 @@
   display: block;
 }
 .osirase-item{
+  display: inline-block; /* ← 重要 */
   background: rgba(255,255,255,0.9);
   border-radius: 14px;
   padding: 8px;
@@ -133,13 +134,15 @@
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 
+
 /* 画像 */
 .osirase-item img{
-  width: 100%;
-  height: auto;
   display: block;
+  max-width: 100%;
+  height: auto;
   border-radius: 10px;
 }
+
 
 /* 画像下の文字 */
 .osirase-text{
@@ -1124,6 +1127,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
