@@ -409,12 +409,13 @@ window.showPage = function(pageId){
 
   if (pageId === 'home') {
     qrSlotWrap.style.display = 'block';
-    boostText.style.display = 'block';
+    if (window.boostText) boostText.style.display = 'block';
   } else {
     qrSlotWrap.style.display = 'none';
-    boostText.style.display = 'none';
+    if (window.boostText) boostText.style.display = 'none';
   }
 };
+
 
     
 
@@ -972,6 +973,7 @@ window.addEventListener("load", ()=>{
   </script>
 </body>
 </html>
+
 
 
 
