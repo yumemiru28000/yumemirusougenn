@@ -170,6 +170,26 @@
   pointer-events: none;
 }
 
+    .osirase-item{
+  position: relative;
+}
+
+/* NEW表示用（背景） */
+.osirase-item.is-new::after{
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;        /* ← ここが最終サイズ */
+  height: 24px;
+  background-image: url("https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/pop_new.png");
+  background-size: contain;   /* ← 元サイズ無視 */
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 3;
+  pointer-events: none;
+}
+
 
     
     /* 新UI：保存領域 */
@@ -1122,6 +1142,11 @@ function buildOsiraseList(){
     const item = document.createElement("div");
     item.className = "osirase-item";
 
+    if(data.new){
+  item.classList.add("is-new");
+}
+
+
     const img = document.createElement("img");
     img.src = data.img;
     img.loading = "lazy";
@@ -1160,6 +1185,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
