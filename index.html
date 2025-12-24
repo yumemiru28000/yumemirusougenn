@@ -152,6 +152,18 @@
   color: #333;
   line-height: 1.4;
 }
+.osirase-item{
+  position: relative; /* ← 重要 */
+}
+
+.osirase-new{
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: auto;
+  pointer-events: none;
+}
 
     
     /* 新UI：保存領域 */
@@ -1056,12 +1068,16 @@ const OSIRASE_IMAGES = [
   {
     img: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase0.jpg",
     text: "『限定イベント』【2025 12/25～27】"
+     new: true  
   },
   {
     img: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/osirase3.png",
     text: "『新キャラ』【2025 12/25～】"
+     new: true  
   }
 ];
+const OSIRASE_NEW_ICON =
+  "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/pop_new.png";
 
 
 const OSIRASE_BTN_EMPTY =
@@ -1109,6 +1125,22 @@ function buildOsiraseList(){
     item.appendChild(img);
     item.appendChild(text);
     list.appendChild(item);
+
+
+    OSIRASE_IMAGES.forEach(data => {
+  const item = document.createElement("div");
+  item.className = "osirase-item";
+
+  const img = document.createElement("img");
+  img.src = data.img;
+    // NEWアイコン
+    if(data.new){
+      const badge = document.createElement("img");
+      badge.src = OSIRASE_NEW_ICON;
+      badge.className = "osirase-new";
+      item.appendChild(badge);
+    }
+
   });
 }
 
@@ -1127,53 +1159,3 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
