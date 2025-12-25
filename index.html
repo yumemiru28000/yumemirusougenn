@@ -155,6 +155,38 @@
 }
 
 
+    /* |||運営パスワード＋時間カード 横並び|||| */
+.admin-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: stretch; /* 高さを揃える */
+  margin-top: 14px;
+}
+
+/* パスワード入力をカード化 */
+.admin-input {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 3px solid #7fd3ff;
+  background: #ffffff;
+  font-size: 16px;
+  width: 360px;              /* ← time-panel と同じ */
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    0 4px 0 #6bbfe6;
+}
+
+/* time-panel を横並び用に微調整 */
+.admin-row .time-panel {
+  margin: 0;                 /* 横並び時は余白消す */
+  width: 360px;              /* ← 完全一致 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* 中央揃え */
+}
+
     
     /* 新UI：保存領域 */
     .card-preview { display:flex; gap:12px; align-items:flex-start; color:#fff; }
@@ -238,14 +270,7 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
         <h1>ユメミる草原</h1>
 
 
- <div class="time-panel">
-  <p class="desc line">プレイ可能時間</p>
 
-  <p class="highlight-time game-time">
-    06:00〜06:02 <span class="ampersand">&</span> 22:00〜22:02
-  </p>
-
-</div>
 
 
         
@@ -287,12 +312,29 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 </div> <!-- ★これが必要！ -->
 
+<!-- 運営パスワード ＋ プレイ可能時間（横並び） -->
+<div class="admin-row">
+
+  <!-- 運営パスワード -->
+  <input
+    id="pw"
+    type="password"
+    placeholder="運営用パスワード"
+    class="admin-input"
+  >
+
+  <!-- プレイ可能時間 -->
+  <div class="time-panel">
+    <p class="desc line">プレイ可能時間</p>
+    <p class="highlight-time game-time">
+      06:00〜06:02 <span class="ampersand">&</span> 22:00〜22:02
+    </p>
+  </div>
+
+</div>
 
  
-      
 
-        <br>
-        <input id="pw" type="password" placeholder="運営用パスワード " style="margin-top:12px; padding:8px 10px; border-radius:8px; border:1px solid #ddd;">
         <button id="myYumekoBtn" class="home-btn" style="display:none;"> ユメっ</button>
 
         <input type="file" id="uploadImage" accept="image/*">
@@ -1154,6 +1196,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
