@@ -242,20 +242,19 @@
   border-radius: 12px;
 }
 /* 極小・運営用トリガー */
+
+
 #adminDot {
   position: fixed;
-  left: 58px;          /* ver のすぐ横 */
+  left: 90px;   /* ← ここ重要：verから物理的に離す */
   bottom: 10px;
-  font-size: 14px;     /* 見えるか怪しいサイズ */
-  color: rgba(0,0,0,0.35);
+  font-size: 16px;
+  color: rgba(0,0,0,0.4);
   cursor: pointer;
   user-select: none;
-  z-index: 10000;
+  z-index: 10001; /* ← ver より必ず上 */
 }
 
-#adminDot:hover {
-  color: rgba(0,0,0,0.6);
-}
 
     
     /* 新UI：保存領域 */
@@ -1269,6 +1268,7 @@ if (adminDot && adminPanel) {
 
 </body>
 </html>
+
 
 
 
