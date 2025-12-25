@@ -166,7 +166,10 @@
 
 /* パスワード入力をカード化 */
 .admin-input {
-  padding: 12px 14px;
+
+  padding: 8px 14px;      /* ← 12px → 8px */
+  font-size: 15px;        /* ← 少しだけ小さく */
+
   border-radius: 14px;
   border: 3px solid #7fd3ff;
   background: #ffffff;
@@ -180,11 +183,13 @@
 
 /* time-panel を横並び用に微調整 */
 .admin-row .time-panel {
+  padding: 8px 12px;      /* ← 追加 or 上書き */
+  justify-content: flex-start; /* ← center をやめる */
   margin: 0;                 /* 横並び時は余白消す */
   width: 360px;              /* ← 完全一致 */
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* 中央揃え */
+ 
 }
 
     
@@ -1196,6 +1201,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
