@@ -176,26 +176,17 @@
   align-items: center;     /* 文字を中央に */
 }
 
-/* time-panel */
 .admin-row .time-panel {
   padding: 2px 8px;
   width: 150px;
-  height: 32px;            /* 高さ固定で揃える */
-  display: flex;
-  flex-direction: column;
-  justify-content: center; /* 中央揃え */
-  gap: 0px;
+  height: 32px;   /* ← 高さ固定 */
 }
 
-/* time-panel 内文字調整 */
-.time-panel p,
-.time-panel .desc,
-.time-panel h4 {
-  margin: 0;
+.time-panel p {
+  font-size: 10px;
   line-height: 1.0;
-  font-size: 10px;         /* 文字もカードサイズに合わせる */
-  text-align: center;
 }
+
 
 
 /* ===== 下部UIをまとめて読みやすくする ===== */
@@ -241,6 +232,42 @@
 }
 .card {
   padding-bottom: 24px;
+}
+
+    /* ===== タイトル横レイアウト ===== */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* タイトル右の時間表示 */
+.title-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  background: rgba(255,255,255,0.75);
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  white-space: nowrap;
+}
+
+    /* ===== 運営パスワード：中央下 ===== */
+.admin-password-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.admin-input-large {
+  width: 220px;
+  height: 36px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(255,255,255,0.9);
 }
 
     /* 新UI：保存領域 */
@@ -322,8 +349,15 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
   <div id="home" class="page active">
     <div class="card-wrapper">
       <div class="card">
-        <h1>ユメミる草原</h1>
+      <div class="title-row">
+  <h1>ユメミる草原</h1>
 
+  <!-- タイトル右：プレイ可能時間 -->
+  <div class="title-time">
+    <span>🕒</span>
+    06:00–06:02 / 22:00–22:02
+  </div>
+</div>
 
 
 
@@ -369,26 +403,17 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 </div> <!-- ★これが必要！ -->
 
-<!-- 運営パスワード ＋ プレイ可能時間（横並び） -->
-<div class="admin-row">
 
-  <!-- 運営パスワード -->
+<!-- 運営パスワード（中央・最下部） -->
+<div class="admin-password-wrap">
   <input
     id="pw"
     type="password"
     placeholder="運営用パスワード"
-    class="admin-input"
+    class="admin-input admin-input-large"
   >
-
-  <!-- プレイ可能時間 -->
-  <div class="time-panel">
-    <p class="desc line">プレイ可能時間</p>
-    <p class="highlight-time game-time">
-      06:00〜06:02 <span class="ampersand">&</span> 22:00〜22:02
-    </p>
-  </div>
-
 </div>
+
 
  
 
@@ -1253,6 +1278,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
