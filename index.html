@@ -241,6 +241,21 @@
   font-size: 14px;
   border-radius: 12px;
 }
+/* 極小・運営用トリガー */
+#adminDot {
+  position: fixed;
+  left: 58px;          /* ver のすぐ横 */
+  bottom: 10px;
+  font-size: 14px;     /* 見えるか怪しいサイズ */
+  color: rgba(0,0,0,0.35);
+  cursor: pointer;
+  user-select: none;
+  z-index: 10000;
+}
+
+#adminDot:hover {
+  color: rgba(0,0,0,0.6);
+}
 
     
     /* 新UI：保存領域 */
@@ -375,13 +390,14 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 <!-- 運営パスワード ＋ プレイ可能時間（横並び） -->
 
-<div class="admin-bottom">
+<div class="admin-bottom hidden" id="adminPanel">
   <input
     id="pw"
     type="password"
     placeholder="運営用パスワード"
   >
 </div>
+
 
         <button id="myYumekoBtn" class="home-btn" style="display:none;"> ユメっ</button>
 
@@ -1231,6 +1247,16 @@ window.addEventListener("load", updateOsiraseButton);
 
 
 
+// === 運営用・極小トリガー ===
+const adminDot = document.getElementById('adminDot');
+const adminPanel = document.getElementById('adminPanel');
+
+if (adminDot && adminPanel) {
+  adminDot.addEventListener('click', () => {
+    adminPanel.classList.toggle('hidden');
+    fitCard(); // 出現後にカードサイズ再計算
+  });
+}
 
 
 
@@ -1239,9 +1265,11 @@ window.addEventListener("load", updateOsiraseButton);
 
 
 <div id="versionLabel">ver 1.0.0</div>
+<div id="adminDot">・</div>
 
 </body>
 </html>
+
 
 
 
