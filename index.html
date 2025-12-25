@@ -131,6 +131,7 @@
 
 
 /* お知らせカード */
+/* お知らせカード（完成形） */
 .osirase-item{
   position: relative;
   display: inline-block;
@@ -138,11 +139,19 @@
   border-radius: 14px;
   padding: 8px;
 
-  width: fit-content;     /* ← 中身の横幅に合わせる */
-  max-width: none;        /* ← 制限解除 */
+  width: fit-content;
+  max-width: none;
 
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+
+  /* ▼ 縮小＆詰め */
+  transform: scale(0.8);
+  transform-origin: top left;
+
+  margin-right: -18%;
+  margin-bottom: -12%;
 }
+
 
 /* お知らせ画像 */
 .osirase-item img{
@@ -153,15 +162,6 @@
 }
 
 
-    .osirase-item{
-  transform: scale(0.8);          /* 見た目を80%に */
-  transform-origin: top left;     /* 基準点を左上に */
-  
-  margin-right: -20%;             /* 縮小でできた余白を詰める */
-}
-.osirase-item{
-  margin-bottom: -20%;
-}
 
 
 .osirase-text{
@@ -1363,6 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
