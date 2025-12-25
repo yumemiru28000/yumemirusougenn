@@ -102,11 +102,32 @@
 
  /* お知らせ一覧 */
 .osirase-list{
-  display: flex;              /* ← grid をやめる */
-  flex-wrap: wrap;            /* 画面幅で折り返すだけ */
+  display: flex;
+  flex-direction: row;
   gap: 16px;
-  align-items: flex-start;    /* 高さを揃えない */
+
+  overflow-x: auto;        /* ← 横スクロール有効 */
+  overflow-y: hidden;
+  white-space: nowrap;
+
+  padding: 16px;
+  box-sizing: border-box;
+
+  width: 100vw;
+  height: auto;
+
+  -webkit-overflow-scrolling: touch; /* スマホ慣性 */
 }
+
+/* スクロールバーが邪魔なら薄く */
+.osirase-list::-webkit-scrollbar{
+  height: 8px;
+}
+.osirase-list::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,0.25);
+  border-radius: 4px;
+}
+
 
 
 /* お知らせカード */
@@ -1330,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
