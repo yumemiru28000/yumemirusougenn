@@ -240,6 +240,14 @@
   background: rgba(255,255,255,0.9);
 }
 
+    .admin-password-fixed {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+}
+
     /* 新UI：保存領域 */
     .card-preview { display:flex; gap:12px; align-items:flex-start; color:#fff; }
     .left-area { display:flex; flex-direction:column; gap:8px; align-items:center; }
@@ -371,11 +379,9 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
     MYユメっこ
   </button>
 
-</div> <!-- ★これが必要！ -->
+</div> <!-- .card の終わり -->
 
-
-<!-- 運営パスワード（中央・最下部） -->
-<div class="admin-password-wrap">
+<div class="admin-password-fixed">
   <input
     id="pw"
     type="password"
@@ -383,7 +389,6 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
     class="admin-input admin-input-large"
   >
 </div>
-
 
  
 
@@ -1248,6 +1253,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
