@@ -135,6 +135,10 @@
   position: relative;
   display: inline-flex;
   flex-direction: column;
+
+  justify-content: center;   /* ← 縦中央に寄せる */
+  align-items: center;       /* ← 横も中央 */
+
   gap: 6px;
 
   background: rgba(255,255,255,0.9);
@@ -144,31 +148,31 @@
   transform: scale(0.8);
   transform-origin: top left;
 
-  margin-right: 4px;       /* ← 正の余白にする */
+  margin-right: 8px;
   margin-bottom: 12px;
 
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 
 
+
 .osirase-item img{
   display: block;
   max-height: 260px;
-  max-width: none;
   height: auto;
-  border-radius: 10px;
+  margin: 0 auto;   /* ← 中央寄せ */
 }
 
 
 .osirase-text{
-  margin-top: 6px;
+  margin: 0;                 /* ← 重要 */
   padding: 6px 4px;
   font-size: 14px;
   color: #333;
   line-height: 1.6;
 
-  white-space: pre;       /* ← 改行は \n のみ */
-  word-break: normal;     /* ← 勝手に折らない */
+  white-space: pre-wrap;     /* ← 改行は保持しつつ */
+  text-align: left;          /* ← 読みやすく */
 }
 
 
@@ -1359,6 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
