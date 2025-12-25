@@ -102,14 +102,12 @@
 
  /* お知らせ一覧 */
 .osirase-list{
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  display: flex;              /* ← grid をやめる */
+  flex-wrap: wrap;            /* 画面幅で折り返すだけ */
   gap: 16px;
-  width: 100%;
-  padding: 24px;
-  box-sizing: border-box;
-  overflow-y: auto;
+  align-items: flex-start;    /* 高さを揃えない */
 }
+
 
 /* お知らせカード */
 .osirase-item{
@@ -118,6 +116,10 @@
   background: rgba(255,255,255,0.9);
   border-radius: 14px;
   padding: 8px;
+
+  width: fit-content;     /* ← 中身の横幅に合わせる */
+  max-width: none;        /* ← 制限解除 */
+
   box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 
@@ -129,15 +131,17 @@
   border-radius: 10px;
 }
 
-/* 画像下の文字 */
 .osirase-text{
   margin-top: 6px;
   padding: 6px 4px;
   font-size: 14px;
   color: #333;
-  line-height: 1.6;      /* ← 少し読みやすく */
-  white-space: pre-wrap; /* ← \n を改行として表示 */
+  line-height: 1.6;
+
+  white-space: pre;       /* ← 改行は \n のみ */
+  word-break: normal;     /* ← 勝手に折らない */
 }
+
 
 
 /* NEW表示（背景方式・確定版） */
@@ -1326,6 +1330,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
