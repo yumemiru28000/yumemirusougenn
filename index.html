@@ -1257,6 +1257,20 @@ if (adminDot && adminPanel) {
   });
 }
 
+<div id="adminDot">・</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const adminDot = document.getElementById('adminDot');
+  const adminPanel = document.getElementById('adminPanel');
+
+  if (!adminDot || !adminPanel) return;
+
+  adminDot.addEventListener('click', () => {
+    adminPanel.classList.toggle('hidden');
+    fitCard();
+  });
+});
+</script>
 
 
     
@@ -1264,10 +1278,10 @@ if (adminDot && adminPanel) {
 
 
 <div id="versionLabel">ver 1.0.0</div>
-<div id="adminDot">・</div>
 
 </body>
 </html>
+
 
 
 
