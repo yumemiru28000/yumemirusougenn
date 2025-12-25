@@ -166,37 +166,33 @@
 
 /* パスワード入力をカード化 */
 .admin-input {
-
-  padding: 3px 14px;      /* ← 12px → 8px */
-  font-size: 15px;        /* ← 少しだけ小さく */
-
-  border-radius: 14px;
-  border: 3px solid #7fd3ff;
-  background: #ffffff;
-  font-size: 16px;
-  width: 360px;              /* ← time-panel と同じ */
-  box-sizing: border-box;
-  box-shadow:
-    inset 0 0 0 2px #ffffff,
-    0 4px 0 #6bbfe6;
+  padding: 6px 10px;        /* ← 縦を少し確保 */
+  width: 240px;             /* ← 360 → 240 */
+  font-size: 14px;          /* ← 少しだけ小さく */
 }
+
 
 /* time-panel を横並び用に微調整 */
 .admin-row .time-panel {
-  padding: 3px 9px;      /* ← 追加 or 上書き */
-  justify-content: flex-start; /* ← center をやめる */
-  margin: 0;                 /* 横並び時は余白消す */
-  width: 360px;              /* ← 完全一致 */
-  display: flex;
-  flex-direction: column;
- 
+  padding: 6px 10px;        /* ← 縦を少し戻す */
+  width: 240px;             /* ← 360 → 240（約2/3） */
+  min-height: 64px;         /* ← タイトル保護 */
 }
+
 
     /* time-panel 内の文字の上下余白と行間を詰める */
 .time-panel p {
   margin: 2px 0;
-  line-height: 0.2;
+  line-height: 1.1; /* ← 0.2 はやりすぎ、1.05〜1.15が限界 */
 }
+
+    .time-panel .desc,
+.time-panel h4 {
+  font-size: 13px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
 
 
     
@@ -1208,6 +1204,7 @@ window.addEventListener("load", updateOsiraseButton);
 
 </body>
 </html>
+
 
 
 
