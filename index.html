@@ -133,22 +133,23 @@
 /* お知らせカード */
 .osirase-item{
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+
   background: rgba(255,255,255,0.9);
   border-radius: 14px;
-  padding: 8px;
-
-  width: fit-content;
-  max-width: none;
-
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  padding: 10px;
 
   transform: scale(0.8);
   transform-origin: top left;
 
-  margin-right: -10%;
-  margin-bottom: -8%;
+  margin-right: 16px;   /* ← 正の余白にする */
+  margin-bottom: 12px;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
+
 
 .osirase-item img{
   display: block;
@@ -1358,6 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
