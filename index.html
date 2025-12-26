@@ -795,8 +795,7 @@ setInterval(() => {
   }
 }, 30000);
 
-
-
+  
 
   /* =========================
      動画選択
@@ -1321,6 +1320,126 @@ if (adminDot && adminPanel) {
 
 
 
+let currentZukanData = null;
+
+function createEmptyZukan(){
+  currentZukanData = {
+    version: 1,
+    chars: {}
+  };
+  renderZukanQR();
+}
+
+function renderZukanQR(){
+  const panel = document.getElementById('zukanPanel');
+  panel.innerHTML = '';
+
+  const canvas = document.createElement('canvas');
+  panel.appendChild(canvas);
+
+  QRCode.toCanvas(
+    canvas,
+    JSON.stringify(currentZukanData),
+    { width: 260 }
+  );
+
+  const btn = document.createElement('button');
+  btn.textContent = '📥 図鑑QRを保存';
+  btn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL();
+    a.download = 'zukan_qr.png';
+    a.click();
+  };
+
+  panel.appendChild(btn);
+}
+function openZukanAdd(){
+  const panel = document.getElementById('zukanPanel');
+  panel.innerHTML = `
+    <p>キャラQR画像を選んでください</p>
+    <input type="file" id="zukanCharInput" accept="image/*">
+  `;
+
+  document.getElementById('zukanCharInput').onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    readCharQRAndAdd(file);
+  };
+}
+function readCharQRAndAdd(file){
+  if(!currentZukanData){
+    alert('先に図鑑QRを作成・読み込みしてください');
+    return;
+  }
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img,0,0);
+
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const qr = jsQR(imageData.data,canvas.width,canvas.height);
+    if(!qr){ alert('QRが読めません'); return; }
+
+    const data = JSON.parse(qr.data);
+    currentZukanData.chars[data.id] = data;
+
+    renderZukanQR(); // 更新された図鑑QRを再生成
+  };
+}
+function openZukanView(){
+  const panel = document.getElementById('zukanPanel');
+  panel.innerHTML = `
+    <p>図鑑QRを選択してください</p>
+    <input type="file" id="zukanLoadInput" accept="image/*">
+  `;
+
+  document.getElementById('zukanLoadInput').onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    loadZukanQR(file);
+  };
+}
+function loadZukanQR(file){
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img,0,0);
+
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const qr = jsQR(imageData.data,canvas.width,canvas.height);
+    if(!qr){ alert('QRが読めません'); return; }
+
+    currentZukanData = JSON.parse(qr.data);
+
+    const panel = document.getElementById('zukanPanel');
+    panel.innerHTML = '<h3>所持キャラ一覧</h3>';
+
+    Object.values(currentZukanData.chars).forEach(c=>{
+      const div = document.createElement('div');
+      div.innerHTML = `
+        <img src="${c.img}" style="width:80px">
+        <div>${c.id}</div>
+      `;
+      panel.appendChild(div);
+    });
+  };
+}
+
+
+
+
 
     
   </script>
@@ -1342,4 +1461,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
