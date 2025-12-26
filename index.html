@@ -871,7 +871,9 @@ qrSlotInput.addEventListener('change', e => {
       return;
     }
 
-   const data = JSON.parse(code.data);
+const data = JSON.parse(code.data);
+const total = data.azatosa + data.health + data.sweetness;
+
 if(
   typeof data.azatosa !== 'number' ||
   typeof data.health !== 'number' ||
@@ -880,6 +882,7 @@ if(
   alert('対応していないQRです');
   return;
 }
+
 
     const percent = Math.round((total / 300) * 100);
     const isOdd = total % 2 === 1;
@@ -938,21 +941,6 @@ pickVideo = function(videos){
 
 
   
-  // 自動正規化（合計100%に戻す）
-pickVideo = function(videos){
-  const boosted = videos.map(v => ({ ...v }));
-
-  boosted.forEach(v => {
-    if (
-      (globalStatusBoost.parity === 'odd' && v.frame === 'odd') ||
-      (globalStatusBoost.parity === 'even' && v.frame === 'even')
-    ){
-      v.weight *= globalStatusBoost.rate;
-    }
-  });
-
-  return _originalPickVideo(boosted);
-};
 
 
     
@@ -1606,6 +1594,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
