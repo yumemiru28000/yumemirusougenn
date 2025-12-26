@@ -137,6 +137,8 @@ function hit(a,b){
 // ================================
 // イベント処理
 // ================================
+let eventLock = false;
+
 function triggerGrassEventA(){
   if (eventLock) return;
   eventLock = true;
