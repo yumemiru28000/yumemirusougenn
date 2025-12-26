@@ -1153,6 +1153,22 @@ ctx.fillText(`かわいさ: ${status.sweetness}`, textX, currentY);
     // クリックでプレビューの画像を拡大して閉じるなどの動作を追加しても良い
   }
 
+// === マップから戻ってきたか判定 ===
+window.addEventListener('load', () => {
+  const fromMap = localStorage.getItem('fromMapEvent');
+
+  if (fromMap === 'A') {
+    localStorage.removeItem('fromMapEvent');
+
+    // 時間制限を無視して強制再生したい場合
+    // onJoin(); ←そのまま使える
+    onJoin();
+  }
+});
+
+
+
+    
   document.getElementById('joinBtnImg').addEventListener('click',onJoin);
 
   function onJoin(){
@@ -1599,6 +1615,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
