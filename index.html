@@ -320,13 +320,6 @@
     .save-btn { padding:8px 12px; border-radius:8px; background:#3d9aff; color:#fff; border:none; font-weight:800; cursor:pointer; }
     .small-muted { font-size:12px; color:#bbb; margin-top:6px; }
     .hidden { display:none !important; }
-
-
-
-
-
-
-
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -419,7 +412,6 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
         </div>
 
 
-<div id="zukanGrid" class="zukan-grid"></div>
 
 
         
@@ -443,7 +435,7 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
     MYユメっこ
   </button>
 
-</div> <!-- これが必要！ -->
+</div> <!-- ★これが必要！ -->
 
 <!-- 運営パスワード ＋ プレイ可能時間（横並び） -->
 
@@ -468,45 +460,11 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 
     
-<!-- ZUKAN ☆-->
-<div id="zukan" class="page">
-  <div class="card-wrapper">
-    <div class="card" style="max-width:980px;">
-      <h1>ユメっこ図鑑</h1>
-
-      <!-- QR読み込み -->
-      <div style="margin-bottom:12px;">
-        <button onclick="document.getElementById('zukanQrInput').click()">
-          図鑑QRを読み込む
-        </button>
-        <input id="zukanQrInput" type="file" accept="image/*" hidden>
-      </div>
-
-      <div style="display:flex; gap:16px;">
-
-        <!-- 左：アイコン一覧 -->
-        <div id="zukanIconList"
-             style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:300px;">
-        </div>
-
-        <!-- 右：詳細パネル -->
-        <div id="zukanDetail"
-             style="flex:1; background:#000; color:#fff; padding:12px; border-radius:12px;">
-          <p>キャラを選択してください</p>
-        </div>
-
-      </div>
-
-      <!-- 新規図鑑 -->
-      <div style="margin-top:12px; text-align:right;">
-        <button onclick="createNewZukan()">＋ 新しい図鑑QR生成</button>
-      </div>
-
-      <button class="home-btn" onclick="showPage('home')">ホーム</button>
-    </div>
+  <!-- ZUKAN -->
+  <div id="zukan" class="page">
+    <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zu.png" class="fullimage">
+    <button class="home-btn" onclick="showPage('home')">ホーム</button>
   </div>
-</div>
-
 
 
 <!-- OSIRASE -->
@@ -825,112 +783,6 @@ setInterval(() => {
   }
 }, 30000);
 
-/* =========================
-   図鑑データ定義
-========================= */
-
-const ALL_CHAR_LIST = [
-  { id:'CHARA001', icon:'char1.jpg', silhouette:'sil1.png' },
-  { id:'CHARA002', icon:'char2.jpg', silhouette:'sil2.png' },
-  { id:'CHARA003', icon:'char3.jpg', silhouette:'sil3.png' },
-  { id:'CHARA004', icon:'char4.jpg', silhouette:'sil4.png' },
-  // 必要な分だけ追加
-];
-
-let currentZukanData = null;
-
-/* =========================
-   新規図鑑作成
-========================= */
-function createNewZukan(){
-  currentZukanData = {
-    version:1,
-    chars:{} // charID : data
-  };
-  renderZukan();
-  generateZukanQR();
-}
-
-/* =========================
-   図鑑QR読み込み
-========================= */
-document.getElementById('zukanQrInput').addEventListener('change', e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-  img.onload = ()=>{
-    const c=document.createElement('canvas');
-    c.width=img.width;
-    c.height=img.height;
-    const ctx=c.getContext('2d');
-    ctx.drawImage(img,0,0);
-
-    // ★右側だけ切り取り
-    const cutX = img.width * 0.5;
-    const imageData = ctx.getImageData(cutX,0,img.width-cutX,img.height);
-    const code = jsQR(imageData.data,imageData.width,imageData.height);
-
-    if(!code){
-      alert('図鑑QRが読み取れません');
-      return;
-    }
-
-    currentZukanData = JSON.parse(code.data);
-    renderZukan();
-  };
-});
-
-/* =========================
-   図鑑描画
-========================= */
-function renderZukan(){
-  const list = document.getElementById('zukanIconList');
-  list.innerHTML = '';
-
-  ALL_CHAR_LIST.forEach(c=>{
-    const has = currentZukanData?.chars[c.id];
-    const img = document.createElement('img');
-    img.src = has ? has.img : c.silhouette;
-    img.style.width='64px';
-    img.style.opacity = has ? 1 : 0.3;
-    img.style.cursor='pointer';
-
-    img.onclick = ()=> showZukanDetail(c.id);
-    list.appendChild(img);
-  });
-}
-
-/* =========================
-   詳細表示
-========================= */
-function showZukanDetail(charId){
-  const panel = document.getElementById('zukanDetail');
-  const data = currentZukanData.chars[charId];
-
-  if(!data){
-    panel.innerHTML = `<p>未取得キャラ</p>`;
-    return;
-  }
-
-  panel.innerHTML = `
-    <img src="${data.img}" style="max-width:200px"><br>
-    <b>${data.name}</b><br>
-    あざとさ:${data.azatosa}<br>
-    体力:${data.health}<br>
-    かわいさ:${data.sweetness}
-  `;
-}
-
-/* =========================
-   図鑑QR生成
-========================= */
-function generateZukanQR(){
-  const qrCanvas = document.createElement('canvas');
-  QRCode.toCanvas(qrCanvas, JSON.stringify(currentZukanData), {width:300});
-  document.getElementById('zukanDetail').appendChild(qrCanvas);
-}
 
 
 
@@ -1190,13 +1042,6 @@ pickVideo = function(videos){
           qrImgEl.onerror = rej;
         });
 
-
-
-
-
-
-
-        
 // レイアウト計算（詰めて小さく）
 const padding = 16;
 // キャラ画像を 1920x1080 に強制
@@ -1463,26 +1308,9 @@ if (adminDot && adminPanel) {
 }
 
 
-// 図鑑に保存☆
-if(currentZukanData){
-  if(currentZukanData.chars[charInfo.id]){
-    if(!confirm('既存データを上書きしますか？')) return;
-  }
-
-  currentZukanData.chars[charInfo.id] = {
-    id: charInfo.id,
-    img: charInfo.img,
-    name: nameText,
-    ...status
-  };
-
-  generateZukanQR();
-}
-
 
 
     
-
   </script>
 
 
@@ -1502,5 +1330,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
