@@ -1492,6 +1492,7 @@ function renderZukanQR(){
   panel.appendChild(btn);
 }
 function openZukanAdd(){
+  console.log('openZukanAdd called');
   const panel = document.getElementById('zukanPanel');
   panel.innerHTML = `
     <p>キャラQR画像を選んでください</p>
@@ -1582,7 +1583,7 @@ function loadZukanQR(file){
   </script>
 
 
-<div id="versionLabel">ver 1.0.1</div>
+<div id="versionLabel">ver 1.0.2</div>
 <div id="adminDot">・</div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -1598,6 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
