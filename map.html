@@ -203,10 +203,10 @@ onChildAdded(playersRef, snapshot => {
     chime.currentTime=0;
     chime.play();
     joinNotifications[id] = { name: data.name || '名無し', time: Date.now() };
-    // 3秒後に通知を削除
     setTimeout(()=>{ delete joinNotifications[id]; }, 3000);
   }
 });
+
 
 
 // ====================== 更新 ======================
