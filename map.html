@@ -251,7 +251,7 @@ onChildAdded(chatsRef, snapshot=>{
   if(chat.mapX===mapX && chat.mapY===mapY){
     activeChats.push({ ...chat, time: Date.now() });
     // 音再生
-    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
     chatSound.play();
   }
 });
