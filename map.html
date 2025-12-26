@@ -29,9 +29,7 @@
     padding: 5px;
     font-size: 16px;
   }
-  #chatForm input {
-    flex: 1;
-  }
+  #chatForm input { flex: 1; }
   #touchControls {
     position: absolute;
     bottom: 10px;
@@ -76,7 +74,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onChildAdded, push, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // ====================== Firebase 設定 ======================
 const firebaseConfig = {
@@ -104,12 +102,23 @@ let playerName = localStorage.getItem('playerName') || '';
 const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
 if(playerName) nameForm.style.display='none';
-nameForm.addEventListener('submit', (e)=>{
+nameForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(nameInput.value.trim()==='') return;
   playerName = nameInput.value.trim();
   localStorage.setItem('playerName', playerName);
   nameForm.style.display='none';
+
+  // 同じ名前のユーザーがいたら削除
+  const q = query(ref(db,'players'), orderByChild('name'), equalTo(playerName));
+  onValue(q, snapshot=>{
+    const data = snapshot.val();
+    if(data){
+      for(const id in data){
+        if(id !== userId) remove(ref(db,'players/'+id));
+      }
+    }
+  }, {onlyOnce:true});
 });
 
 // ====================== Canvas 設定 ======================
@@ -201,17 +210,16 @@ onValue(playersRef,(snapshot)=>{
   for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
 });
 
-// ====================== 入室通知（本人以外だけ） ======================
+// ====================== 入室通知 ======================
 const joinNotifications = [];
 const notifiedUsers = new Set();
 const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
-
+const enterTime = Date.now();
 onChildAdded(playersRef, snapshot => {
   const data = snapshot.val();
   const id = snapshot.key;
   if(id!==userId && !notifiedUsers.has(id)){
     notifiedUsers.add(id);
-    // 自分以外には音と表示
     chime.currentTime=0;
     chime.play();
     joinNotifications.push({ name:data.name||'名無し', time: Date.now() });
@@ -237,8 +245,11 @@ chatForm.addEventListener('submit',(e)=>{
 onChildAdded(chatsRef, snapshot=>{
   const chat = snapshot.val();
   if(chat.mapX===mapX && chat.mapY===mapY){
+    if(Date.now() - enterTime < 5000) return;
     activeChats = activeChats.filter(c=>!(c.userId===chat.userId));
     activeChats.push({...chat, time:Date.now()});
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
+    chatSound.play();
   }
 });
 
@@ -316,19 +327,20 @@ function draw(){
     ctx.fillText(`${n.name}さんが出撃`,10,35);
   }
 
-  // ===== チャット描画（文字を黒に変更） =====
+  // ===== チャット描画（吹き出し付き） =====
   for(let i=activeChats.length-1;i>=0;i--){
     const c = activeChats[i];
     if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
     const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
     const y = c.userId===userId ? player.y - 20 : (otherPlayers[c.userId]?.y - 20 || 0);
+
     ctx.font='14px sans-serif';
     const padding = 4;
     const textWidth = ctx.measureText(c.msg).width;
     const textHeight = 16;
     ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.fillRect(x - padding, y - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
-    ctx.fillStyle='black'; // 文字色を黒に
+    ctx.fillStyle='black'; // 文字黒
     ctx.fillText(c.msg, x, y);
   }
 }
