@@ -1321,7 +1321,131 @@ if (adminDot && adminPanel) {
 
 
 let currentZukanData = null;
+let addCharData = null;
+let addZukanData = null;
 
+function openZukanAdd(){
+  const panel = document.getElementById('zukanPanel');
+  panel.innerHTML = '';
+
+  panel.innerHTML = `
+    <h3>キャラを図鑑に追加</h3>
+
+    <button id="loadCharQR">🖼 キャラQRを読み込む</button>
+    <div id="charStatus">未読み込み</div>
+
+    <button id="loadZukanQR">📘 図鑑QRを読み込む</button>
+    <div id="zukanStatus">未読み込み</div>
+
+    <button id="applyAdd" disabled>➕ 追加</button>
+
+    <div id="newZukanQR"></div>
+    <button id="saveNewZukan" class="hidden">📥 新しい図鑑QRを保存</button>
+
+    <input type="file" id="zukanFileInput" accept="image/*" hidden>
+    <input type="file" id="charFileInput" accept="image/*" hidden>
+  `;
+
+  document.getElementById('loadCharQR').onclick =
+    () => document.getElementById('charFileInput').click();
+
+  document.getElementById('loadZukanQR').onclick =
+    () => document.getElementById('zukanFileInput').click();
+
+  document.getElementById('charFileInput').onchange =
+    e => readQRFile(e.target.files[0], 'char');
+
+  document.getElementById('zukanFileInput').onchange =
+    e => readQRFile(e.target.files[0], 'zukan');
+
+  document.getElementById('applyAdd').onclick = applyAddToZukan;
+}
+
+function readQRFile(file, type){
+  if(!file) return;
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img,0,0);
+
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if(!code){
+      alert('QRが読み取れません');
+      return;
+    }
+
+    const data = JSON.parse(code.data);
+
+    if(type === 'char'){
+      addCharData = data;
+      document.getElementById('charStatus').textContent =
+        `読み込み済み：${data.id}`;
+    }
+
+    if(type === 'zukan'){
+      addZukanData = data;
+      document.getElementById('zukanStatus').textContent =
+        `図鑑読み込み済み（${Object.keys(data.chars||{}).length}体）`;
+    }
+
+    checkAddReady();
+  };
+}
+    
+function checkAddReady(){
+  const btn = document.getElementById('applyAdd');
+  if(addCharData && addZukanData){
+    btn.disabled = false;
+  }
+}
+
+function applyAddToZukan(){
+  // 念のためコピー
+  const newZukan = JSON.parse(JSON.stringify(addZukanData));
+
+  if(!newZukan.chars){
+    newZukan.chars = {};
+  }
+
+  // IDをキーにして丸ごと追加
+  newZukan.chars[addCharData.id] = addCharData;
+
+  // 新しいQR表示
+  const qrArea = document.getElementById('newZukanQR');
+  qrArea.innerHTML = '';
+
+  const canvas = document.createElement('canvas');
+  qrArea.appendChild(canvas);
+
+  QRCode.toCanvas(
+    canvas,
+    JSON.stringify(newZukan),
+    { width: 260 }
+  );
+
+  // 保存ボタン表示
+  const saveBtn = document.getElementById('saveNewZukan');
+  saveBtn.classList.remove('hidden');
+
+  saveBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'zukan_updated.png';
+    a.click();
+  };
+}
+
+
+
+    
 function createEmptyZukan(){
   currentZukanData = {
     version: 1,
@@ -1461,6 +1585,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
