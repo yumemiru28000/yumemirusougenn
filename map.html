@@ -19,9 +19,6 @@
   canvas {
     background: #000;
     border: 4px solid #fff;
-    width: 100vw; /* 横幅いっぱい */
-    height: auto;  /* 縦はアスペクト比維持 */
-    display: block;
   }
   #nameForm {
     margin-bottom: 10px;
@@ -29,6 +26,16 @@
   #nameForm input {
     padding: 5px;
     font-size: 16px;
+  }
+  #chatForm {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+  #chatForm input {
+    flex: 1;
+    padding: 5px;
+    font-size: 14px;
   }
   #touchControls {
     position: absolute;
@@ -52,12 +59,22 @@
 </style>
 </head>
 <body>
+
+<!-- 名前入力 -->
 <form id="nameForm">
   <input type="text" id="playerName" placeholder="名前を入力" maxlength="10">
   <button type="submit">決定</button>
 </form>
+
+<!-- チャット入力 -->
+<form id="chatForm">
+  <input type="text" id="chatInput" placeholder="チャットを入力" maxlength="50">
+  <button type="submit">送信</button>
+</form>
+
 <canvas id="game" width="400" height="300"></canvas>
 
+<!-- スマホ用操作ボタン -->
 <div id="touchControls" style="display:none;">
   <div class="touchButton" data-key="w">↑</div>
   <div class="touchButton" data-key="s">↓</div>
@@ -67,7 +84,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onChildAdded } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // ====================== Firebase 設定 ======================
 const firebaseConfig = {
@@ -106,20 +123,7 @@ nameForm.addEventListener('submit', (e)=>{
 // ====================== Canvas 設定 ======================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-let baseW = 400, baseH = 300;
-let scale = 1;
-
-// 画面リサイズ時のキャンバス倍率計算
-function resizeCanvas(){
-  const scaleX = window.innerWidth / baseW;
-  const scaleY = window.innerHeight / baseH;
-  scale = Math.min(scaleX, scaleY); // 画面内に収まる最大サイズ
-  canvas.style.width = `${baseW * scale}px`;
-  canvas.style.height = `${baseH * scale}px`;
-}
-
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+const W = canvas.width, H = canvas.height;
 
 // ====================== プレイヤー ======================
 const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false };
@@ -199,7 +203,7 @@ function sendPosition(){
   });
 }
 
-// ====================== Firebase 他プレイヤー取得 ======================
+// ====================== 他プレイヤー取得 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
@@ -218,6 +222,37 @@ onChildAdded(playersRef, snapshot => {
     chime.currentTime=0;
     chime.play();
     joinNotifications.push({ name:data.name||'名無し', time: Date.now() });
+  }
+});
+
+// ====================== チャット機能 ======================
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatsRef = ref(db,'chats');
+
+const activeChats = []; // 描画用チャット
+
+chatForm.addEventListener('submit',(e)=>{
+  e.preventDefault();
+  const msg = chatInput.value.trim();
+  if(!msg) return;
+  chatInput.value='';
+  // Firebaseに送信
+  const chatData = {
+    userId, name:playerName, msg, mapX, mapY, timestamp: Date.now()
+  };
+  push(chatsRef, chatData);
+});
+
+// チャット受信
+onChildAdded(chatsRef, snapshot=>{
+  const chat = snapshot.val();
+  // 同じマップにいる場合のみ表示
+  if(chat.mapX===mapX && chat.mapY===mapY){
+    activeChats.push({ ...chat, time: Date.now() });
+    // 音再生
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
+    chatSound.play();
   }
 });
 
@@ -240,28 +275,26 @@ function update(){
     }
   }
 
-  if(player.x<0){ mapX--; player.x=baseW-player.size; }
-  if(player.x+player.size>baseW){ mapX++; player.x=0; }
-  if(player.y<0){ mapY--; player.y=baseH-player.size; }
-  if(player.y+player.size>baseH){ mapY++; player.y=0; }
+  if(player.x<0){ mapX--; player.x=W-player.size; }
+  if(player.x+player.size>W){ mapX++; player.x=0; }
+  if(player.y<0){ mapY--; player.y=H-player.size; }
+  if(player.y+player.size>H){ mapY++; player.y=0; }
 
   if(playerName) sendPosition();
 }
 
 // ====================== 描画 ======================
 function draw(){
-  ctx.save();
-  ctx.scale(scale, scale); // スケーリング
-
   const key = `${mapX},${mapY}`;
   const map = maps[key];
-  if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,baseW,baseH);
-  else { ctx.fillStyle='#333'; ctx.fillRect(0,0,baseW,baseH); }
+  if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
+  else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
 
   map.objects.forEach((o,i)=>{
     if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
   });
 
+  // 他プレイヤー描画
   for(const id in otherPlayers){
     const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
@@ -273,47 +306,51 @@ function draw(){
       }
       const oi = otherImages[id];
       if(oi.loaded) ctx.drawImage(oi.img, p.x, p.y, player.size, player.size);
-      else { ctx.fillStyle='#0f0'; ctx.fillRect(p.x,p.y,player.size,player.size); }
+      else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
       ctx.fillStyle='#fff';
       ctx.font='12px sans-serif';
       ctx.fillText(p.name||id, p.x, p.y-5);
     }
   }
 
+  // 自分描画
   if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
-  else { ctx.fillStyle='#f55'; ctx.fillRect(player.x,player.y,player.size,player.size); }
-  if(playerName){ ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(playerName, player.x, player.y-5); }
+  else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
+  if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
 
-  ctx.fillStyle='#fff';
-  ctx.font='16px sans-serif';
-  ctx.fillText(map.name,10,20);
+  // マップ名
+  ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
 
+  // 時刻表示
   const now = new Date();
   const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-  ctx.fillStyle='#fff';
-  ctx.font='20px monospace';
-  ctx.fillText(timeStr,baseW-110,24);
+  ctx.fillStyle='#fff'; ctx.font='20px monospace'; ctx.fillText(timeStr,W-110,24);
 
+  // 入室通知
   const nowTime = Date.now();
   for(let i=joinNotifications.length-1;i>=0;i--){
     const n = joinNotifications[i];
     if(nowTime - n.time > 3000){ joinNotifications.splice(i,1); continue; }
-    ctx.fillStyle='yellow';
-    ctx.font='16px sans-serif';
+    ctx.fillStyle='yellow'; ctx.font='16px sans-serif';
     ctx.fillText(`${n.name}さんが出撃`,10,50);
   }
 
-  ctx.restore();
+  // チャット描画（15秒で消える）
+  for(let i=activeChats.length-1;i>=0;i--){
+    const c = activeChats[i];
+    if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
+    ctx.fillStyle='cyan';
+    ctx.font='14px sans-serif';
+    ctx.fillText(c.msg, c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0, 
+                            c.userId===userId ? player.y - 10 : otherPlayers[c.userId]?.y - 10 || 0);
+  }
 }
 
 // ====================== メインループ ======================
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
+// ====================== タブ閉じ時 ======================
 window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId)); });
 </script>
 </body>
