@@ -1193,21 +1193,7 @@ pickVideo = function(videos){
 
 
 
-// 図鑑に保存☆
-if(currentZukanData){
-  if(currentZukanData.chars[charInfo.id]){
-    if(!confirm('既存データを上書きしますか？')) return;
-  }
 
-  currentZukanData.chars[charInfo.id] = {
-    id: charInfo.id,
-    img: charInfo.img,
-    name: nameText,
-    ...status
-  };
-
-  generateZukanQR();
-}
 
 
         
@@ -1497,3 +1483,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
