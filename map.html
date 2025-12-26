@@ -111,10 +111,13 @@ let scale = 1;
 
 // 画面リサイズ時のキャンバス倍率計算
 function resizeCanvas(){
-  scale = window.innerWidth / baseW;
-  canvas.style.width = `${window.innerWidth}px`;
+  const scaleX = window.innerWidth / baseW;
+  const scaleY = window.innerHeight / baseH;
+  scale = Math.min(scaleX, scaleY); // 画面内に収まる最大サイズ
+  canvas.style.width = `${baseW * scale}px`;
   canvas.style.height = `${baseH * scale}px`;
 }
+
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
