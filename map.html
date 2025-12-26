@@ -55,11 +55,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ====================== ユーザーID（タブごとにユニーク） ======================
-let userId = sessionStorage.getItem('userId');
+// ====================== ユーザーID（同一PC内で共有） ======================
+let userId = localStorage.getItem('userId');
 if(!userId){
   userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  sessionStorage.setItem('userId', userId);
+  localStorage.setItem('userId', userId);
 }
 
 // ====================== 名前取得 ======================
@@ -135,7 +135,7 @@ let eventLock=false;
 function triggerGrassEventA(){
   if(eventLock) return;
   eventLock=true;
-  remove(ref(db,'players/'+userId)); // イベント移動時も削除
+  remove(ref(db,'players/'+userId));
   localStorage.setItem('playVideo','true');
   location.href='index.html';
 }
@@ -153,7 +153,7 @@ function sendPosition(){
     mapY:mapY,
     name:playerName,
     imgUrl:player.img.src,
-    lastSeen: Date.now(), // heartbeat追加
+    lastSeen: Date.now(), // heartbeat
     timestamp:Date.now()
   });
 }
@@ -165,7 +165,7 @@ onValue(playersRef,(snapshot)=>{
   const now = Date.now();
   for(const id in data){
     const p = data[id];
-    // 30秒以上更新していないアバターは削除
+    // 30秒以上更新がないプレイヤーは削除
     if(now - (p.lastSeen||0) > 30000){
       remove(ref(db,'players/'+id));
       continue;
