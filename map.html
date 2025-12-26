@@ -76,9 +76,9 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onChildAdded, push, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// ================= Firebase 設定 =================
+// ====================== Firebase 設定 ======================
 const firebaseConfig = {
   apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
   authDomain: "zzonline.firebaseapp.com",
@@ -92,19 +92,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ================= ユーザーID =================
+// ====================== ユーザーID ======================
 let userId = sessionStorage.getItem('userId');
 if(!userId){
   userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   sessionStorage.setItem('userId', userId);
 }
 
-// ================= 名前取得 =================
+// ====================== 名前取得 ======================
 let playerName = localStorage.getItem('playerName') || '';
 const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
 if(playerName) nameForm.style.display='none';
-nameForm.addEventListener('submit', e=>{
+nameForm.addEventListener('submit', (e)=>{
   e.preventDefault();
   if(nameInput.value.trim()==='') return;
   playerName = nameInput.value.trim();
@@ -112,12 +112,12 @@ nameForm.addEventListener('submit', e=>{
   nameForm.style.display='none';
 });
 
-// ================= Canvas 設定 =================
+// ====================== Canvas 設定 ======================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-// ================= プレイヤー =================
+// ====================== プレイヤー ======================
 const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false };
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
@@ -125,7 +125,7 @@ player.img.onload = ()=>player.imgLoaded = true;
 const otherPlayers = {};
 const otherImages = {};
 
-// ================= マップ =================
+// ====================== マップ ======================
 const maps = {
   '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'} ] },
   '1,0':{ name:'右の森', bg:'https://picsum.photos/id/1020/400/300', block:{up:false,down:true,left:false,right:true}, objects:[ {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'} ] },
@@ -147,12 +147,12 @@ for(const k in maps){
   maps[k].objects.forEach((o,i)=>{ if(o.img) loadImage(`obj_${k}_${i}`, o.img); });
 }
 
-// ================= 入力管理 =================
+// ====================== 入力管理 ======================
 const keyState={};
 addEventListener('keydown', e=>keyState[e.key.toLowerCase()]=true);
 addEventListener('keyup', e=>keyState[e.key.toLowerCase()]=false);
 
-// ================= スマホ操作 =================
+// ====================== スマホ操作ボタン ======================
 const touchControls = document.getElementById('touchControls');
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(isMobile) touchControls.style.display='flex';
@@ -162,12 +162,12 @@ document.querySelectorAll('.touchButton').forEach(btn=>{
   btn.addEventListener('touchend', e=>{ e.preventDefault(); keyState[key]=false; });
 });
 
-// ================= 判定 =================
+// ====================== 判定 ======================
 function hit(a,b){
   return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
 }
 
-// ================= イベント =================
+// ====================== イベント ======================
 let eventLock=false;
 function triggerGrassEventA(){
   if(eventLock) return;
@@ -177,10 +177,10 @@ function triggerGrassEventA(){
   location.href='index.html';
 }
 
-// ================= マップ状態 =================
+// ====================== マップ状態 ======================
 let mapX=0, mapY=0;
 
-// ================= Firebase送信 =================
+// ====================== Firebase送信 ======================
 function sendPosition(){
   const playerRef=ref(db,'players/'+userId);
   set(playerRef,{
@@ -194,14 +194,14 @@ function sendPosition(){
   });
 }
 
-// ================= 他プレイヤー取得 =================
+// ====================== 他プレイヤー取得 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
   for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
 });
 
-// ================= 入室通知 =================
+// ====================== 入室通知 ======================
 const joinNotifications = [];
 const notifiedUsers = new Set();
 const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
@@ -216,12 +216,13 @@ onChildAdded(playersRef, snapshot => {
   }
 });
 
-// ================= チャット =================
+// ====================== チャット機能 ======================
 const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const chatsRef = ref(db,'chats');
+
+// 描画用チャット（ここだけが表示される）
 let activeChats = [];
-let lastOwnChatIndex = null; // 自分の前のチャットのインデックス
 
 chatForm.addEventListener('submit',(e)=>{
   e.preventDefault();
@@ -229,29 +230,27 @@ chatForm.addEventListener('submit',(e)=>{
   if(!msg) return;
   chatInput.value='';
 
-  // 前の自分のチャットを強制終了
-  if(lastOwnChatIndex!==null){
-    activeChats.splice(lastOwnChatIndex,1);
-    lastOwnChatIndex = null;
-  }
-
+  // 新しいチャットを優先表示
   const chatData = { userId, name:playerName, msg, mapX, mapY, timestamp: Date.now() };
+  activeChats = activeChats.filter(c=>c.userId!==userId); // 自分の古いチャット削除
+  activeChats.push({...chatData, time: Date.now()});
   push(chatsRef, chatData);
 });
 
-// 受信
+// チャット受信（過去のチャットを初回表示しない）
 onChildAdded(chatsRef, snapshot=>{
   const chat = snapshot.val();
-  // 自分の過去チャットは描画しない
-  if(chat.userId === userId) return;
+  if(chat.timestamp < Date.now() - 1000) return; // 過去のチャットをスキップ
   if(chat.mapX===mapX && chat.mapY===mapY){
-    activeChats.push({ ...chat, time: Date.now() });
+    // 自分の古いチャットを消して新しいチャットを優先
+    activeChats = activeChats.filter(c=>!(c.userId===chat.userId && c.userId===userId));
+    activeChats.push({...chat, time: Date.now()});
     const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
     chatSound.play();
   }
 });
 
-// ================= 更新 =================
+// ====================== 更新 ======================
 function update(){
   const key = `${mapX},${mapY}`;
   const map = maps[key];
@@ -278,7 +277,7 @@ function update(){
   if(playerName) sendPosition();
 }
 
-// ================= 描画 =================
+// ====================== 描画 ======================
 function draw(){
   const key = `${mapX},${mapY}`;
   const map = maps[key];
@@ -336,18 +335,14 @@ function draw(){
     const padding = 4;
     const textWidth = ctx.measureText(c.msg).width;
     const textHeight = 16;
-    // 吹き出し
     ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.fillRect(x - padding, y - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
-    // 文字
     ctx.fillStyle='cyan';
     ctx.fillText(c.msg, x, y);
-
-    if(c.userId===userId) lastOwnChatIndex = i; // 自分のチャットインデックス保存
   }
 }
 
-// ================= メインループ =================
+// ====================== メインループ ======================
 function loop(){ update(); draw(); requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
