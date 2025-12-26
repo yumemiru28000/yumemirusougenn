@@ -93,8 +93,13 @@ for (const k in maps) {
 // 入力管理
 // ================================
 const keyState = {};
-addEventListener('keydown', e => keyState[e.key] = true);
-addEventListener('keyup',   e => keyState[e.key] = false);
+addEventListener('keydown', e => {
+  keyState[e.key.toLowerCase()] = true;
+});
+addEventListener('keyup', e => {
+  keyState[e.key.toLowerCase()] = false;
+});
+
 
 // ================================
 // 時間制限（2分）
