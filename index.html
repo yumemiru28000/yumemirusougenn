@@ -1309,70 +1309,6 @@ if (adminDot && adminPanel) {
 }
 
 
-function createEmptyZukan(){
-  return {
-    version: 1,
-    totalCharacters: 26,
-    owned: {}
-  };
-}
-function loadZukanFromQR(qrJson){
-  if(qrJson.type !== 'zukan') return null;
-  return qrJson.data;
-}
-
-
-
-    function addCharacterToZukan(zukan, charInfo, status, customName){
-  const id = charInfo.id;
-
-  zukan.owned[id] = {
-    id,
-    name: customName,
-    img: charInfo.img,
-    status,
-    obtainedAt: Date.now()
-  };
-
-  return zukan;
-}
-function generateZukanQR(zukan, canvas){
-  const data = JSON.stringify({
-    type: "zukan",
-    data: zukan
-  });
-
-  QRCode.toCanvas(canvas, data, { width: 300 });
-}
-function renderZukan(zukan){
-  const grid = document.getElementById('zukanGrid');
-  grid.innerHTML = '';
-
-  ALL_CHARACTERS.forEach(char => {
-    const cell = document.createElement('div');
-
-    if(zukan.owned[char.id]){
-      cell.innerHTML = `<img src="${char.face}">`;
-      cell.onclick = () => showZukanDetail(zukan.owned[char.id]);
-    } else {
-      cell.innerHTML = `<img src="silhouette.png">`;
-    }
-
-    grid.appendChild(cell);
-  });
-}
-function showZukanDetail(data){
-  alert(`
-${data.name}
-あざとさ:${data.status.azatosa}
-体力:${data.status.health}
-かわいさ:${data.status.sweetness}
-`);
-}
-if(zukan.owned[id]){
-  const overwrite = confirm('同じキャラがあります。上書きしますか？');
-  if(!overwrite) return;
-}
 
   </script>
 
@@ -1393,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
