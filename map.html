@@ -39,7 +39,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // ====================== Firebase 設定 ======================
 const firebaseConfig = {
@@ -158,6 +158,7 @@ let eventLock=false;
 function triggerGrassEventA(){
   if(eventLock) return;
   eventLock=true;
+  remove(ref(db,'players/'+userId)); // イベント移動時も削除
   localStorage.setItem('playVideo','true');
   location.href='index.html';
 }
@@ -276,7 +277,11 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// ====================== タブ閉じ・ページ移動時に Firebase 削除 ======================
+window.addEventListener('beforeunload', ()=>{
+  remove(ref(db,'players/'+userId));
+});
 </script>
 </body>
 </html>
-
