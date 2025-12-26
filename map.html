@@ -38,24 +38,22 @@
 <canvas id="game" width="400" height="300"></canvas>
 
 <script type="module">
- 
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
-    authDomain: "zzonline.firebaseapp.com",
-    databaseURL: "https://zzonline-default-rtdb.firebaseio.com",
-    projectId: "zzonline",
-    storageBucket: "zzonline.firebasestorage.app",
-    messagingSenderId: "50179905692",
-    appId: "1:50179905692:web:12b9664ac730e6a58d3559",
-    measurementId: "G-NMVHG2XN1F"
-  };
-
-
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+// ====================== Firebase 設定 ======================
+const firebaseConfig = {
+  apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
+  authDomain: "zzonline.firebaseapp.com",
+  databaseURL: "https://zzonline-default-rtdb.firebaseio.com",
+  projectId: "zzonline",
+  storageBucket: "zzonline.firebasestorage.app",
+  messagingSenderId: "50179905692",
+  appId: "1:50179905692:web:12b9664ac730e6a58d3559",
+  measurementId: "G-NMVHG2XN1F"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app); // ← Realtime Database を初期化
 
 // ====================== ユーザーID ======================
 let userId;
@@ -70,7 +68,6 @@ if(!localStorage.getItem('userId')){
 let playerName = localStorage.getItem('playerName') || '';
 const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
-
 if(playerName) nameForm.style.display='none';
 
 nameForm.addEventListener('submit', (e)=>{
@@ -188,7 +185,7 @@ function sendPosition(){
   });
 }
 
-// Firebase 他プレイヤー取得
+// ====================== Firebase 他プレイヤー取得 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
@@ -282,7 +279,6 @@ function loop(now){
   draw();
   requestAnimationFrame(loop);
 }
-
 requestAnimationFrame(loop);
 
 </script>
