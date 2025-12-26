@@ -460,11 +460,23 @@ window.addEventListener("DOMContentLoaded", setupClickSound);
 
 
     
-  <!-- ZUKAN -->
-  <div id="zukan" class="page">
-    <img src="https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zu.png" class="fullimage">
-    <button class="home-btn" onclick="showPage('home')">ホーム</button>
+ <!-- ZUKAN -->
+<div id="zukan" class="page">
+  <div class="card-wrapper">
+    <div class="card">
+      <h1>図鑑</h1>
+
+      <button onclick="createEmptyZukan()">📘 新しい図鑑QRを作る</button>
+      <button onclick="openZukanAdd()">➕ キャラQRを追加</button>
+      <button onclick="openZukanView()">📖 図鑑QRを確認</button>
+
+      <div id="zukanPanel" style="margin-top:16px;"></div>
+
+      <button class="home-btn" onclick="showPage('home')">ホーム</button>
+    </div>
   </div>
+</div>
+
 
 
 <!-- OSIRASE -->
@@ -1330,3 +1342,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
