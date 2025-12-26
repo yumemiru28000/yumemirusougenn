@@ -55,7 +55,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ====================== ユーザーID（タブごとにユニーク） ======================
+// ====================== ユーザーID ======================
 let userId = sessionStorage.getItem('userId');
 if(!userId){
   userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
@@ -92,32 +92,9 @@ const otherImages = {};
 
 // ====================== マップ ======================
 const maps = {
-  '0,0': {
-    name:'スタート',
-    bg:'https://picsum.photos/id/1015/400/300',
-    block:{up:false,down:false,left:false,right:false},
-    objects:[
-      {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
-      {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'}
-    ]
-  },
-  '1,0':{
-    name:'右の森',
-    bg:'https://picsum.photos/id/1020/400/300',
-    block:{up:false,down:true,left:false,right:true},
-    objects:[
-      {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'}
-    ]
-  },
-  '-1,0':{
-    name:'左の森',
-    bg:'https://picsum.photos/id/1016/400/300',
-    block:{up:false,down:false,left:false,right:false},
-    objects:[
-      {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
-      {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}
-    ]
-  }
+  '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', block:{up:false,down:false,left:false,right:false}, objects:[{type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'}] },
+  '1,0': { name:'右の森', bg:'https://picsum.photos/id/1020/400/300', block:{up:false,down:true,left:false,right:true}, objects:[{type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'}] },
+  '-1,0': { name:'左の森', bg:'https://picsum.photos/id/1016/400/300', block:{up:false,down:false,left:false,right:false}, objects:[{type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}] }
 };
 
 // 画像ロード
@@ -127,9 +104,9 @@ function loadImage(key,src){
   const img = new Image();
   status[key] = 'loading';
   img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
+  img.onerror=()=>status[key]='error';
   img.src = src;
-  images[key] = img;
+  images[key]=img;
 }
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
@@ -166,7 +143,7 @@ function triggerGrassEventA(){
 // ====================== マップ状態 ======================
 let mapX=0, mapY=0;
 
-// ====================== Firebase送信 ======================
+// ====================== Firebase送信（lastSeen込み） ======================
 function sendPosition(){
   const playerRef=ref(db,'players/'+userId);
   set(playerRef,{
@@ -176,16 +153,23 @@ function sendPosition(){
     mapY:mapY,
     name:playerName,
     imgUrl:player.img.src,
-    timestamp:Date.now()
+    lastSeen: Date.now()
   });
 }
 
-// ====================== Firebase 他プレイヤー取得 ======================
+// ====================== Firebase 他プレイヤー取得 & timeout削除 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
+  const now = Date.now();
   for(const id in data){
-    if(id!==userId) otherPlayers[id]=data[id];
+    const p = data[id];
+    // 10秒更新がないアバターは削除
+    if(now - (p.lastSeen||0) > 10000){
+      remove(ref(db,'players/'+id));
+    } else if(id!==userId){
+      otherPlayers[id] = p;
+    }
   }
 });
 
@@ -211,7 +195,7 @@ function update(){
   if(player.y<0){ mapY--; player.y=H-player.size; }
   if(player.y+player.size>H){ mapY++; player.y=0; }
 
-  if(playerName) sendPosition();
+  sendPosition();
 }
 
 // ====================== 描画 ======================
@@ -225,7 +209,6 @@ function draw(){
     if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h); 
   });
 
-  // 他プレイヤー描画
   for(const id in otherPlayers){
     const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
@@ -244,14 +227,12 @@ function draw(){
     }
   }
 
-  // 自分描画
   if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
   else { ctx.fillStyle='#f55'; ctx.fillRect(player.x,player.y,player.size,player.size); }
   ctx.fillStyle='#fff';
   ctx.font='16px sans-serif';
   if(playerName) ctx.fillText(playerName, player.x, player.y-5);
 
-  // マップ名と時間
   ctx.fillStyle='#fff';
   ctx.font='16px sans-serif';
   ctx.fillText(map.name,10,20);
@@ -279,9 +260,11 @@ function loop(now){
 requestAnimationFrame(loop);
 
 // ====================== タブ閉じ・ページ移動時に Firebase 削除 ======================
-window.addEventListener('beforeunload', ()=>{
-  remove(ref(db,'players/'+userId));
-});
+window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId)); });
+
+// ====================== heartbeat 送信（3秒ごと） ======================
+setInterval(()=>{ sendPosition(); }, 3000);
+
 </script>
 </body>
 </html>
