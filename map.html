@@ -192,18 +192,22 @@ onValue(playersRef,(snapshot)=>{
   for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
 });
 
-// ====================== 入室通知 ======================
-const joinNotifications = [];
+// ====================== 入室通知（重複防止版） ======================
+const joinNotifications = {};
 const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
+
 onChildAdded(playersRef, snapshot => {
   const data = snapshot.val();
   const id = snapshot.key;
-  if(id!==userId){
+  if(id!==userId && !joinNotifications[id]){
     chime.currentTime=0;
     chime.play();
-    joinNotifications.push({ name:data.name||'名無し', time: Date.now() });
+    joinNotifications[id] = { name: data.name || '名無し', time: Date.now() };
+    // 3秒後に通知を削除
+    setTimeout(()=>{ delete joinNotifications[id]; }, 3000);
   }
 });
+
 
 // ====================== 更新 ======================
 function update(){
@@ -279,16 +283,16 @@ function draw(){
   ctx.font='20px monospace';
   ctx.fillText(timeStr,W-110,24);
 
-  // 入室通知表示
-  const nowTime = Date.now();
-  for(let i=joinNotifications.length-1;i>=0;i--){
-    const n = joinNotifications[i];
-    if(nowTime - n.time > 3000){ joinNotifications.splice(i,1); continue; }
-    ctx.fillStyle='yellow';
-    ctx.font='16px sans-serif';
-    ctx.fillText(`${n.name}さんが出撃`,10,50 + i*20);
-  }
+ // 入室通知表示
+let i = 0;
+for(const id in joinNotifications){
+  const n = joinNotifications[id];
+  ctx.fillStyle='yellow';
+  ctx.font='16px sans-serif';
+  ctx.fillText(`${n.name}さんが出撃`,10,50 + i*20);
+  i++;
 }
+
 
 // ====================== メインループ ======================
 function loop(){
