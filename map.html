@@ -174,11 +174,10 @@ function update(){
   const ox = player.x;
   const oy = player.y;
 
-if (keyState.w) player.y -= player.speed;
-if (keyState.s) player.y += player.speed;
-if (keyState.a) player.x -= player.speed;
-if (keyState.d) player.x += player.speed;
-
+  if (keyState.w) player.y -= player.speed;
+  if (keyState.s) player.y += player.speed;
+  if (keyState.a) player.x -= player.speed;
+  if (keyState.d) player.x += player.speed;
 
   for (const obj of map.objects) {
     if (hit(player,obj)){
@@ -188,10 +187,9 @@ if (keyState.d) player.x += player.speed;
       if (obj.type==='event' && obj.event==='A'){
         triggerGrassEventA();
       }
-if (obj.type==='grass' && obj.event==='A'){ // ←新規
-    triggerGrassEventA();
-  }
-      
+      if (obj.type==='grass' && obj.event==='A'){
+        triggerGrassEventA();
+      }
     }
   }
 
@@ -199,6 +197,9 @@ if (obj.type==='grass' && obj.event==='A'){ // ←新規
   if (player.x+player.size > W) { mapX++; player.x = 0; }
   if (player.y < 0) { mapY--; player.y = H-player.size; }
   if (player.y+player.size > H) { mapY++; player.y = 0; }
+
+  // ←ここで自分の位置を送信
+  sendPosition();
 }
 
 // ================================
@@ -296,6 +297,21 @@ if(!localStorage.getItem('userId')){
 console.log("あなたのユーザーID:", userId);
 
 // ここに「プレイヤー位置を Firebase に送ったり同期する処理」を追加可能
+
+
+function sendPosition() {
+  const playerRef = ref(firebaseDB, 'players/' + userId);
+  set(playerRef, {
+    x: player.x,
+    y: player.y,
+    mapX: mapX,
+    mapY: mapY,
+    timestamp: Date.now()
+  });
+}
+
+
+  
 </script>
 
 
