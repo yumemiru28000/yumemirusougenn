@@ -2,44 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ユメっ子探１せ</title>
+<title>ユメっ子探せ</title>
 <style>
-  body {
-    margin: 0;
-    background: #222;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    color: #fff;
-    font-family: sans-serif;
-    overflow: hidden;
-  }
-  canvas {
-    background: #000;
-    border: 4px solid #fff;
-  }
-  #nameForm, #chatForm {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 5px;
-  }
-  #nameForm input, #chatForm input { padding:5px; font-size:16px; }
-  #chatForm input { flex:1; }
-  #touchControls {
-    position: absolute;
-    bottom: 10px;
-    display: flex;
-    gap: 10px;
-  }
-  .touchButton {
-    width: 60px; height: 60px;
-    background: rgba(255,255,255,0.3);
-    color: #fff; font-size: 24px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 10px; user-select: none; touch-action: none;
-  }
+  body {margin:0; background:#222; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; color:#fff; font-family:sans-serif; overflow:hidden;}
+  canvas {background:#000; border:4px solid #fff;}
+  #nameForm, #chatForm {display:flex; gap:5px; margin-bottom:5px;}
+  #nameForm input, #chatForm input {padding:5px; font-size:16px;}
+  #chatForm input {flex:1;}
+  #touchControls {position:absolute; bottom:10px; display:flex; gap:10px;}
+  .touchButton {width:60px; height:60px; background:rgba(255,255,255,0.3); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; border-radius:10px; user-select:none; touch-action:none;}
 </style>
 </head>
 <body>
@@ -61,6 +32,7 @@
   <div class="touchButton" data-key="s">↓</div>
   <div class="touchButton" data-key="a">←</div>
   <div class="touchButton" data-key="d">→</div>
+  <div class="touchButton" data-key=" ">SPACE</div>
 </div>
 
 <script type="module">
@@ -68,16 +40,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebas
 import { getDatabase, ref, set, onValue, remove, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // ====================== Firebase 設定 ======================
-const firebaseConfig = {
-  apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
-  authDomain: "zzonline.firebaseapp.com",
-  databaseURL: "https://zzonline-default-rtdb.firebaseio.com",
-  projectId: "zzonline",
-  storageBucket: "zzonline.firebasestorage.app",
-  messagingSenderId: "50179905692",
-  appId: "1:50179905692:web:12b9664ac730e6a58d3559",
-  measurementId: "G-NMVHG2XN1F"
-};
+const firebaseConfig = { /* Firebase設定省略（先ほどのものをそのまま） */ };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -94,7 +57,14 @@ const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
 if(playerName) nameForm.style.display='none';
 
-async function removeOldSameName(){
+nameForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(nameInput.value.trim()==='') return;
+  playerName = nameInput.value.trim();
+  localStorage.setItem('playerName', playerName);
+  nameForm.style.display='none';
+
+  // 同じ名前のユーザーを削除
   const playersSnapshot = await new Promise(resolve => onValue(ref(db,'players'), snap => resolve(snap), {onlyOnce:true}));
   const playersData = playersSnapshot.val() || {};
   for(const id in playersData){
@@ -102,17 +72,9 @@ async function removeOldSameName(){
       remove(ref(db,'players/'+id));
     }
   }
-}
 
-nameForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if(nameInput.value.trim()==='') return;
-  playerName = nameInput.value.trim();
-  localStorage.setItem('playerName', playerName);
-  nameForm.style.display='none';
-  await removeOldSameName();
   sendPosition();
-  sessionStorage.setItem('enterTime', Date.now()); // 入室時間記録
+  sessionStorage.setItem('enterTime', Date.now());
 });
 
 // ====================== Canvas 設定 ======================
@@ -121,37 +83,28 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 // ====================== プレイヤー ======================
-const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false, lastGrassX:null, lastGrassY:null };
+const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false };
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
-
 const otherPlayers = {};
 const otherImages = {};
 
 // ====================== マップ ======================
 const maps = {
-  '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', objects:[
-    {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
-    {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'}
-  ] },
-  '1,0':{ name:'右の森', bg:'https://picsum.photos/id/1020/400/300', objects:[
-    {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'}
-  ] },
-  '-1,0':{ name:'左の森', bg:'https://picsum.photos/id/1016/400/300', objects:[
-    {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
-    {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}
-  ] }
+  '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', block:{up:true,down:true,left:true,right:true}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'} ] },
+  '1,0':{ name:'右の森', bg:'https://picsum.photos/id/1020/400/300', block:{up:true,down:true,left:true,right:true}, objects:[ {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'} ] },
+  '-1,0':{ name:'左の森', bg:'https://picsum.photos/id/1016/400/300', block:{up:true,down:true,left:true,right:true}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'} ] }
 };
 
 const images = {};
 const status = {};
 function loadImage(key,src){
   const img = new Image();
-  status[key]='loading';
+  status[key] = 'loading';
   img.onload = ()=>status[key]='loaded';
   img.onerror = ()=>status[key]='error';
-  img.src=src;
-  images[key]=img;
+  img.src = src;
+  images[key] = img;
 }
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
@@ -168,7 +121,7 @@ const touchControls = document.getElementById('touchControls');
 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(isMobile) touchControls.style.display='flex';
 document.querySelectorAll('.touchButton').forEach(btn=>{
-  const key = btn.dataset.key;
+  const key = btn.dataset.key===' ' ? ' ' : btn.dataset.key;
   btn.addEventListener('touchstart', e=>{ e.preventDefault(); keyState[key]=true; });
   btn.addEventListener('touchend', e=>{ e.preventDefault(); keyState[key]=false; });
 });
@@ -178,56 +131,23 @@ function hit(a,b){
   return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
 }
 
-// ====================== 草イベント処理 ======================
-const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
-function tryGrassEvent(obj){
-  // 離れた場合のみ再判定
-  if(player.lastGrassX===obj.x && player.lastGrassY===obj.y) return;
-  player.lastGrassX = obj.x; player.lastGrassY = obj.y;
-
-  // 入室後5秒間は音鳴らさない
-  if(Date.now() - (parseInt(sessionStorage.getItem('enterTime'))||0) > 5000){
-    chatSound.currentTime=0;
-    chatSound.play();
-  }
-
-  // 10%で動画再生
-  if(Math.random()<0.1){
-    hidePlayerBeforeVideo();
-    triggerGrassEventA();
-  }
-}
-
-// ====================== 動画再生前に自身を非表示 ======================
-function hidePlayerBeforeVideo(){
-  remove(ref(db,'players/'+userId)); // 自分を他から消す
-}
-
-// ====================== イベント ======================
+// ====================== 草イベント ======================
 let eventLock=false;
 function triggerGrassEventA(){
   if(eventLock) return;
   eventLock=true;
+  remove(ref(db,'players/'+userId));
   localStorage.setItem('playVideo','true');
-  // 動画ページに遷移
   location.href='index.html';
 }
 
 // ====================== マップ状態 ======================
-let mapX=0,mapY=0;
+let mapX=0, mapY=0;
 
 // ====================== Firebase送信 ======================
 function sendPosition(){
   const playerRef=ref(db,'players/'+userId);
-  set(playerRef,{
-    x:player.x,
-    y:player.y,
-    mapX:mapX,
-    mapY:mapY,
-    name:playerName,
-    imgUrl:player.img.src,
-    timestamp:Date.now()
-  });
+  set(playerRef,{ x:player.x, y:player.y, mapX, mapY, name:playerName, imgUrl:player.img.src, timestamp:Date.now() });
 }
 
 // ====================== 他プレイヤー取得 ======================
@@ -242,78 +162,69 @@ const joinNotifications = [];
 const notifiedUsers = new Set();
 const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
 
-onChildAdded(playersRef, snapshot=>{
-  const data = snapshot.val();
-  const id = snapshot.key;
-  if(id!==userId && !notifiedUsers.has(id)){
-    notifiedUsers.add(id);
-    // 入室5秒以内は音鳴らない
-    if(Date.now() - (parseInt(sessionStorage.getItem('enterTime'))||0) > 5000){
-      chime.currentTime=0;
-      chime.play();
-    }
-    joinNotifications.push({name:data.name||'名無し', time:Date.now()});
-  }
-});
-
 // ====================== チャット ======================
-const chatForm=document.getElementById('chatForm');
-const chatInput=document.getElementById('chatInput');
-const chatsRef=ref(db,'chats');
-let activeChats=[];
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatsRef = ref(db,'chats');
+let activeChats = [];
 
 chatForm.addEventListener('submit',(e)=>{
   e.preventDefault();
-  const msg=chatInput.value.trim();
+  const msg = chatInput.value.trim();
   if(!msg) return;
   chatInput.value='';
-  push(chatsRef,{userId,name:playerName,msg,mapX,mapY,timestamp:Date.now()});
+  push(chatsRef,{ userId, name:playerName, msg, mapX, mapY, timestamp:Date.now() });
 });
 
-onChildAdded(chatsRef,snapshot=>{
+onChildAdded(chatsRef, snapshot=>{
   const chat = snapshot.val();
-  if(chat.mapX===mapX && chat.mapY===mapY){
-    activeChats = activeChats.filter(c=>c.userId!==chat.userId);
-    activeChats.push({...chat,time:Date.now()});
-    if(Date.now() - (parseInt(sessionStorage.getItem('enterTime'))||0) > 5000){
-      const s = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
-      s.play();
-    }
+  const enterTime = sessionStorage.getItem('enterTime') || Date.now();
+  if(chat.mapX===mapX && chat.mapY===mapY && Date.now()-enterTime>5000){
+    activeChats = activeChats.filter(c=>!(c.userId===chat.userId));
+    activeChats.push({...chat, time:Date.now()});
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
+    chatSound.play();
   }
 });
 
 // ====================== 更新 ======================
 function update(){
-  const key=`${mapX},${mapY}`;
+  const key = `${mapX},${mapY}`;
   const map = maps[key];
-  if(!map) return;
-  const ox=player.x,oy=player.y;
+  if(!map) return; // マップがない場所は行けない
+  const ox=player.x, oy=player.y;
 
   if(keyState.w) player.y-=player.speed;
   if(keyState.s) player.y+=player.speed;
   if(keyState.a) player.x-=player.speed;
   if(keyState.d) player.x+=player.speed;
 
+  let onGrass=false;
+
   for(const obj of map.objects){
     if(hit(player,obj)){
       if(obj.type==='block'){ player.x=ox; player.y=oy; }
       if(obj.type==='event' && obj.event==='A'){ triggerGrassEventA(); }
-      if(obj.type==='grass' && obj.event==='A'){ tryGrassEvent(obj); }
+      if(obj.type==='grass' && obj.event==='A'){ onGrass=true; } // 通過可能
     }
   }
 
-  // マップ端移動
-  const nx = player.x<0 ? mapX-1 : player.x+player.size>W ? mapX+1 : mapX;
-  const ny = player.y<0 ? mapY-1 : player.y+player.size>H ? mapY+1 : mapY;
-  if(maps[`${nx},${ny}`]){
-    if(player.x<0){ mapX=nx; player.x=W-player.size; }
-    if(player.x+player.size>W){ mapX=nx; player.x=0; }
-    if(player.y<0){ mapY=ny; player.y=H-player.size; }
-    if(player.y+player.size>H){ mapY=ny; player.y=0; }
-  } else {
-    if(player.x<0 || player.x+player.size>W) player.x=ox;
-    if(player.y<0 || player.y+player.size>H) player.y=oy;
+  // 草上でスペース押すとchat音＋20分の1確率で動画
+  if(onGrass && keyState[' ']){
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
+    chatSound.play();
+    if(Math.floor(Math.random()*20)===0){
+      remove(ref(db,'players/'+userId)); // 非表示
+      localStorage.setItem('playVideo','true');
+      location.href='index.html';
+    }
   }
+
+  // マップ端移動制御
+  if(player.x<0){ if(maps[`${mapX-1},${mapY}`]){ mapX--; player.x=W-player.size; } else player.x=0; }
+  if(player.x+player.size>W){ if(maps[`${mapX+1},${mapY}`]){ mapX++; player.x=0; } else player.x=W-player.size; }
+  if(player.y<0){ if(maps[`${mapX},${mapY-1}`]){ mapY--; player.y=H-player.size; } else player.y=0; }
+  if(player.y+player.size>H){ if(maps[`${mapX},${mapY+1}`]){ mapY++; player.y=0; } else player.y=H-player.size; }
 
   if(playerName) sendPosition();
 }
@@ -324,54 +235,62 @@ function draw(){
   const map = maps[key];
   if(!map) return;
   if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
-  else ctx.fillStyle='#333',ctx.fillRect(0,0,W,H);
+  else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
 
-  map.objects.forEach((o,i)=>{ if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h); });
+  map.objects.forEach((o,i)=>{
+    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
+  });
 
   for(const id in otherPlayers){
-    const p=otherPlayers[id];
+    const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
-      if(!otherImages[id]){ const img=new Image(); img.src=p.imgUrl || 'https://picsum.photos/seed/player/48'; otherImages[id]={img,loaded:false}; img.onload=()=>otherImages[id].loaded=true; }
-      const oi=otherImages[id];
-      if(oi.loaded) ctx.drawImage(oi.img,p.x,p.y,player.size,player.size);
-      else ctx.fillStyle='#0f0',ctx.fillRect(p.x,p.y,player.size,player.size);
-      ctx.fillStyle='#fff'; ctx.font='12px sans-serif';
-      ctx.fillText(p.name||id,p.x,p.y-5);
+      if(!otherImages[id]){
+        const img = new Image();
+        img.src = p.imgUrl || 'https://picsum.photos/seed/player/48';
+        otherImages[id] = { img, loaded:false };
+        img.onload = ()=>otherImages[id].loaded=true;
+      }
+      const oi = otherImages[id];
+      if(oi.loaded) ctx.drawImage(oi.img, p.x, p.y, player.size, player.size);
+      else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
+      ctx.fillStyle='#fff';
+      ctx.font='12px sans-serif';
+      ctx.fillText(p.name||id, p.x, p.y-5);
     }
   }
 
   if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
-  else ctx.fillStyle='#f55',ctx.fillRect(player.x,player.y,player.size,player.size);
-  if(playerName) ctx.fillStyle='#fff',ctx.font='16px sans-serif',ctx.fillText(playerName,player.x,player.y-5);
+  else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
+  if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
 
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
 
   const now = new Date();
-  ctx.fillStyle='#fff'; ctx.font='20px monospace';
-  ctx.fillText(`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`, W-110,24);
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  ctx.fillStyle='#fff'; ctx.font='20px monospace'; ctx.fillText(timeStr,W-110,24);
 
   const nowTime = Date.now();
   for(let i=joinNotifications.length-1;i>=0;i--){
-    const n=joinNotifications[i];
-    if(nowTime-n.time>3000){ joinNotifications.splice(i,1); continue; }
+    const n = joinNotifications[i];
+    if(nowTime - n.time > 3000){ joinNotifications.splice(i,1); continue; }
     ctx.fillStyle='yellow'; ctx.font='16px sans-serif';
     ctx.fillText(`${n.name}さんが出撃`,10,35);
   }
 
   // ===== チャット描画 =====
   for(let i=activeChats.length-1;i>=0;i--){
-    const c=activeChats[i];
-    if(nowTime-c.time>15000){ activeChats.splice(i,1); continue; }
-    const x=c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
-    const y=c.userId===userId ? player.y-20 : (otherPlayers[c.userId]?.y-20||0);
+    const c = activeChats[i];
+    if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
+    const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
+    const y = c.userId===userId ? player.y - 20 : (otherPlayers[c.userId]?.y - 20 || 0);
     ctx.font='14px sans-serif';
-    const padding=4;
-    const textWidth=ctx.measureText(c.msg).width;
-    const textHeight=16;
+    const padding = 4;
+    const textWidth = ctx.measureText(c.msg).width;
+    const textHeight = 16;
     ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.fillRect(x-padding,y-textHeight-padding,textWidth+padding*2,textHeight+padding*2);
+    ctx.fillRect(x - padding, y - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
     ctx.fillStyle='black';
-    ctx.fillText(c.msg,x,y);
+    ctx.fillText(c.msg, x, y);
   }
 }
 
