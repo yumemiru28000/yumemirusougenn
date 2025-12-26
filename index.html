@@ -1170,6 +1170,42 @@ function onJoin(){
   location.href = 'map.html';
 }
 
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(localStorage.getItem('playVideo') === 'true'){
+    localStorage.removeItem('playVideo'); // フラグを消す
+    startVideo(); // 下で定義する動画再生関数
+  }
+});
+
+function startVideo(){
+  const pick = pickVideo(config.videos);
+  const container = document.getElementById('playerContainer');
+  container.style.display='flex';
+  container.innerHTML='';
+  const vid = document.createElement('video');
+  vid.src = pick.url;
+  vid.playsInline = true;
+  vid.autoplay = true;
+  vid.controls = false;
+  container.appendChild(vid);
+
+  vid.addEventListener('loadeddata', async ()=>{
+    try{ await vid.play(); }catch(e){}
+    try{ if(container.requestFullscreen) await container.requestFullscreen({navigationUI:'hide'});}catch(e){}
+  });
+
+  vid.addEventListener('ended', async ()=>{
+    try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){}
+    container.innerHTML='';
+    const charInfo = characterMap[pick.id];
+    if(charInfo){
+      const status = generateStatus();
+      generateCharacterCard(charInfo,status);
+    } else {
+      showPage('endScreen');
+    }
+  });
+}
 
 
     
@@ -1586,6 +1622,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
