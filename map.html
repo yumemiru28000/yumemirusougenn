@@ -140,10 +140,11 @@ function update(){
   const ox = player.x;
   const oy = player.y;
 
-  if (keyState.ArrowUp)    player.y -= player.speed;
-  if (keyState.ArrowDown)  player.y += player.speed;
-  if (keyState.ArrowLeft)  player.x -= player.speed;
-  if (keyState.ArrowRight) player.x += player.speed;
+if (keyState.w) player.y -= player.speed;
+if (keyState.s) player.y += player.speed;
+if (keyState.a) player.x -= player.speed;
+if (keyState.d) player.x += player.speed;
+
 
   for (const obj of map.objects) {
     if (hit(player,obj)){
