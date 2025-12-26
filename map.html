@@ -76,7 +76,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove, onChildAdded, push, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// ====================== Firebase 設定 ======================
+/* ====================== Firebase ====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
   authDomain: "zzonline.firebaseapp.com",
@@ -90,266 +90,168 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ====================== ユーザーID ======================
+/* ====================== ユーザーID ====================== */
 let userId = sessionStorage.getItem('userId');
 if(!userId){
   userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   sessionStorage.setItem('userId', userId);
 }
 
-// ====================== 名前取得 ======================
+/* ====================== 名前 ====================== */
 let playerName = localStorage.getItem('playerName') || '';
 const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
 if(playerName) nameForm.style.display='none';
-nameForm.addEventListener('submit', async (e)=>{
+
+nameForm.addEventListener('submit', (e)=>{
   e.preventDefault();
-  if(nameInput.value.trim()==='') return;
+  if(!nameInput.value.trim()) return;
   playerName = nameInput.value.trim();
   localStorage.setItem('playerName', playerName);
   nameForm.style.display='none';
 
-  // 同じ名前のユーザーがいたら削除
   const q = query(ref(db,'players'), orderByChild('name'), equalTo(playerName));
   onValue(q, snapshot=>{
     const data = snapshot.val();
     if(data){
       for(const id in data){
-        if(id !== userId) remove(ref(db,'players/'+id));
+        if(id!==userId) remove(ref(db,'players/'+id));
       }
     }
-  }, {onlyOnce:true});
+  },{onlyOnce:true});
+
+  /* ===== 入室ログを送信（ここが重要） ===== */
+  push(ref(db,'enterLogs'),{
+    userId,
+    name: playerName,
+    timestamp: Date.now()
+  });
 });
 
-// ====================== Canvas 設定 ======================
+/* ====================== Canvas ====================== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-// ====================== プレイヤー ======================
-const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false };
-player.img.src = 'https://picsum.photos/seed/player/48';
-player.img.onload = ()=>player.imgLoaded = true;
+/* ====================== プレイヤー ====================== */
+const player = { x:80,y:30,size:24,speed:1.2,img:new Image(),imgLoaded:false };
+player.img.src='https://picsum.photos/seed/player/48';
+player.img.onload=()=>player.imgLoaded=true;
 
 const otherPlayers = {};
 const otherImages = {};
 
-// ====================== マップ ======================
-const maps = {
-  '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'} ] },
-  '1,0':{ name:'右の森', bg:'https://picsum.photos/id/1020/400/300', block:{up:false,down:true,left:false,right:true}, objects:[ {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'} ] },
-  '-1,0':{ name:'左の森', bg:'https://picsum.photos/id/1016/400/300', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'} ] }
+/* ====================== マップ ====================== */
+const maps={
+  '0,0':{name:'スタート',bg:'https://picsum.photos/id/1015/400/300',objects:[
+    {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
+    {type:'event',x:60,y:200,w:80,h:40,event:'A'}
+  ]},
+  '1,0':{name:'右の森',bg:'https://picsum.photos/id/1020/400/300',objects:[
+    {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'}
+  ]},
+  '-1,0':{name:'左の森',bg:'https://picsum.photos/id/1016/400/300',objects:[
+    {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
+    {type:'grass',x:60,y:200,w:80,h:40,event:'A'}
+  ]}
 };
 
-const images = {};
-const status = {};
-function loadImage(key,src){
-  const img = new Image();
-  status[key] = 'loading';
-  img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
-  img.src = src;
-  images[key] = img;
+const images={},status={};
+function loadImage(k,s){
+  const i=new Image();status[k]='loading';
+  i.onload=()=>status[k]='loaded';
+  i.src=s;images[k]=i;
 }
 for(const k in maps){
-  loadImage(`bg_${k}`, maps[k].bg);
-  maps[k].objects.forEach((o,i)=>{ if(o.img) loadImage(`obj_${k}_${i}`, o.img); });
+  loadImage(`bg_${k}`,maps[k].bg);
+  maps[k].objects.forEach((o,i)=>{if(o.img)loadImage(`obj_${k}_${i}`,o.img);});
 }
 
-// ====================== 入力管理 ======================
+/* ====================== 入力 ====================== */
 const keyState={};
-addEventListener('keydown', e=>keyState[e.key.toLowerCase()]=true);
-addEventListener('keyup', e=>keyState[e.key.toLowerCase()]=false);
+addEventListener('keydown',e=>keyState[e.key.toLowerCase()]=true);
+addEventListener('keyup',e=>keyState[e.key.toLowerCase()]=false);
 
-// ====================== スマホ操作ボタン ======================
-const touchControls = document.getElementById('touchControls');
-const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-if(isMobile) touchControls.style.display='flex';
-document.querySelectorAll('.touchButton').forEach(btn=>{
-  const key = btn.dataset.key;
-  btn.addEventListener('touchstart', e=>{ e.preventDefault(); keyState[key]=true; });
-  btn.addEventListener('touchend', e=>{ e.preventDefault(); keyState[key]=false; });
-});
-
-// ====================== 判定 ======================
-function hit(a,b){
-  return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
-}
-
-// ====================== イベント ======================
-let eventLock=false;
-function triggerGrassEventA(){
-  if(eventLock) return;
-  eventLock=true;
-  remove(ref(db,'players/'+userId));
-  localStorage.setItem('playVideo','true');
-  location.href='index.html';
-}
-
-// ====================== マップ状態 ======================
-let mapX=0, mapY=0;
-
-// ====================== Firebase送信 ======================
+/* ====================== Firebase 同期 ====================== */
+const playersRef=ref(db,'players');
 function sendPosition(){
-  const playerRef=ref(db,'players/'+userId);
-  set(playerRef,{
-    x:player.x,
-    y:player.y,
-    mapX:mapX,
-    mapY:mapY,
-    name:playerName,
-    imgUrl:player.img.src,
+  set(ref(db,'players/'+userId),{
+    x:player.x,y:player.y,mapX,mapY,
+    name:playerName,imgUrl:player.img.src,
     timestamp:Date.now()
   });
 }
-
-// ====================== 他プレイヤー取得 ======================
-const playersRef = ref(db,'players');
-onValue(playersRef,(snapshot)=>{
-  const data = snapshot.val()||{};
-  for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
+onValue(playersRef,s=>{
+  const d=s.val()||{};
+  for(const id in d) if(id!==userId) otherPlayers[id]=d[id];
 });
 
-// ====================== 入室通知 ======================
-const joinNotifications = [];
-const notifiedUsers = new Set();
-const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
-const enterTime = Date.now();
-onChildAdded(playersRef, snapshot => {
-  const data = snapshot.val();
-  const id = snapshot.key;
-  if(id!==userId && !notifiedUsers.has(id)){
-    notifiedUsers.add(id);
-    chime.currentTime=0;
-    chime.play();
-    joinNotifications.push({ name:data.name||'名無し', time: Date.now() });
-  }
+/* ====================== 入室通知（完成形） ====================== */
+const joinNotifications=[];
+const chime=new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
+const enterTime=Date.now();
+
+onChildAdded(ref(db,'enterLogs'),snap=>{
+  const d=snap.val();
+  if(!d) return;
+  if(d.userId===userId) return;
+  if(d.timestamp<enterTime) return;
+
+  chime.currentTime=0;
+  chime.play();
+  joinNotifications.push({name:d.name||'名無し',time:Date.now()});
 });
 
-// ====================== チャット機能 ======================
-const chatForm = document.getElementById('chatForm');
-const chatInput = document.getElementById('chatInput');
-const chatsRef = ref(db,'chats');
+/* ====================== チャット ====================== */
+const chatForm=document.getElementById('chatForm');
+const chatInput=document.getElementById('chatInput');
+const chatsRef=ref(db,'chats');
+let activeChats=[];
 
-let activeChats = [];
-
-chatForm.addEventListener('submit',(e)=>{
+chatForm.addEventListener('submit',e=>{
   e.preventDefault();
-  const msg = chatInput.value.trim();
+  const msg=chatInput.value.trim();
   if(!msg) return;
   chatInput.value='';
-  const chatData = { userId, name:playerName, msg, mapX, mapY, timestamp:Date.now() };
-  push(chatsRef, chatData);
+  push(chatsRef,{userId,name:playerName,msg,mapX,mapY,timestamp:Date.now()});
 });
 
-onChildAdded(chatsRef, snapshot=>{
-  const chat = snapshot.val();
-  if(chat.mapX===mapX && chat.mapY===mapY){
-    if(Date.now() - enterTime < 5000) return;
-    activeChats = activeChats.filter(c=>!(c.userId===chat.userId));
-    activeChats.push({...chat, time:Date.now()});
-    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
-    chatSound.play();
-  }
+onChildAdded(chatsRef,s=>{
+  const c=s.val();
+  if(c.mapX!==mapX||c.mapY!==mapY) return;
+  if(Date.now()-enterTime<5000) return;
+  activeChats.push({...c,time:Date.now()});
+  new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3').play();
 });
 
-// ====================== 更新 ======================
+/* ====================== ループ ====================== */
+let mapX=0,mapY=0;
 function update(){
-  const key = `${mapX},${mapY}`;
-  const map = maps[key];
-  const ox=player.x, oy=player.y;
-
-  if(keyState.w) player.y-=player.speed;
-  if(keyState.s) player.y+=player.speed;
-  if(keyState.a) player.x-=player.speed;
-  if(keyState.d) player.x+=player.speed;
-
-  for(const obj of map.objects){
-    if(hit(player,obj)){
-      if(obj.type==='block'){ player.x=ox; player.y=oy; }
-      if(obj.type==='event' && obj.event==='A'){ triggerGrassEventA(); }
-      if(obj.type==='grass' && obj.event==='A'){ triggerGrassEventA(); }
-    }
-  }
-
-  if(player.x<0){ mapX--; player.x=W-player.size; }
-  if(player.x+player.size>W){ mapX++; player.x=0; }
-  if(player.y<0){ mapY--; player.y=H-player.size; }
-  if(player.y+player.size>H){ mapY++; player.y=0; }
-
-  if(playerName) sendPosition();
+  if(keyState.w)player.y-=player.speed;
+  if(keyState.s)player.y+=player.speed;
+  if(keyState.a)player.x-=player.speed;
+  if(keyState.d)player.x+=player.speed;
+  if(playerName)sendPosition();
 }
-
-// ====================== 描画 ======================
 function draw(){
-  const key = `${mapX},${mapY}`;
-  const map = maps[key];
-  if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
-  else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
-
-  map.objects.forEach((o,i)=>{
-    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
-  });
-
+  const key=`${mapX},${mapY}`;
+  if(status[`bg_${key}`]==='loaded')ctx.drawImage(images[`bg_${key}`],0,0,W,H);
   for(const id in otherPlayers){
-    const p = otherPlayers[id];
-    if(p.mapX===mapX && p.mapY===mapY){
-      if(!otherImages[id]){
-        const img = new Image();
-        img.src = p.imgUrl || 'https://picsum.photos/seed/player/48';
-        otherImages[id] = { img, loaded:false };
-        img.onload = ()=>otherImages[id].loaded=true;
-      }
-      const oi = otherImages[id];
-      if(oi.loaded) ctx.drawImage(oi.img, p.x, p.y, player.size, player.size);
-      else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
-      ctx.fillStyle='#fff';
-      ctx.font='12px sans-serif';
-      ctx.fillText(p.name||id, p.x, p.y-5);
+    const p=otherPlayers[id];
+    if(p.mapX===mapX&&p.mapY===mapY){
+      ctx.fillRect(p.x,p.y,24,24);
+      ctx.fillText(p.name,p.x,p.y-4);
     }
   }
-
-  if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
-  else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
-  if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
-
-  ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
-
-  const now = new Date();
-  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-  ctx.fillStyle='#fff'; ctx.font='20px monospace'; ctx.fillText(timeStr,W-110,24);
-
-  const nowTime = Date.now();
-  for(let i=joinNotifications.length-1;i>=0;i--){
-    const n = joinNotifications[i];
-    if(nowTime - n.time > 3000){ joinNotifications.splice(i,1); continue; }
-    ctx.fillStyle='yellow'; ctx.font='16px sans-serif';
-    ctx.fillText(`${n.name}さんが出撃`,10,35);
-  }
-
-  // ===== チャット描画（吹き出し付き） =====
-  for(let i=activeChats.length-1;i>=0;i--){
-    const c = activeChats[i];
-    if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
-    const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
-    const y = c.userId===userId ? player.y - 20 : (otherPlayers[c.userId]?.y - 20 || 0);
-
-    ctx.font='14px sans-serif';
-    const padding = 4;
-    const textWidth = ctx.measureText(c.msg).width;
-    const textHeight = 16;
-    ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.fillRect(x - padding, y - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
-    ctx.fillStyle='black'; // 文字黒
-    ctx.fillText(c.msg, x, y);
-  }
+  ctx.fillRect(player.x,player.y,24,24);
+  joinNotifications.forEach(n=>{
+    if(Date.now()-n.time<3000){
+      ctx.fillText(`${n.name}さんが出撃`,10,35);
+    }
+  });
 }
-
-// ====================== メインループ ======================
-function loop(){ update(); draw(); requestAnimationFrame(loop); }
-requestAnimationFrame(loop);
-
-window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId)); });
+(function loop(){update();draw();requestAnimationFrame(loop);})();
+window.addEventListener('beforeunload',()=>remove(ref(db,'players/'+userId)));
 </script>
 </body>
 </html>
