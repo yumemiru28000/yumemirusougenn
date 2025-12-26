@@ -271,7 +271,6 @@ requestAnimationFrame(loop);
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// Firebase 設定
 const firebaseConfig = {
   apiKey: "AIzaSyCvdaEW4o2y8rljlafXQJbGE-nuGQn9Q88",
   authDomain: "zuzutomo-d8fa0.firebaseapp.com",
@@ -286,21 +285,17 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 window.firebaseDB = db;
 
-// ==================================
-// ステップ4：ユーザーIDを作る
-// ==================================
+// ユーザーID生成
 let userId;
-if (!localStorage.getItem('userId')) {
+if(!localStorage.getItem('userId')){
   userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
   localStorage.setItem('userId', userId);
-} else {
+}else{
   userId = localStorage.getItem('userId');
 }
 console.log("あなたのユーザーID:", userId);
 
-// ==================================
-// ここに「プレイヤー位置を Firebase に送ったり同期する処理」を追加できる
-// ==================================
+// ここに「プレイヤー位置を Firebase に送ったり同期する処理」を追加可能
 </script>
 
 
