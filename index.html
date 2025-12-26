@@ -326,117 +326,7 @@
 
 
 
-/* =========================
-   図鑑データ定義☆
-========================= */
 
-const ALL_CHAR_LIST = [
-  { id:'CHARA001', icon:'char1.jpg', silhouette:'sil1.png' },
-  { id:'CHARA002', icon:'char2.jpg', silhouette:'sil2.png' },
-  { id:'CHARA003', icon:'char3.jpg', silhouette:'sil3.png' },
-  { id:'CHARA004', icon:'char4.jpg', silhouette:'sil4.png' },
-  // 必要な分だけ追加
-];
-
-let currentZukanData = null;
-
-/* =========================
-   新規図鑑作成
-========================= */
-function createNewZukan(){
-  currentZukanData = {
-    version:1,
-    chars:{} // charID : data
-  };
-  renderZukan();
-  generateZukanQR();
-}
-
-/* =========================
-   図鑑QR読み込み
-========================= */
-document.getElementById('zukanQrInput').addEventListener('change', e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-  img.onload = ()=>{
-    const c=document.createElement('canvas');
-    c.width=img.width;
-    c.height=img.height;
-    const ctx=c.getContext('2d');
-    ctx.drawImage(img,0,0);
-
-    // ★右側だけ切り取り
-    const cutX = img.width * 0.5;
-    const imageData = ctx.getImageData(cutX,0,img.width-cutX,img.height);
-    const code = jsQR(imageData.data,imageData.width,imageData.height);
-
-    if(!code){
-      alert('図鑑QRが読み取れません');
-      return;
-    }
-
-    currentZukanData = JSON.parse(code.data);
-    renderZukan();
-  };
-});
-
-/* =========================
-   図鑑描画
-========================= */
-function renderZukan(){
-  const list = document.getElementById('zukanIconList');
-  list.innerHTML = '';
-
-  ALL_CHAR_LIST.forEach(c=>{
-    const has = currentZukanData?.chars[c.id];
-    const img = document.createElement('img');
-    img.src = has ? has.img : c.silhouette;
-    img.style.width='64px';
-    img.style.opacity = has ? 1 : 0.3;
-    img.style.cursor='pointer';
-
-    img.onclick = ()=> showZukanDetail(c.id);
-    list.appendChild(img);
-  });
-}
-
-/* =========================
-   詳細表示
-========================= */
-function showZukanDetail(charId){
-  const panel = document.getElementById('zukanDetail');
-  const data = currentZukanData.chars[charId];
-
-  if(!data){
-    panel.innerHTML = `<p>未取得キャラ</p>`;
-    return;
-  }
-
-  panel.innerHTML = `
-    <img src="${data.img}" style="max-width:200px"><br>
-    <b>${data.name}</b><br>
-    あざとさ:${data.azatosa}<br>
-    体力:${data.health}<br>
-    かわいさ:${data.sweetness}
-  `;
-}
-
-/* =========================
-   図鑑QR生成
-========================= */
-function generateZukanQR(){
-  const qrCanvas = document.createElement('canvas');
-  QRCode.toCanvas(qrCanvas, JSON.stringify(currentZukanData), {width:300});
-  document.getElementById('zukanDetail').appendChild(qrCanvas);
-}
-
-
-
-
-    
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -1501,6 +1391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
