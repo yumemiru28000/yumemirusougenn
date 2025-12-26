@@ -38,21 +38,24 @@
 <canvas id="game" width="400" height="300"></canvas>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+ 
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
 
-// ====================== Firebase 設定 ======================
-const firebaseConfig = {
-  apiKey: "AIzaSyCvdaEW4o2y8rljlafXQJbGE-nuGQn9Q88",
-  authDomain: "zuzutomo-d8fa0.firebaseapp.com",
-  databaseURL: "https://zuzutomo-d8fa0-default-rtdb.firebaseio.com",
-  projectId: "zuzutomo-d8fa0",
-  storageBucket: "zuzutomo-d8fa0.appspot.com",
-  messagingSenderId: "637121353766",
-  appId: "1:637121353766:web:d14e8556c981f83c616ee7"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
+    authDomain: "zzonline.firebaseapp.com",
+    databaseURL: "https://zzonline-default-rtdb.firebaseio.com",
+    projectId: "zzonline",
+    storageBucket: "zzonline.firebasestorage.app",
+    messagingSenderId: "50179905692",
+    appId: "1:50179905692:web:12b9664ac730e6a58d3559",
+    measurementId: "G-NMVHG2XN1F"
+  };
+
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 
 // ====================== ユーザーID ======================
 let userId;
