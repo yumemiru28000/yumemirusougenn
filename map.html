@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>画面切り替え移動デモ（画像ブロック＆イベント対応）</title>
+<title>ユメっ子探せ</title>
 <style>
   body {
     margin: 0;
@@ -21,30 +21,45 @@
 <body>
 <canvas id="game" width="400" height="300"></canvas>
 <script>
+// ================================
+// 基本設定
+// ================================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width;
 const H = canvas.height;
 
 // ================================
-// マップ定義（画像ブロック・イベント対応）
+// プレイヤー定義
+// ================================
+const player = {
+  x: 180,
+  y: 130,
+  size: 24,
+  speed: 1.2,
+  img: (() => {
+    const i = new Image();
+    i.src = 'https://picsum.photos/seed/player/48';
+    return i;
+  })()
+};
+
+// ================================
+// マップ定義
 // ================================
 const maps = {
   '0,0': {
     name: 'スタート',
-    img: 'https://picsum.photos/id/1015/400/300',
+    bg: 'https://picsum.photos/id/1015/400/300',
     block: { up:false, down:false, left:false, right:false },
     objects: [
-      // 通れない画像ブロック（岩など）
       { type:'block', x:150, y:80,  w:64, h:64, img:'https://picsum.photos/id/1056/64/64' },
-
-      // 草エリア（通れる・イベント発生）
-      { type:'event', x:60, y:200, w:80, h:40, img:null, event:'A' }
+      { type:'event', x:60,  y:200, w:80, h:40, img:null, event:'A' }
     ]
   },
   '1,0': {
     name: '右の森',
-    img: 'https://picsum.photos/id/1020/400/300',
+    bg: 'https://picsum.photos/id/1020/400/300',
     block: { up:false, down:true, left:false, right:true },
     objects: [
       { type:'block', x:220, y:120, w:64, h:64, img:'https://picsum.photos/id/1062/64/64' }
@@ -53,174 +68,146 @@ const maps = {
 };
 
 // ================================
-// 画像ロード管理（背景＋オブジェクト）
+// 画像ロード
 // ================================
 const images = {};
-const imageStatus = {};
+const status = {};
 
 function loadImage(key, src) {
   const img = new Image();
-  imageStatus[key] = 'loading';
-  img.onload = () => imageStatus[key] = 'loaded';
-  img.onerror = () => imageStatus[key] = 'error';
+  status[key] = 'loading';
+  img.onload = () => status[key] = 'loaded';
+  img.onerror = () => status[key] = 'error';
   img.src = src;
   images[key] = img;
 }
 
-for (const key in maps) {
-  loadImage(`bg_${key}`, maps[key].img);
-  maps[key].objects?.forEach((o, i) => {
-    if (o.img) loadImage(`obj_${key}_${i}`, o.img);
+for (const k in maps) {
+  loadImage(`bg_${k}`, maps[k].bg);
+  maps[k].objects.forEach((o,i)=>{
+    if (o.img) loadImage(`obj_${k}_${i}`, o.img);
   });
 }
 
-let mapX = 0;
-let mapY = 0;
+// ================================
+// 入力管理
+// ================================
+const keyState = {};
+addEventListener('keydown', e => keyState[e.key] = true);
+addEventListener('keyup',   e => keyState[e.key] = false);
 
 // ================================
-// 制限時間（2分）
+// 時間制限（2分）
 // ================================
-let timeLeft = 120; // 秒
+let timeLeft = 120;
 let lastTime = performance.now();
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
-  const s = sec % 60;
+  const s = Math.floor(sec % 60);
   return `${m}:${s.toString().padStart(2,'0')}`;
 }
 
-const keyState = {};=> {
-    const i = new Image();
-    i.src = 'https://picsum.photos/seed/player/48';
-    return i;
-  })()
-};
-
-const keyState = {};
-addEventListener('keydown', e => keyState[e.key] = true);
-addEventListener('keyup', e => keyState[e.key] = false);
-
-function rectHit(a, b) {
-  return a.x < b.x + b.w && a.x + a.size > b.x && a.y < b.y + b.h && a.y + a.size > b.y;
+// ================================
+// 判定
+// ================================
+function hit(a,b){
+  return a.x < b.x+b.w && a.x+a.size > b.x && a.y < b.y+b.h && a.y+a.size > b.y;
 }
 
 // ================================
 // イベント処理
 // ================================
 let eventLock = false;
-function triggerEvent(type) {
+function triggerGrassEventA(){
   if (eventLock) return;
   eventLock = true;
-
-  if (type === 'A') {
-    alert('🌱 草を踏んだ！特殊イベントA発生！');
-  }
-
-  setTimeout(() => eventLock = false, 500);
-}
-
-function update() {
-  const map = maps[`${mapX},${mapY}`] || { block:{}, objects:[] };
-  const oldX = player.x;
-  const oldY = player.y;
-
-  if (keyState['ArrowUp']) player.y -= player.speed;
-  if (keyState['ArrowDown']) player.y += player.speed;
-  if (keyState['ArrowLeft']) player.x -= player.speed;
-  if (keyState['ArrowRight']) player.x += player.speed;
-
-
-  function triggerGrassEventA() {
-  // 「イベントAが起きた」印
-  localStorage.setItem('fromMapEvent', 'A');
-
-  // index.html に戻る
+  localStorage.setItem('fromMapEvent','A');
   location.href = 'index.html';
 }
 
+// ================================
+// マップ状態
+// ================================
+let mapX = 0;
+let mapY = 0;
 
-  // オブジェクト判定
-  for (const obj of map.objects) {
-    if (rectHit(player, obj)) {
-      if (obj.type === 'block') {
-        player.x = oldX;
-        player.y = oldY;
-      }
-      if (obj.type === 'event') {
-        triggerEvent(obj.event);
-      }
-      if (tile.type === 'grass') {
-  triggerGrassEventA();
-}
-    }
-  }
-
-  // === 画面切り替え ===
-  if (player.x < 0) {
-    if (!map.block.left) { mapX--; player.x = W - player.size; }
-    else player.x = 0;
-  }
-  if (player.x + player.size > W) {
-    if (!map.block.right) { mapX++; player.x = 0; }
-    else player.x = W - player.size;
-  }
-  if (player.y < 0) {
-    if (!map.block.up) { mapY--; player.y = H - player.size; }
-    else player.y = 0;
-  }
-  if (player.y + player.size > H) {
-    if (!map.block.down) { mapY++; player.y = 0; }
-    else player.y = H - player.size;
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  drawBackground();
-
+// ================================
+// 更新処理
+// ================================
+function update(){
   const map = maps[`${mapX},${mapY}`];
+  const ox = player.x;
+  const oy = player.y;
 
-  // 壁の可視化（デバッグ用）
-  if (map?.walls) {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    for (const w of map.walls) {
-      ctx.fillRect(w.x, w.y, w.w, w.h);
+  if (keyState.ArrowUp)    player.y -= player.speed;
+  if (keyState.ArrowDown)  player.y += player.speed;
+  if (keyState.ArrowLeft)  player.x -= player.speed;
+  if (keyState.ArrowRight) player.x += player.speed;
+
+  for (const obj of map.objects) {
+    if (hit(player,obj)){
+      if (obj.type==='block'){
+        player.x = ox; player.y = oy;
+      }
+      if (obj.type==='event' && obj.event==='A'){
+        triggerGrassEventA();
+      }
     }
   }
 
-  // プレイヤー（画像）
-  if (player.img.complete) {
-    ctx.drawImage(player.img, player.x, player.y, player.size, player.size);
-  } else {
-    ctx.fillStyle = '#ff5555';
-    ctx.fillRect(player.x, player.y, player.size, player.size);
-  }
-
-  // UI
-  ctx.fillStyle = '#fff';
-  ctx.font = '16px sans-serif';
-  ctx.fillText(map ? map.name : '未開エリア', 10, 20);
-  ctx.fillText(`(${mapX}, ${mapY})`, 10, 40);
-
-  // タイマー表示
-  ctx.font = '20px monospace';
-  ctx.fillText(formatTime(timeLeft), W - 90, 24);
+  if (player.x < 0) { mapX--; player.x = W-player.size; }
+  if (player.x+player.size > W) { mapX++; player.x = 0; }
+  if (player.y < 0) { mapY--; player.y = H-player.size; }
+  if (player.y+player.size > H) { mapY++; player.y = 0; }
 }
 
-function loop(now) {
-  const delta = (now - lastTime) / 1000;
-  lastTime = now;
+// ================================
+// 描画
+// ================================
+function draw(){
+  const key = `${mapX},${mapY}`;
+  if (status[`bg_${key}`]==='loaded'){
+    ctx.drawImage(images[`bg_${key}`],0,0,W,H);
+  } else {
+    ctx.fillStyle='#333'; ctx.fillRect(0,0,W,H);
+  }
 
-  timeLeft -= delta;
-  if (timeLeft <= 0) {
-    timeLeft = 0;
-    draw();
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  const map = maps[key];
+  map.objects.forEach((o,i)=>{
+    if (o.img && status[`obj_${key}_${i}`]==='loaded'){
+      ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
+    }
+  });
+
+  if (player.img.complete){
+    ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
+  } else {
+    ctx.fillStyle='#f55'; ctx.fillRect(player.x,player.y,player.size,player.size);
+  }
+
+  ctx.fillStyle='#fff';
+  ctx.font='16px sans-serif';
+  ctx.fillText(map.name,10,20);
+  ctx.font='20px monospace';
+  ctx.fillText(formatTime(timeLeft),W-90,24);
+}
+
+// ================================
+// メインループ
+// ================================
+function loop(now){
+  const dt = (now-lastTime)/1000;
+  lastTime = now;
+  timeLeft -= dt;
+
+  if (timeLeft<=0){
+    ctx.fillStyle='rgba(0,0,0,0.7)';
     ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#fff';
-    ctx.font = '24px sans-serif';
-    ctx.fillText('TIME UP', W/2 - 60, H/2);
-    return; // 強制終了
+    ctx.fillStyle='#fff';
+    ctx.font='24px sans-serif';
+    ctx.fillText('TIME UP',W/2-60,H/2);
+    return;
   }
 
   update();
@@ -229,30 +216,6 @@ function loop(now) {
 }
 
 requestAnimationFrame(loop);
-
-loop();
-
-
-
-let timeLeft = 120; // 2分
-
-const timerEl = document.getElementById('timer');
-
-const timer = setInterval(() => {
-  timeLeft--;
-
-  const m = Math.floor(timeLeft / 60);
-  const s = timeLeft % 60;
-  timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-
-  if (timeLeft <= 0) {
-    clearInterval(timer);
-    alert('時間切れです');
-    location.href = 'index.html';
-  }
-}, 1000);
-
-  
 </script>
 </body>
 </html>
