@@ -54,7 +54,7 @@ const maps = {
     block: { up:false, down:false, left:false, right:false },
     objects: [
       { type:'block', x:150, y:80,  w:64, h:64, img:'https://picsum.photos/id/1056/64/64' },
-      { type:'event', x:60,  y:200, w:80, h:40, img:null, event:'A' }
+      { type:'event', x:60,  y:200, w:80, h:40, img:null, event:'B' }
     ]
   },
   '1,0': {
@@ -174,7 +174,7 @@ if (keyState.d) player.x += player.speed;
       if (obj.type==='block'){
         player.x = ox; player.y = oy;
       }
-      if (obj.type==='event' && obj.event==='A'){
+      if (obj.type==='event' && obj.event==='B'){
         triggerGrassEventA();
       }
 if (obj.type==='grass' && obj.event==='A'){ // ←新規
