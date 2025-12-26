@@ -8,31 +8,6 @@
 
 
 
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyCvdaEW4o2y8rljlafXQJbGE-nuGQn9Q88",
-    authDomain: "zuzutomo-d8fa0.firebaseapp.com",
-    projectId: "zuzutomo-d8fa0",
-    storageBucket: "zuzutomo-d8fa0.firebasestorage.app",
-    messagingSenderId: "637121353766",
-    appId: "1:637121353766:web:d14e8556c981f83c616ee7",
-    measurementId: "G-JEDC3ZMSG7"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
-  window.firebaseDB = db; // 他の関数からも使えるように
-</script>
 
 
 
@@ -289,5 +264,53 @@ requestAnimationFrame(loop);
 
   
 </script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+
+// Firebase 設定
+const firebaseConfig = {
+  apiKey: "AIzaSyCvdaEW4o2y8rljlafXQJbGE-nuGQn9Q88",
+  authDomain: "zuzutomo-d8fa0.firebaseapp.com",
+  databaseURL: "https://zuzutomo-d8fa0-default-rtdb.firebaseio.com",
+  projectId: "zuzutomo-d8fa0",
+  storageBucket: "zuzutomo-d8fa0.appspot.com",
+  messagingSenderId: "637121353766",
+  appId: "1:637121353766:web:d14e8556c981f83c616ee7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window.firebaseDB = db;
+
+// ==================================
+// ステップ4：ユーザーIDを作る
+// ==================================
+let userId;
+if (!localStorage.getItem('userId')) {
+  userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  localStorage.setItem('userId', userId);
+} else {
+  userId = localStorage.getItem('userId');
+}
+console.log("あなたのユーザーID:", userId);
+
+// ==================================
+// ここに「プレイヤー位置を Firebase に送ったり同期する処理」を追加できる
+// ==================================
+</script>
+
+
+
+
+
+
+
+
+
+
+
+  
 </body>
 </html>
