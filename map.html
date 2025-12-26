@@ -129,6 +129,16 @@ function update() {
   if (keyState['ArrowLeft']) player.x -= player.speed;
   if (keyState['ArrowRight']) player.x += player.speed;
 
+
+  function triggerGrassEventA() {
+  // 「イベントAが起きた」印
+  localStorage.setItem('fromMapEvent', 'A');
+
+  // index.html に戻る
+  location.href = 'index.html';
+}
+
+
   // オブジェクト判定
   for (const obj of map.objects) {
     if (rectHit(player, obj)) {
@@ -139,6 +149,9 @@ function update() {
       if (obj.type === 'event') {
         triggerEvent(obj.event);
       }
+      if (tile.type === 'grass') {
+  triggerGrassEventA();
+}
     }
   }
 
@@ -218,6 +231,28 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 loop();
+
+
+
+let timeLeft = 120; // 2分
+
+const timerEl = document.getElementById('timer');
+
+const timer = setInterval(() => {
+  timeLeft--;
+
+  const m = Math.floor(timeLeft / 60);
+  const s = timeLeft % 60;
+  timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+
+  if (timeLeft <= 0) {
+    clearInterval(timer);
+    alert('時間切れです');
+    location.href = 'index.html';
+  }
+}, 1000);
+
+  
 </script>
 </body>
 </html>
