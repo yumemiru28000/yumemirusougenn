@@ -6,7 +6,7 @@
 <style>
   body {
     margin: 0;
-    background: #222;
+    background: #578191;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -329,7 +329,7 @@ function draw(){
     const c = activeChats[i];
     if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
     const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
-    const y = c.userId===userId ? player.y - 20 : (otherPlayers[c.userId]?.y - 20 || 0); // 上にずらした
+    const y = c.userId===userId ? player.y - 22 : (otherPlayers[c.userId]?.y - 22 || 0); // 上にずらした
 
     ctx.font='14px sans-serif';
     const padding = 4;
