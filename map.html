@@ -131,6 +131,16 @@ canvas {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
+const SPAWN = {
+  mapX: -4,
+  mapY: -4,
+  x: 150,
+  y: 120
+};
+
+
+
+  
 const firebaseConfig = {
   apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
   authDomain: "zzonline.firebaseapp.com",
@@ -191,8 +201,8 @@ function resizeCanvas(){
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 const player = {
-  x:80,
-  y:30,
+  x: SPAWN.x,
+  y: SPAWN.y,
   size:24,
   speed:1.2,
   img:new Image(),
@@ -2529,8 +2539,9 @@ function hit(a,b){
   return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
 }
 
-let mapX = 0;
-let mapY = 0;
+let mapX = SPAWN.mapX;
+let mapY = SPAWN.mapY;
+
 
 function isOnGrass(){
   const key = `${mapX},${mapY}`;
