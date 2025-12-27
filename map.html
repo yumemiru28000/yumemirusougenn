@@ -168,7 +168,16 @@ const player = {
 };
 // ===== ☆BGM 管理 =====
 let currentBgmZoneId = null;
-let bgmAudio = new Audio();
+// 単体BGM（町・エリア曲）
+const singleBgmAudio = new Audio();
+singleBgmAudio.loop = true;
+singleBgmAudio.volume = 0.6;
+
+// アルバムBGM（複数曲ループ）
+const albumBgmAudio = new Audio();
+albumBgmAudio.loop = false;
+albumBgmAudio.volume = 0.6;
+
 bgmAudio.loop = true;
 bgmAudio.volume = 0.6;
 
@@ -183,35 +192,49 @@ function stopBgm(){
   currentBgmZoneId = null;
   albumMode = false;
 }
-
 function playSingleBgm(url){
-  if(bgmAudio.src !== url){
-    bgmAudio.src = url;
+  if(singleBgmAudio.src !== url){
+    singleBgmAudio.src = url;
+    singleBgmAudio.play();
   }
-  bgmAudio.loop = true;
-  bgmAudio.play();
 }
+
+function stopSingleBgm(){
+  singleBgmAudio.pause();
+  singleBgmAudio.currentTime = 0;
+}
+
 
 function playAlbum(list){
+  if(albumActive && JSON.stringify(albumList) === JSON.stringify(list)) return;
+
   albumList = list;
   albumIndex = 0;
-  albumMode = true;
-  bgmAudio.src = albumList[0];
-  bgmAudio.loop = false;
-  bgmAudio.play();
+  albumActive = true;
 
-  bgmAudio.onended = ()=>{
-    if(!albumMode) return;
+  albumBgmAudio.src = albumList[albumIndex];
+  albumBgmAudio.play();
+
+  albumBgmAudio.onended = ()=>{
+    if(!albumActive) return;
     albumIndex = (albumIndex + 1) % albumList.length;
-    bgmAudio.src = albumList[albumIndex];
-    bgmAudio.play();
+    albumBgmAudio.src = albumList[albumIndex];
+    albumBgmAudio.play();
   };
 }
+
+function stopAlbum(){
+  albumActive = false;
+  albumBgmAudio.pause();
+  albumBgmAudio.currentTime = 0;
+}
+
 
 
   
 function checkBgmZone(){
-  let inZone = false;
+  let singleHit = null;
+  let albumHit = null;
 
   for(const zone of worldBgmZones){
     if(
@@ -220,24 +243,23 @@ function checkBgmZone(){
       mapY >= zone.mapY1 &&
       mapY <= zone.mapY2
     ){
-      inZone = true;
-
-      if(currentBgmZoneId !== zone.id){
-        currentBgmZoneId = zone.id;
-
-        if(zone.type === 'single'){
-          albumMode = false;
-          playSingleBgm(zone.url);
-        }else if(zone.type === 'album'){
-          playAlbum(zone.list);
-        }
-      }
-      break;
+      if(zone.type === 'single') singleHit = zone;
+      if(zone.type === 'album') albumHit = zone;
     }
   }
 
-  if(!inZone && currentBgmZoneId){
-    stopBgm();
+  // 単体BGM
+  if(singleHit){
+    playSingleBgm(singleHit.url);
+  }else{
+    stopSingleBgm();
+  }
+
+  // アルバムBGM
+  if(albumHit){
+    playAlbum(albumHit.list);
+  }else{
+    stopAlbum();
   }
 }
 
