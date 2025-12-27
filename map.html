@@ -168,24 +168,23 @@ const player = {
 };
 // ===== ☆BGM 管理 =====
 let currentBgmZoneId = null;
-// 単体BGM（町・エリア曲）
+// 単体BGM
 const singleBgmAudio = new Audio();
 singleBgmAudio.loop = true;
 singleBgmAudio.volume = 0.6;
 
-// アルバムBGM（複数曲ループ）
+// アルバムBGM
 const albumBgmAudio = new Audio();
 albumBgmAudio.loop = false;
 albumBgmAudio.volume = 0.6;
 
-bgmAudio.loop = true;
-bgmAudio.volume = 0.6;
-
-// アルバム用
+// アルバム管理
 let albumList = [];
 let albumIndex = 0;
-let albumMode = false;
+let albumActive = false;
 
+
+  
 function stopBgm(){
   bgmAudio.pause();
   bgmAudio.currentTime = 0;
