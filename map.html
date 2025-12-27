@@ -420,7 +420,7 @@ const newPNGObject = {
   y: 0,   // 左上に配置
   w: 400, // マップと同じ幅
   h: 300, // マップと同じ高さ
-  img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari2.png', // 任意の画像URLを使用
+  img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png', // 任意の画像URLを使用
 };
 
 //☆ マップの画像とnewPNGObjectのサイズを合わせる
@@ -434,7 +434,6 @@ const maps = {
       newPNGObject //☆ 新しいPNGオブジェクトを追加
     ]
   },
-
   
   '0,0': {
     name:'ZZ病院前',
@@ -2294,52 +2293,37 @@ const maps = {
     ]
   }
 };
-function isPassable(x, y, image) {
-  const img = new Image();
-  img.src = image;
-  img.onload = function () {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    
-    // 画像のピクセル情報を取得
-    const pixelData = ctx.getImageData(x, y, 1, 1).data; // 1x1ピクセルのデータを取得
-
-    // アルファチャンネルが0（透明）でない場合、通れない
-    return pixelData[3] === 0 ? false : true;
-  };
-} 
-  function checkObjectCollision(player) {
-  const mapKey = `${mapX},${mapY}`;
-  const map = maps[mapKey];
-
-  for (const obj of map.objects) {
-    if (obj.type === 'block') {
-      const objX = obj.x;
-      const objY = obj.y;
-      const objWidth = obj.w;
-      const objHeight = obj.h;
-
-      //☆ PNG画像内の通過判定
-      if (isPassable(player.x, player.y, obj.img)) {
-        // 通れない場合
-        player.x = ox;
-        player.y = oy;
-      }
-    }
-  }
-}
-
+// ピクセルデータキャッシュ（key -> {data,width,height}）
+const imagePixelData = {};
 const images = {};
 const status = {};
 
 function loadImage(key,src){
   const img = new Image();
   status[key] = 'loading';
-  img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
+  img.crossOrigin = 'anonymous'; // 可能であれば CORS を許可して getImageData を使用できるようにする
+  img.onload = ()=>{
+    status[key]='loaded';
+    // オフスクリーンでピクセルデータを作る（失敗したら null）
+    try{
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const cx = canvas.getContext('2d');
+      cx.drawImage(img,0,0);
+      const imageData = cx.getImageData(0,0,canvas.width,canvas.height);
+      imagePixelData[key] = {
+        data: imageData.data,
+        width: imageData.width,
+        height: imageData.height
+      };
+    }catch(e){
+      // CORS 制約などで取得できない場合は null をセット（フォールバックで矩形衝突）
+      imagePixelData[key] = null;
+      // console.warn('Could not get pixel data for', key, e);
+    }
+  };
+  img.onerror = ()=>{ status[key]='error'; imagePixelData[key] = null; };
   img.src = src;
   images[key] = img;
 }
@@ -2558,10 +2542,12 @@ function update() {
     if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
     if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
 
-    for (const obj of map.objects) {
+    // ゲート処理（インデックスを使用するようにループを変更）
+    for (let i = 0; i < map.objects.length; i++) {
+        const obj = map.objects[i];
         if (obj.type === 'gate') {
-            const need = countPlayersInRange(obj);
-            const near = playersNearGate(obj);
+            const need = countPlayersInRange ? countPlayersInRange(obj) : (obj.need||1);
+            const near = playersNearGate ? playersNearGate(obj) : 0;
             if (near >= need) {
                 // 全員TP
                 for (const id in otherPlayers) {
@@ -2591,11 +2577,48 @@ function update() {
         }
     }
 
-    for (const obj of map.objects) {
+    // オブジェクトとの衝突判定（ピクセル単位をサポート）
+    for (let i = 0; i < map.objects.length; i++) {
+        const obj = map.objects[i];
         if (hit(player, obj)) {
             if (obj.type === 'block') {
-                player.x = ox;
-                player.y = oy;
+                // pixelData キーは obj_${key}_${i}
+                const pixelKey = `obj_${key}_${i}`;
+                const pixel = imagePixelData[pixelKey];
+
+                if (pixel && pixel.data) {
+                    // プレイヤー矩形とオブジェクト画像のオーバーラップ領域を求める
+                    const startX = Math.max(0, Math.floor(player.x - obj.x));
+                    const startY = Math.max(0, Math.floor(player.y - obj.y));
+                    const endX = Math.min(obj.w - 1, Math.floor(player.x + player.size - obj.x));
+                    const endY = Math.min(obj.h - 1, Math.floor(player.y + player.size - obj.y));
+
+                    const scaleX = pixel.width / obj.w;
+                    const scaleY = pixel.height / obj.h;
+
+                    let collided = false;
+                    // サンプリングは必要に応じて間引き可能（負荷低減）
+                    for (let py = startY; py <= endY && !collided; py++) {
+                        for (let px = startX; px <= endX; px++) {
+                            const imgX = Math.floor(px * scaleX);
+                            const imgY = Math.floor(py * scaleY);
+                            if (imgX < 0 || imgX >= pixel.width || imgY < 0 || imgY >= pixel.height) continue;
+                            const idx = (imgY * pixel.width + imgX) * 4 + 3; // alpha チャンネル
+                            if (pixel.data[idx] > 10) { // 透明度閾値（10）
+                                collided = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (collided) {
+                        player.x = ox;
+                        player.y = oy;
+                    }
+                } else {
+                    // ピクセルデータが無ければ矩形ブロックでフォールバック
+                    player.x = ox;
+                    player.y = oy;
+                }
             }
             if (obj.type === 'warp') {
                 player.x = obj.to.x;
