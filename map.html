@@ -545,11 +545,13 @@ function update(){
   for(const obj of map.objects){
     if(hit(player,obj)){
       if(obj.type==='block'){ player.x=ox; player.y=oy; }
-      if(obj.type==='warp'){
-        player.x=obj.to.x;
-        player.y=obj.to.y;
-        mapX=0; mapY=0;
-      }
+if(obj.type==='warp'){
+  player.x = obj.to.x;
+  player.y = obj.to.y;
+  mapX = obj.to.mapX;
+  mapY = obj.to.mapY;
+}
+
     }
   }
 
