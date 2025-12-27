@@ -413,17 +413,14 @@ const worldBgmZones = [
   }
 ];
 
-const maps = {
+  const maps = {
+
   '50,0': {
-    name: '仮ホーム',
-    bg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari.png',
-    block: { up: false, down: true, left: false, right: true },
-    objects: [
-      {
-        type: 'block', x: 150, y: 100, w: 64, h: 64, 
-        img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png', //☆新しいPNG画像
-        collision: 'block' //☆通れない部分の定義
-      }
+    name:'仮ホーム',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari.png',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[
+      {type:'warp',x:200,y:200,w:40,h:40,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png',to:{ x:50, y:200, mapX:-7, mapY:-2 }}
     ]
   },
 
@@ -2287,45 +2284,6 @@ const maps = {
   }
 };
 
-  //☆画像の読み込み関数（通行判定用）
-  function loadImage(key, src, callback) {
-  const img = new Image();
-  img.onload = () => {
-    callback(img);
-  };
-  img.onerror = () => {
-    console.error(`画像の読み込み失敗: ${src}`);
-  };
-  img.src = src;
-}
-
-//☆通行判定用関数
-function checkCollision(player, object) {
-  const imgData = ctx.getImageData(object.x, object.y, object.w, object.h);
-  const pixels = imgData.data;
-
-  // 透明ピクセルがあるかどうかで通行判定
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i + 3] !== 0) { // alpha（透明度）が0以外の部分
-      return true; // 衝突あり
-    }
-  }
-  return false; // 衝突なし
-}
-
-//☆マップオブジェクトに対して通行判定を行う
-function updatePlayerPosition() {
-  const currentMap = maps[`${mapX},${mapY}`];
-  
-  for (const obj of currentMap.objects) {
-    if (obj.type === 'block' && checkCollision(player, obj)) {
-      // 衝突した場合、プレイヤーを元の位置に戻す
-      player.x = player.prevX;
-      player.y = player.prevY;
-    }
-  }
-}
-  
 const images = {};
 const status = {};
 
@@ -2337,7 +2295,6 @@ function loadImage(key,src){
   img.src = src;
   images[key] = img;
 }
-
 
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
@@ -2538,10 +2495,6 @@ function checkUiZone(){
 }
 
 function update() {
-
-    player.prevX = player.x;  //☆位置を記録
-  player.prevY = player.y;
-  
     const key = mapX + ',' + mapY; // `${mapX},${mapY}` の代わりに文字列結合
     if (!maps[key]) return;
     const map = maps[key];
@@ -2626,7 +2579,6 @@ function update() {
     if (playerName) sendPosition();
     checkBgmZone();
     checkUiZone();
-    updatePlayerPosition();  //☆通行判定の実行
 }
 
 
