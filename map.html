@@ -2,28 +2,29 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ユあメっ子探せ</title>
+<title>ユメっ子探せ</title>
 <style>
 body {
   margin: 0;
   background: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
   color: #fff;
   font-family: sans-serif;
   overflow: hidden;
+  position: relative;
+  height: 100vh;
 }
 canvas {
   background: #000;
   border: 4px solid #fff;
+
+  width: 400px;   /* 内部解像度基準 */
+  height: 300px;
+  display: block;
 }
-#nameForm, #chatForm { display: flex; gap: 5px; margin-bottom: 5px; }
+#nameForm, #chatForm { display: flex; gap: 5px; margin-bottom: 5px; position: absolute; z-index: 10; }
 #nameForm input, #chatForm input { padding: 5px; font-size: 16px; }
 #chatForm input { flex: 1; }
-#touchControls { position: absolute; bottom: 10px; display: flex; gap: 10px; }
+#touchControls { position: absolute; bottom: 10px; display: flex; gap: 10px; z-index: 10; }
 .touchButton {
   width: 60px; height: 60px;
   background: rgba(255,255,255,0.3); color: #fff;
@@ -31,7 +32,7 @@ canvas {
   align-items: center; justify-content: center;
   border-radius: 10px; user-select: none; touch-action: none;
 }
-#extraButtons { position: absolute; bottom: 80px; display:flex; gap:10px; }
+#extraButtons { position: absolute; bottom: 80px; display:flex; gap:10px; z-index: 10; }
 #extraButtons .touchButton { background: rgba(0,200,255,0.4); }
 </style>
 </head>
@@ -42,7 +43,7 @@ canvas {
   <button type="submit">決定</button>
 </form>
 
-<form id="chatForm">
+<form id="chatForm" style="top: 10px; left: 10px;">
   <input type="text" id="chatInput" placeholder="チャットを入力" maxlength="50">
   <button type="submit">送信</button>
 </form>
@@ -56,7 +57,6 @@ canvas {
   <div class="touchButton" data-key="d">→</div>
 </div>
 
-<!-- スマホ用追加ボタン（Shift・Space） -->
 <div id="extraButtons" style="display:none;">
   <div class="touchButton" data-key="shift">Shift</div>
   <div class="touchButton" data-key="space">Space</div>
@@ -118,6 +118,23 @@ nameForm.addEventListener('submit', async (e)=>{
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
+
+// ====================== リサイズ対応 ======================
+function resizeCanvas(){
+  const scaleX = window.innerWidth / W;
+  const scaleY = window.innerHeight / H;
+  const scale = Math.min(scaleX, scaleY);
+
+  canvas.style.transform = `scale(${scale})`;
+  canvas.style.transformOrigin = 'top left';
+
+  canvas.style.left = `${(window.innerWidth - W*scale)/2}px`;
+  canvas.style.top  = `${(window.innerHeight - H*scale)/2}px`;
+  canvas.style.position = 'absolute';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
 // ====================== プレイヤー ======================
 const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false, shift:false };
