@@ -2226,7 +2226,7 @@ setInterval(async ()=>{
   const playersData = playersSnap.val() || {};
   for(const id in playersData) if(now - playersData[id].timestamp > 300000) remove(ref(db,'players/'+id));
   const chatsSnap = await get(ref(db,'chats')); const chatsData = chatsSnap.val() || {};
-  for(const id in chatsData) if(now - chatsData[id].timestamp > 5000) remove(ref(db,'chats/'+id));
+  for(const id in chatsData) if(now - chatsData[id].timestamp > 1800) remove(ref(db,'chats/'+id));
 },60000);
 
 /* --- UI zone --- */
