@@ -145,7 +145,7 @@ playerShiftImg.src = 'https://picsum.photos/seed/playerShift/48';
 
 // 他プレイヤー
 const otherPlayers = {};
-const otherImages = {};
+
 
   player.dir = 'down';
 player.state = 'idle';
@@ -289,17 +289,9 @@ const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
   for(const id in data){
-    if(id!==userId){
-      otherPlayers[id] = data[id];
 
-      if(!otherImages[id]){
-        const img = new Image();
-        img.src = data[id].imgUrl || 'https://picsum.photos/seed/player/48';
-        otherImages[id] = { img, loaded:false };
-        img.onload = ()=>otherImages[id].loaded=true;
-      }
-      else otherImages[id].img.src = data[id].imgUrl; // Shift共有反映
-    }
+     
+    
   }
 });
 
@@ -307,7 +299,7 @@ onValue(playersRef,(snapshot)=>{
 onChildRemoved(playersRef, snapshot=>{
   const id = snapshot.key;
   delete otherPlayers[id];
-  delete otherImages[id];
+ 
 });
 
 // ====================== 入室通知 ======================
@@ -452,7 +444,10 @@ function draw(){
  for (const id in otherPlayers) {
   const p = otherPlayers[id];
   if (p.mapX === mapX && p.mapY === mapY) {
-    const img = spriteImages[p.state]?.[p.dir];
+    const state = p.state || 'idle';
+const dir   = p.dir   || 'down';
+const img = spriteImages[state]?.[dir];
+
     if (img) {
       ctx.drawImage(img, p.x, p.y, player.size, player.size);
     } else {
