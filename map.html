@@ -176,15 +176,18 @@ const worldBgmZones = [
 ];
 
 //☆ 新しいPNG画像をマップに追加
+// 例: 元の定義をこう変更
 const newPNGObject = {
   type: 'block',
-  x: 0,   // 左上に配置
-  y: 0,   // 左上に配置
-  w: 400, // マップと同じ幅
-  h: 300, // マップと同じ高さ
-  img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari2.png', // 任意の画像URLを使用
+  x: 0,
+  y: 0,
+  w: 400,
+  h: 300,
+  img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png',
+  mask: true,     // ← この行を追加（または visible: false）
+  // mask:true = 描画はしないがピクセル判定用に読み込む
 };
-
+    
 const maps = {
   '50,0': {
     name: '仮ホーム',
@@ -2350,9 +2353,15 @@ function draw(){
 
   // 注意: collisionMask は描画しない（見えないマスクとして使うため）
   // map.objects を描画（既存）
-  map.objects.forEach((o,i)=>{
-    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
-  });
+// 変更後:
+map.objects.forEach((o,i)=>{
+  // mask フラグがある場合は描画しない（ピクセル判定は保持）
+  if (o.mask) return;
+
+  if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
+    ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+  }
+});
 
   for(const id in otherPlayers){
     const p = otherPlayers[id];
