@@ -281,54 +281,6 @@ function stopAlbum(){
   albumBgmAudio.currentTime = 0;
 }
 
-function playersNearGate(gate){
-  let count = 0;
-
-  if(hit(player, gate)) count++;
-
-  for(const id in otherPlayers){
-    const p = otherPlayers[id];
-    if(p.mapX===mapX && p.mapY===mapY){
-      const fake = {x:p.x,y:p.y,size:player.size};
-      if(hit(fake, gate)) count++;
-    }
-  }
-
-  return count;
-}
-
-
-  function countPlayersInRange(range){
-  let count = 0;
-
-  // 自分
-  if(
-    mapX >= range.mapX1 &&
-    mapX <= range.mapX2 &&
-    mapY >= range.mapY1 &&
-    mapY <= range.mapY2
-  ){
-    count++;
-  }
-
-  // 他プレイヤー
-  for(const id in otherPlayers){
-    const p = otherPlayers[id];
-    if(
-      p.mapX >= range.mapX1 &&
-      p.mapX <= range.mapX2 &&
-      p.mapY >= range.mapY1 &&
-      p.mapY <= range.mapY2
-    ){
-      count++;
-    }
-  }
-
-  return count;
-}
-
-
-
 
   
   
@@ -2244,33 +2196,8 @@ const worldBgmZones = [
     name:'始まりの町',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(15-8).png',
     block:{up:false,down:true,left:false,right:true},
-    objects:[{type:'gate',
-  x:180,
-  y:100,
-  w:40,
-  h:40,
-
-  // 「参加者を数える範囲（マップ単位）」
-  range:{
-    mapX1:-7,
-    mapY1:-7,
-    mapX2:7,
-    mapY2:7
-  },
-
-  // TP先
-  to:{
-    mapX:100,
-    mapY:0,
-    x:150,
-    y:120
-  }
-
-
-  }
-]
-
-    
+    objects:[
+    ]
   },
       
   '1,7': {
