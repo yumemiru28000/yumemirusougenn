@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ユメsっ子探せ</title>
+<title>ユメっ子探せ</title>
 <style>
 body {
   margin: 0;
@@ -52,6 +52,8 @@ canvas {
   <div class="touchButton" data-key="s">↓</div>
   <div class="touchButton" data-key="a">←</div>
   <div class="touchButton" data-key="d">→</div>
+  <div class="touchButton" data-key="shift">Shift</div>
+  <div class="touchButton" data-key=" ">Space</div>
 </div>
 
 <script type="module">
@@ -112,9 +114,15 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 // ====================== プレイヤー ======================
-const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false };
+const player = { 
+  x:80, y:30, size:24, speed:1.2, 
+  img:new Image(), imgLoaded:false, hidden:false,
+  imgShift:new Image(), imgShiftLoaded:false
+};
 player.img.src = 'https://picsum.photos/seed/player/48';
-player.img.onload = ()=>player.imgLoaded = true;
+player.img.onload = ()=>player.imgLoaded=true;
+player.imgShift.src = 'https://picsum.photos/seed/playerShift/48';
+player.imgShift.onload = ()=>player.imgShiftLoaded=true;
 
 const otherPlayers = {};
 const otherImages = {};
@@ -130,11 +138,11 @@ const images = {};
 const status = {};
 function loadImage(key,src){
   const img = new Image();
-  status[key] = 'loading';
-  img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
-  img.src = src;
-  images[key] = img;
+  status[key]='loading';
+  img.onload=()=>status[key]='loaded';
+  img.onerror=()=>status[key]='error';
+  img.src=src;
+  images[key]=img;
 }
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
@@ -145,22 +153,10 @@ for(const k in maps){
 const keyState={};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()]=true;
-
-  // 草ブロック上でスペースキー
-  if(e.key===' '){
-    if(isOnGrass()){
-      const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
-      chatSound.play();
-      if(Math.random() < 1/20){ // 1/20で動画イベント
-        player.hidden=true;
-        remove(ref(db,'players/'+userId));
-        localStorage.setItem('playVideo','true');
-        location.href='index.html';
-      }
-    }
-  }
 });
-addEventListener('keyup', e=>keyState[e.key.toLowerCase()]=false);
+addEventListener('keyup', e=>{
+  keyState[e.key.toLowerCase()]=false;
+});
 
 // ====================== スマホ操作ボタン ======================
 const touchControls = document.getElementById('touchControls');
@@ -183,16 +179,6 @@ function isOnGrass(){
   return false;
 }
 
-// ====================== イベント ======================
-let eventLock=false;
-function triggerGrassEventA(){
-  if(eventLock) return;
-  eventLock=true;
-  remove(ref(db,'players/'+userId));
-  localStorage.setItem('playVideo','true');
-  location.href='index.html';
-}
-
 // ====================== マップ状態 ======================
 let mapX=0, mapY=0;
 
@@ -206,16 +192,32 @@ function sendPosition(){
     mapX:mapX,
     mapY:mapY,
     name:playerName,
-    imgUrl:player.img.src,
+    imgUrl: keyState.shift ? player.imgShift.src : player.img.src,
     timestamp:Date.now()
   });
 }
 
-// ====================== 他プレイヤー取得 ======================
+// ====================== 他プレイヤー取得・削除反映 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
-  for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
+  // 既存オブジェクトを更新または削除
+  for(const id in otherPlayers){
+    if(!data[id]) delete otherPlayers[id];
+  }
+  for(const id in data){
+    if(id!==userId){
+      otherPlayers[id]=data[id];
+      if(!otherImages[id]){
+        const img = new Image();
+        img.src = data[id].imgUrl || 'https://picsum.photos/seed/player/48';
+        otherImages[id]={img, loaded:false};
+        img.onload=()=>otherImages[id].loaded=true;
+      } else {
+        otherImages[id].img.src = data[id].imgUrl;
+      }
+    }
+  }
 });
 
 // ====================== 入室通知 ======================
@@ -250,7 +252,7 @@ chatForm.addEventListener('submit',(e)=>{
 onChildAdded(chatsRef, snapshot=>{
   const chat = snapshot.val();
   if(chat.mapX===mapX && chat.mapY===mapY){
-    if(Date.now()-enterTime<5000) return; // 入室5秒間無効
+    if(Date.now()-enterTime<5000) return;
     activeChats = activeChats.filter(c=>!(c.userId===chat.userId));
     activeChats.push({...chat, time:Date.now()});
     const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
@@ -258,32 +260,20 @@ onChildAdded(chatsRef, snapshot=>{
   }
 });
 
-// ====================== 古いプレイヤー・チャット自動削除 ======================
+// ====================== 古いデータ自動削除 ======================
 setInterval(async ()=>{
-  const now = Date.now();
-
-  // プレイヤー削除（5分無操作）
+  const now=Date.now();
   const playersSnap = await get(ref(db,'players'));
-  const playersData = playersSnap.val() || {};
-  for(const id in playersData){
-    if(now - playersData[id].timestamp > 300000){ // 5分
-      remove(ref(db,'players/'+id));
-    }
-  }
-
-  // 古いチャット削除（15分以上）
+  const playersData = playersSnap.val()||{};
+  for(const id in playersData){ if(now-playersData[id].timestamp>300000){ remove(ref(db,'players/'+id)); } }
   const chatsSnap = await get(ref(db,'chats'));
-  const chatsData = chatsSnap.val() || {};
-  for(const chatId in chatsData){
-    if(now - chatsData[chatId].timestamp > 900000){ // 15分
-      remove(ref(db,'chats/'+chatId));
-    }
-  }
-},60000); // 1分ごとにチェック
+  const chatsData = chatsSnap.val()||{};
+  for(const chatId in chatsData){ if(now-chatsData[chatId].timestamp>900000){ remove(ref(db,'chats/'+chatId)); } }
+},60000);
 
 // ====================== 更新 ======================
 function update(){
-  const key = `${mapX},${mapY}`;
+  const key=`${mapX},${mapY}`;
   if(!maps[key]) return;
   const map = maps[key];
   const ox=player.x, oy=player.y;
@@ -299,11 +289,11 @@ function update(){
     }
   }
 
-  let nextMapX = mapX, nextMapY = mapY;
-  if(player.x<0) nextMapX--; 
-  if(player.x+player.size>W) nextMapX++; 
-  if(player.y<0) nextMapY--; 
-  if(player.y+player.size>H) nextMapY++; 
+  let nextMapX=mapX, nextMapY=mapY;
+  if(player.x<0) nextMapX--;
+  if(player.x+player.size>W) nextMapX++;
+  if(player.y<0) nextMapY--;
+  if(player.y+player.size>H) nextMapY++;
   if(maps[`${nextMapX},${nextMapY}`]){
     mapX=nextMapX; mapY=nextMapY;
     if(player.x<0) player.x=W-player.size;
@@ -317,65 +307,58 @@ function update(){
 
 // ====================== 描画 ======================
 function draw(){
-  const key = `${mapX},${mapY}`;
-  const map = maps[key];
+  const key=`${mapX},${mapY}`;
+  const map=maps[key];
   if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
   else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
 
-  map.objects.forEach((o,i)=>{
-    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
-  });
+  map.objects.forEach((o,i)=>{ if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h); });
 
   for(const id in otherPlayers){
-    const p = otherPlayers[id];
+    const p=otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
-      if(!otherImages[id]){
-        const img = new Image();
-        img.src = p.imgUrl || 'https://picsum.photos/seed/player/48';
-        otherImages[id] = { img, loaded:false };
-        img.onload = ()=>otherImages[id].loaded=true;
-      }
-      const oi = otherImages[id];
-      if(oi.loaded) ctx.drawImage(oi.img, p.x, p.y, player.size, player.size);
+      const oi=otherImages[id];
+      if(oi?.loaded) ctx.drawImage(oi.img,p.x,p.y,player.size,player.size);
       else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
       ctx.fillStyle='#fff';
       ctx.font='12px sans-serif';
-      ctx.fillText(p.name||id, p.x, p.y-5);
+      ctx.fillText(p.name||id,p.x,p.y-5);
     }
   }
 
   if(!player.hidden){
-    if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
+    const imgToDraw = keyState.shift && player.imgShiftLoaded ? player.imgShift : player.imgLoaded ? player.img : null;
+    if(imgToDraw) ctx.drawImage(imgToDraw,player.x,player.y,player.size,player.size);
     else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
-    if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
+    if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName,player.x,player.y-5);
   }
 
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
-  const now = new Date();
+  const now=new Date();
   ctx.fillStyle='#fff'; ctx.font='20px monospace';
   ctx.fillText(`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`,W-110,24);
 
-  const nowTime = Date.now();
+  const nowTime=Date.now();
   for(let i=joinNotifications.length-1;i>=0;i--){
-    const n = joinNotifications[i];
-    if(nowTime - n.time > 3000){ joinNotifications.splice(i,1); continue; }
+    const n=joinNotifications[i];
+    if(nowTime-n.time>3000){ joinNotifications.splice(i,1); continue; }
     ctx.fillStyle='yellow'; ctx.font='16px sans-serif';
     ctx.fillText(`${n.name}さんが出撃`,10,35);
   }
 
   for(let i=activeChats.length-1;i>=0;i--){
-    const c = activeChats[i];
-    if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
-    const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
-    const y = c.userId===userId ? player.y - 20 : (otherPlayers[c.userId]?.y - 20 || 0);
+    const c=activeChats[i];
+    if(nowTime-c.time>15000){ activeChats.splice(i,1); continue; }
+    const x=c.userId===userId?player.x:otherPlayers[c.userId]?.x||0;
+    const y=c.userId===userId?player.y-20:(otherPlayers[c.userId]?.y-20||0);
     ctx.font='14px sans-serif';
-    const padding = 4;
-    const textWidth = ctx.measureText(c.msg).width;
-    const textHeight = 16;
+    const padding=4;
+    const textWidth=ctx.measureText(c.msg).width;
+    const textHeight=16;
     ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.fillRect(x - padding, y - textHeight - padding, textWidth + padding*2, textHeight + padding*2);
+    ctx.fillRect(x-padding,y-textHeight-padding,textWidth+padding*2,textHeight+padding*2);
     ctx.fillStyle='black';
-    ctx.fillText(c.msg, x, y);
+    ctx.fillText(c.msg,x,y);
   }
 }
 
