@@ -52,8 +52,8 @@ canvas {
   <div class="touchButton" data-key="s">↓</div>
   <div class="touchButton" data-key="a">←</div>
   <div class="touchButton" data-key="d">→</div>
-  <div class="touchButton" data-key="shift">Shift</div>
-  <div class="touchButton" data-key=" ">Space</div>
+  <div class="touchButton" data-key=" ">⎵</div>
+  <div class="touchButton" data-key="Shift">⇧</div>
 </div>
 
 <script type="module">
@@ -94,7 +94,6 @@ nameForm.addEventListener('submit', async (e)=>{
   localStorage.setItem('playerName', playerName);
   nameForm.style.display='none';
 
-  // 同じ名前のユーザーを削除
   const playersSnapshot = await get(ref(db,'players'));
   const playersData = playersSnapshot.val() || {};
   for(const id in playersData){
@@ -103,7 +102,6 @@ nameForm.addEventListener('submit', async (e)=>{
     }
   }
 
-  // 自分のデータを登録
   sendPosition();
   sessionStorage.setItem('enterTime', Date.now());
 });
@@ -117,15 +115,16 @@ const W = canvas.width, H = canvas.height;
 const player = { 
   x:80, y:30, size:24, speed:1.2, 
   img:new Image(), imgLoaded:false, hidden:false,
-  imgShift:new Image(), imgShiftLoaded:false
+  shiftImg:new Image(), shiftPressed:false
 };
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded=true;
-player.imgShift.src = 'https://picsum.photos/seed/playerShift/48';
-player.imgShift.onload = ()=>player.imgShiftLoaded=true;
+player.shiftImg.src = 'https://picsum.photos/seed/player_shift/48';
+player.shiftImg.onload = ()=>{}; 
 
 const otherPlayers = {};
 const otherImages = {};
+const otherShift = {};
 
 // ====================== マップ ======================
 const maps = {
@@ -152,10 +151,24 @@ for(const k in maps){
 // ====================== 入力管理 ======================
 const keyState={};
 addEventListener('keydown', e=>{
-  keyState[e.key.toLowerCase()]=true;
+  keyState[e.key]=true;
+  if(e.key===' '){
+    if(isOnGrass()){
+      const chatSound=new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
+      chatSound.play();
+      if(Math.random()<1/20){
+        player.hidden=true;
+        remove(ref(db,'players/'+userId));
+        localStorage.setItem('playVideo','true');
+        location.href='index.html';
+      }
+    }
+  }
+  if(e.key==='Shift') player.shiftPressed=true;
 });
 addEventListener('keyup', e=>{
-  keyState[e.key.toLowerCase()]=false;
+  keyState[e.key]=false;
+  if(e.key==='Shift') player.shiftPressed=false;
 });
 
 // ====================== スマホ操作ボタン ======================
@@ -164,8 +177,8 @@ const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(isMobile) touchControls.style.display='flex';
 document.querySelectorAll('.touchButton').forEach(btn=>{
   const key = btn.dataset.key;
-  btn.addEventListener('touchstart', e=>{ e.preventDefault(); keyState[key]=true; });
-  btn.addEventListener('touchend', e=>{ e.preventDefault(); keyState[key]=false; });
+  btn.addEventListener('touchstart', e=>{ e.preventDefault(); if(key==='Shift') player.shiftPressed=true; else keyState[key]=true; });
+  btn.addEventListener('touchend', e=>{ e.preventDefault(); if(key==='Shift') player.shiftPressed=false; else keyState[key]=false; });
 });
 
 // ====================== 判定 ======================
@@ -177,6 +190,16 @@ function isOnGrass(){
     if(obj.type==='grass' && hit(player,obj)) return true;
   }
   return false;
+}
+
+// ====================== イベント ======================
+let eventLock=false;
+function triggerGrassEventA(){
+  if(eventLock) return;
+  eventLock=true;
+  remove(ref(db,'players/'+userId));
+  localStorage.setItem('playVideo','true');
+  location.href='index.html';
 }
 
 // ====================== マップ状態 ======================
@@ -192,30 +215,24 @@ function sendPosition(){
     mapX:mapX,
     mapY:mapY,
     name:playerName,
-    imgUrl: keyState.shift ? player.imgShift.src : player.img.src,
+    imgUrl:player.img.src,
+    shift:player.shiftPressed,
     timestamp:Date.now()
   });
 }
 
-// ====================== 他プレイヤー取得・削除反映 ======================
+// ====================== 他プレイヤー取得 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
-  // 既存オブジェクトを更新または削除
+  // 既存データリフレッシュ
   for(const id in otherPlayers){
-    if(!data[id]) delete otherPlayers[id];
+    if(!data[id]) delete otherPlayers[id], delete otherImages[id], delete otherShift[id];
   }
   for(const id in data){
-    if(id!==userId){
+    if(id!==userId) {
       otherPlayers[id]=data[id];
-      if(!otherImages[id]){
-        const img = new Image();
-        img.src = data[id].imgUrl || 'https://picsum.photos/seed/player/48';
-        otherImages[id]={img, loaded:false};
-        img.onload=()=>otherImages[id].loaded=true;
-      } else {
-        otherImages[id].img.src = data[id].imgUrl;
-      }
+      otherShift[id]=data[id].shift||false;
     }
   }
 });
@@ -260,20 +277,24 @@ onChildAdded(chatsRef, snapshot=>{
   }
 });
 
-// ====================== 古いデータ自動削除 ======================
+// ====================== 古いプレイヤー・チャット自動削除 ======================
 setInterval(async ()=>{
   const now=Date.now();
   const playersSnap = await get(ref(db,'players'));
   const playersData = playersSnap.val()||{};
-  for(const id in playersData){ if(now-playersData[id].timestamp>300000){ remove(ref(db,'players/'+id)); } }
+  for(const id in playersData){
+    if(now-playersData[id].timestamp>300000) remove(ref(db,'players/'+id));
+  }
   const chatsSnap = await get(ref(db,'chats'));
   const chatsData = chatsSnap.val()||{};
-  for(const chatId in chatsData){ if(now-chatsData[chatId].timestamp>900000){ remove(ref(db,'chats/'+chatId)); } }
+  for(const chatId in chatsData){
+    if(now-chatsData[chatId].timestamp>900000) remove(ref(db,'chats/'+chatId));
+  }
 },60000);
 
 // ====================== 更新 ======================
 function update(){
-  const key=`${mapX},${mapY}`;
+  const key = `${mapX},${mapY}`;
   if(!maps[key]) return;
   const map = maps[key];
   const ox=player.x, oy=player.y;
@@ -289,11 +310,11 @@ function update(){
     }
   }
 
-  let nextMapX=mapX, nextMapY=mapY;
-  if(player.x<0) nextMapX--;
-  if(player.x+player.size>W) nextMapX++;
-  if(player.y<0) nextMapY--;
-  if(player.y+player.size>H) nextMapY++;
+  let nextMapX=mapX,nextMapY=mapY;
+  if(player.x<0) nextMapX--; 
+  if(player.x+player.size>W) nextMapX++; 
+  if(player.y<0) nextMapY--; 
+  if(player.y+player.size>H) nextMapY++; 
   if(maps[`${nextMapX},${nextMapY}`]){
     mapX=nextMapX; mapY=nextMapY;
     if(player.x<0) player.x=W-player.size;
@@ -307,18 +328,26 @@ function update(){
 
 // ====================== 描画 ======================
 function draw(){
-  const key=`${mapX},${mapY}`;
-  const map=maps[key];
+  const key = `${mapX},${mapY}`;
+  const map = maps[key];
   if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
   else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
 
-  map.objects.forEach((o,i)=>{ if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h); });
+  map.objects.forEach((o,i)=>{
+    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
+  });
 
   for(const id in otherPlayers){
-    const p=otherPlayers[id];
+    const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
-      const oi=otherImages[id];
-      if(oi?.loaded) ctx.drawImage(oi.img,p.x,p.y,player.size,player.size);
+      if(!otherImages[id]){
+        const img = new Image();
+        img.src = otherShift[id] ? p.imgUrl.replace('/seed/player/','/seed/player_shift/') : p.imgUrl || 'https://picsum.photos/seed/player/48';
+        otherImages[id] = { img, loaded:false };
+        img.onload=()=>otherImages[id].loaded=true;
+      }
+      const oi = otherImages[id];
+      if(oi.loaded) ctx.drawImage(oi.img,p.x,p.y,player.size,player.size);
       else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
       ctx.fillStyle='#fff';
       ctx.font='12px sans-serif';
@@ -327,33 +356,34 @@ function draw(){
   }
 
   if(!player.hidden){
-    const imgToDraw = keyState.shift && player.imgShiftLoaded ? player.imgShift : player.imgLoaded ? player.img : null;
-    if(imgToDraw) ctx.drawImage(imgToDraw,player.x,player.y,player.size,player.size);
+    const imgToDraw = player.shiftPressed ? player.shiftImg : player.img;
+    const loaded = player.shiftPressed ? true : player.imgLoaded;
+    if(loaded) ctx.drawImage(imgToDraw,player.x,player.y,player.size,player.size);
     else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
     if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName,player.x,player.y-5);
   }
 
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
-  const now=new Date();
+  const now = new Date();
   ctx.fillStyle='#fff'; ctx.font='20px monospace';
   ctx.fillText(`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`,W-110,24);
 
-  const nowTime=Date.now();
+  const nowTime = Date.now();
   for(let i=joinNotifications.length-1;i>=0;i--){
-    const n=joinNotifications[i];
+    const n = joinNotifications[i];
     if(nowTime-n.time>3000){ joinNotifications.splice(i,1); continue; }
     ctx.fillStyle='yellow'; ctx.font='16px sans-serif';
     ctx.fillText(`${n.name}さんが出撃`,10,35);
   }
 
   for(let i=activeChats.length-1;i>=0;i--){
-    const c=activeChats[i];
+    const c = activeChats[i];
     if(nowTime-c.time>15000){ activeChats.splice(i,1); continue; }
     const x=c.userId===userId?player.x:otherPlayers[c.userId]?.x||0;
-    const y=c.userId===userId?player.y-20:(otherPlayers[c.userId]?.y-20||0);
+    const y=c.userId===userId?player.y-20:otherPlayers[c.userId]?.y-20||0;
     ctx.font='14px sans-serif';
     const padding=4;
-    const textWidth=ctx.measureText(c.msg).width;
+    const textWidth = ctx.measureText(c.msg).width;
     const textHeight=16;
     ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.fillRect(x-padding,y-textHeight-padding,textWidth+padding*2,textHeight+padding*2);
@@ -366,8 +396,7 @@ function draw(){
 function loop(){ update(); draw(); requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
-window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId)); });
-
+window.addEventListener('beforeunload',()=>{ remove(ref(db,'players/'+userId)); });
 </script>
 </body>
 </html>
