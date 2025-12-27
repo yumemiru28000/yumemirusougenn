@@ -145,6 +145,23 @@ function checkBgmZone(){
   if(albumHit) playAlbum(albumHit.list); else stopAlbum();
 }
 
+/* --- 歩行音 / シフト音（ここを追加） --- */
+/* 要件:
+ - WASD のいずれかを押している間、押している本人だけに歩行音をループで再生（長押しで継続）。
+ - Shift 押下時は sihuto.mp3 を最初の押下時のみ再生（長押しで繰り返さない）。
+ - 既存ロジックは極力壊さない。
+*/
+const footstepAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asioto.mp3');
+footstepAudio.loop = true;
+footstepAudio.volume = 0.6;
+
+const shiftAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sihuto.mp3');
+shiftAudio.loop = false;
+shiftAudio.volume = 0.6;
+
+let footstepPlaying = false;      // 現在歩行音を再生中か
+let shiftSoundPlayed = false;     // Shift が押されている間に既に一度音を鳴らしたか（押しっぱなしで繰り返さないため）
+
 /* --- スプライト（既存） --- */
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
@@ -184,8 +201,7 @@ const newPNGObject = {
   w: 400,
   h: 300,
   img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png',
-  mask: true,     // ← この行を追加（または visible: false）
-  // mask:true = 描画はしないがピクセル判定用に読み込む
+  mask: true,     // 描画しないがピクセル判定用に読み込む
 };
     
 const maps = {
@@ -2105,8 +2121,27 @@ for(const k in maps){
 
 /* --- 入力 --- */
 const keyState = {};
-addEventListener('keydown', e=>{ keyState[e.key.toLowerCase()] = true; if(e.key === 'Shift') player.shift = true; if(e.key === ' ' || e.key === 'Space') triggerSpaceEvent(); });
-addEventListener('keyup', e=>{ keyState[e.key.toLowerCase()] = false; if(e.key === 'Shift') player.shift = false; });
+addEventListener('keydown', e=>{
+  keyState[e.key.toLowerCase()] = true;
+
+  // Shift の押下（最初の押下で一回だけ shift 音を鳴らす）
+  if(e.key === 'Shift'){
+    player.shift = true;
+    if(!shiftSoundPlayed){
+      try{ shiftAudio.currentTime = 0; shiftAudio.play(); }catch(e){}
+      shiftSoundPlayed = true;
+    }
+  }
+  if(e.key === ' ' || e.key === 'Space') triggerSpaceEvent();
+});
+addEventListener('keyup', e=>{
+  keyState[e.key.toLowerCase()] = false;
+  if(e.key === 'Shift'){
+    player.shift = false;
+    // Shift を離したらフラグをリセットして次回押下時にまた音が鳴るようにする
+    shiftSoundPlayed = false;
+  }
+});
 
 const touchControls = document.getElementById('touchControls');
 const extraButtons = document.getElementById('extraButtons');
@@ -2114,8 +2149,26 @@ const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(isMobile){ touchControls.style.display='flex'; extraButtons.style.display='flex'; }
 document.querySelectorAll('.touchButton').forEach(btn=>{
   const key = btn.dataset.key;
-  btn.addEventListener('touchstart', e=>{ e.preventDefault(); if(key==='shift') player.shift=true; else if(key==='space') triggerSpaceEvent(); else keyState[key]=true; });
-  btn.addEventListener('touchend', e=>{ e.preventDefault(); if(key==='shift') player.shift=false; else keyState[key]=false; });
+  btn.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(key==='shift'){
+      player.shift=true;
+      if(!shiftSoundPlayed){
+        try{ shiftAudio.currentTime = 0; shiftAudio.play(); }catch(e){}
+        shiftSoundPlayed = true;
+      }
+    }
+    else if(key==='space') triggerSpaceEvent();
+    else keyState[key]=true;
+  });
+  btn.addEventListener('touchend', e=>{
+    e.preventDefault();
+    if(key==='shift'){
+      player.shift=false;
+      shiftSoundPlayed = false;
+    }
+    else keyState[key]=false;
+  });
 });
 
 function hit(a,b){ return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y; }
@@ -2268,6 +2321,19 @@ function update() {
   if (keyState.s) { player.y += player.speed; player.dir = 'down'; player.moving = true; }
   if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
   if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
+
+  // === ここで歩行音の開始/停止を制御（既存ロジックを壊さずに追加） ===
+  const anyMoveKey = keyState['w'] || keyState['a'] || keyState['s'] || keyState['d'];
+  if(anyMoveKey && !footstepPlaying){
+    // 移動開始 -> 歩行音をループ再生
+    try{ footstepAudio.currentTime = 0; footstepAudio.play(); }catch(e){}
+    footstepPlaying = true;
+  }else if(!anyMoveKey && footstepPlaying){
+    // 移動終了 -> 歩行音を停止（先頭へ戻す）
+    try{ footstepAudio.pause(); footstepAudio.currentTime = 0; }catch(e){}
+    footstepPlaying = false;
+  }
+  // ===============================================================
 
   // ゲート処理（既存）
   for (const obj of map.objects){
