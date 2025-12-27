@@ -2335,14 +2335,7 @@ function isPassable(x, y, image) {
 const images = {};
 const status = {};
 
-function loadImage(key,src){
-  const img = new Image();
-  status[key] = 'loading';
-  img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
-  img.src = src;
-  images[key] = img;
-}
+
 
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
@@ -2650,9 +2643,10 @@ function draw(){
     ctx.fillRect(0,0,W,H);
   }
 
-  map.objects.forEach((o,i)=>{
-    if(o.img && status[`obj_${key}_${i}`]==='loaded'){
-      ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
+  //☆ マップ画像の下にPNGオブジェクトを隠すための透明描画
+  map.objects.forEach((obj, i) => {
+    if (obj.type === 'block' && status[`obj_${key}_${i}`] === 'loaded') {
+      ctx.drawImage(images[`obj_${key}_${i}`], obj.x, obj.y, obj.w, obj.h);
     }
   });
 
@@ -2666,7 +2660,10 @@ function draw(){
       ctx.fillText(p.name||id,p.x,p.y-5);
     }
   }
-
+  //☆ 追加したnewPNGObject（新しいPNG画像）を描画（マップの下に隠す）
+  if (status[`obj_${key}_newPNG`] === 'loaded') {
+    ctx.drawImage(images[`obj_${key}_newPNG`], 0, 0, 400, 300); // マップ画像の下に隠して描画
+  }
   if(!player.hidden){
     const img = getImage(player);
     if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
@@ -2712,6 +2709,24 @@ function draw(){
     ctx.fillStyle='black';
     ctx.fillText(c.msg,x,y-5);
   }
+
+  //☆ 画像読み込み
+function loadImage(key, src) {
+  const img = new Image();
+  status[key] = 'loading';
+  img.onload = () => status[key] = 'loaded';
+  img.onerror = () => status[key] = 'error';
+  img.src = src;
+  images[key] = img;
+}
+// 画像をマップと新しいPNGオブジェクトの両方に読み込む
+for (const k in maps) {
+  loadImage(`bg_${k}`, maps[k].bg);
+  maps[k].objects.forEach((o, i) => {
+    if (o.img) loadImage(`obj_${k}_${i}`, o.img);
+  });
+  loadImage(`obj_${k}_newPNG`, newPNGObject.img); //☆ 新しいPNGオブジェクトの画像も読み込む
+}
 }
 
 function loop(){
