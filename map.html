@@ -166,7 +166,94 @@ const player = {
   moving:false,
   crouch:false
 };
+// ===== ☆BGM 管理 =====
+let currentBgmZoneId = null;
+let bgmAudio = new Audio();
+bgmAudio.loop = true;
+bgmAudio.volume = 0.6;
 
+// アルバム用
+let albumList = [];
+let albumIndex = 0;
+let albumMode = false;
+
+function stopBgm(){
+  bgmAudio.pause();
+  bgmAudio.currentTime = 0;
+  currentBgmZoneId = null;
+  albumMode = false;
+}
+
+function playSingleBgm(url){
+  if(bgmAudio.src !== url){
+    bgmAudio.src = url;
+  }
+  bgmAudio.loop = true;
+  bgmAudio.play();
+}
+
+function playAlbum(list){
+  albumList = list;
+  albumIndex = 0;
+  albumMode = true;
+  bgmAudio.src = albumList[0];
+  bgmAudio.loop = false;
+  bgmAudio.play();
+
+  bgmAudio.onended = ()=>{
+    if(!albumMode) return;
+    albumIndex = (albumIndex + 1) % albumList.length;
+    bgmAudio.src = albumList[albumIndex];
+    bgmAudio.play();
+  };
+}
+
+
+  
+function checkBgmZone(){
+  const mapKey = `${currentMapX},${currentMapY}`;
+  const map = maps[mapKey];
+  if(!map || !map.bgmZones){
+    if(currentBgmZoneId) stopBgm();
+    return;
+  }
+
+  let inZone = false;
+
+  for(const zone of map.bgmZones){
+    if(
+      player.x >= zone.x1 &&
+      player.x <= zone.x2 &&
+      player.y >= zone.y1 &&
+      player.y <= zone.y2
+    ){
+      inZone = true;
+
+      if(currentBgmZoneId !== zone.id){
+        currentBgmZoneId = zone.id;
+
+        if(zone.type === 'single'){
+          albumMode = false;
+          playSingleBgm(zone.url);
+        }else if(zone.type === 'album'){
+          playAlbum(zone.list);
+        }
+      }
+      break;
+    }
+  }
+
+  if(!inZone && currentBgmZoneId){
+    stopBgm();
+  }
+}
+
+
+
+
+
+
+  
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
 
@@ -203,7 +290,35 @@ sprites.crouch.right.src = 'https://raw.githubusercontent.com/yumemiru28000/yume
 const otherPlayers = {};
 const otherImages = {};
 
-const maps = {
+  const maps = {
+
+
+  
+ bgmZones:[
+    {
+      id:'hospital',
+      x-7: 50,  y-7: 50,     // 左上
+      x7: 200, y7: 180,    // 右下
+      type:'single',
+      url:'https://example.com/hospital.mp3'
+    },
+    {
+      id:'park',
+      x-7: 50,  y-7: 50,     // 左上
+      x7: 200, y7: 180,    // 右下
+      type:'album',
+      list:[
+        'https://example.com/park1.mp3',
+        'https://example.com/park2.mp3',
+        'https://example.com/park3.mp3'
+      ]
+    }
+  ],
+
+
+
+
+  
   '0,0': {
     name:'ZZ病院前',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',
@@ -2502,6 +2617,13 @@ if(obj.type==='warp'){
   }
 
   if(playerName) sendPosition();
+
+
+  checkBgmZone();
+
+
+
+  
 }
 
 function getImage(p){
