@@ -211,21 +211,14 @@ function playAlbum(list){
 
   
 function checkBgmZone(){
-  const mapKey = `${currentMapX},${currentMapY}`;
-  const map = maps[mapKey];
-  if(!map || !map.bgmZones){
-    if(currentBgmZoneId) stopBgm();
-    return;
-  }
-
   let inZone = false;
 
-  for(const zone of map.bgmZones){
+  for(const zone of worldBgmZones){
     if(
-      player.x >= zone.x1 &&
-      player.x <= zone.x2 &&
-      player.y >= zone.y1 &&
-      player.y <= zone.y2
+      mapX >= zone.mapX1 &&
+      mapX <= zone.mapX2 &&
+      mapY >= zone.mapY1 &&
+      mapY <= zone.mapY2
     ){
       inZone = true;
 
@@ -290,6 +283,30 @@ sprites.crouch.right.src = 'https://raw.githubusercontent.com/yumemiru28000/yume
 const otherPlayers = {};
 const otherImages = {};
 
+  const worldBgmZones = [
+  {
+    id:'town',
+    mapX1: -7,
+    mapY1: -7,
+    mapX2: 7,
+    mapY2: 7,
+    type:'single',
+    url:'https://example.com/town.mp3'
+  },
+  {
+    id:'forest',
+    mapX1: -7,
+    mapY1: -7,
+    mapX2: 7,
+    mapY2: 7,
+    type:'album',
+    list:[
+      'https://example.com/zzbgm1.mp3',
+      'https://example.com/zzbgm3.mp3'
+    ]
+  }
+];
+
   const maps = {
 
 
@@ -298,31 +315,7 @@ const otherImages = {};
   
   '0,0': {
     name:'ZZ病院前',
-    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',
-
-    bgmZones:[
-    {
-      id:'hospital',
-      x-7: 50,  y-7: 50,     // 左上
-      x7: 200, y7: 180,    // 右下
-      type:'single',
-      url:'https://example.com/hospital.mp3'
-    },
-    {
-      id:'park',
-      x-7: 50,  y-7: 50,     // 左上
-      x7: 200, y7: 180,    // 右下
-      type:'album',
-      list:[
-        'https://example.com/park1.mp3',
-        'https://example.com/park2.mp3',
-        'https://example.com/park3.mp3'
-      ]
-    }
-  ],
-
-
-    
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',  
     block:{up:false,down:false,left:false,right:false},
     objects:[
       {type:'block',x:150,y:80,w:64,h:64,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTA.png'},
