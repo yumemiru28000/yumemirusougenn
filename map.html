@@ -2478,20 +2478,33 @@ function checkUiZone(){
 }
 
 function update() {
-    gateMessage = null; // 毎フレームリセット
-    gatePos = { x: 0, y: 0 };
+    const key = mapX + ',' + mapY; // `${mapX},${mapY}` の代わりに文字列結合
+    if (!maps[key]) return;
+    const map = maps[key];
+
+    const ox = player.x;
+    const oy = player.y;
+
+    player.moving = false;
+    player.crouch = player.shift;
+
+    if (keyState.w) { player.y -= player.speed; player.dir = 'up'; player.moving = true; }
+    if (keyState.s) { player.y += player.speed; player.dir = 'down'; player.moving = true; }
+    if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
+    if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
 
     for (const obj of map.objects) {
         if (obj.type === 'gate') {
-            const need = countPlayersInRange(obj.range);
+            const need = countPlayersInRange(obj);
             const near = playersNearGate(obj);
-
             if (near >= need) {
                 // 全員TP
                 for (const id in otherPlayers) {
                     const p = otherPlayers[id];
-                    if (p.mapX >= obj.range.mapX1 && p.mapX <= obj.range.mapX2 && 
-                        p.mapY >= obj.range.mapY1 && p.mapY <= obj.range.mapY2) {
+                    if (
+                        p.mapX >= obj.range.mapX1 && p.mapX <= obj.range.mapX2 &&
+                        p.mapY >= obj.range.mapY1 && p.mapY <= obj.range.mapY2
+                    ) {
                         set(ref(db, 'players/' + id), {
                             ...p,
                             mapX: obj.to.mapX,
@@ -2507,41 +2520,10 @@ function update() {
                 player.x = obj.to.x;
                 player.y = obj.to.y;
             } else if (near > 0) {
-                gateMessage = `残り${need - near}人`;
+                gateMessage = '残り' + (need - near) + '人';
                 gatePos = { x: obj.x, y: obj.y };
             }
         }
-    }
-
-    const key = `${mapX},${mapY}`;
-    if (!maps[key]) return;
-    const map = maps[key];
-
-    const ox = player.x;
-    const oy = player.y;
-
-    player.moving = false;
-    player.crouch = player.shift;
-
-    if (keyState.w) {
-        player.y -= player.speed;
-        player.dir = 'up';
-        player.moving = true;
-    }
-    if (keyState.s) {
-        player.y += player.speed;
-        player.dir = 'down';
-        player.moving = true;
-    }
-    if (keyState.a) {
-        player.x -= player.speed;
-        player.dir = 'left';
-        player.moving = true;
-    }
-    if (keyState.d) {
-        player.x += player.speed;
-        player.dir = 'right';
-        player.moving = true;
     }
 
     for (const obj of map.objects) {
@@ -2560,16 +2542,14 @@ function update() {
     }
 
     let nx = mapX, ny = mapY;
-
     if (player.x < 0) nx--;
     if (player.x + player.size > W) nx++;
     if (player.y < 0) ny--;
     if (player.y + player.size > H) ny++;
 
-    if (maps[`${nx},${ny}`]) {
+    if (maps[nx + ',' + ny]) {
         mapX = nx;
         mapY = ny;
-
         if (player.x < 0) player.x = W - player.size;
         if (player.x + player.size > W) player.x = 0;
         if (player.y < 0) player.y = H - player.size;
@@ -2583,6 +2563,7 @@ function update() {
     checkBgmZone();
     checkUiZone();
 }
+
 
 
 
