@@ -462,7 +462,10 @@ const img = spriteImages[state]?.[dir];
 }
 
  if (!player.hidden) {
-  const myImg = spriteImages[player.state]?.[player.dir];
+  const myState = player.state || 'idle';
+const myDir   = player.dir   || 'down';
+const myImg = spriteImages[myState]?.[myDir];
+
   if (myImg) {
     ctx.drawImage(myImg, player.x, player.y, player.size, player.size);
   } else {
