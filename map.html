@@ -62,6 +62,32 @@ canvas {
 #extraButtons .touchButton {
   background: rgba(0,200,255,0.4);
 }
+#sideUI{
+  position:absolute;
+  right:20px;
+  top:50%;
+  transform:translateY(-50%);
+  width:200px;
+  text-align:center;
+  z-index:5;
+}
+
+#zoneImage{
+  width:100%;
+  display:none;
+}
+
+#zoneText{
+  margin-top:8px;
+  font-size:14px;
+}
+
+.volumeBox{
+  margin-top:20px;
+}
+
+
+  
 </style>
 </head>
 <body>
@@ -77,6 +103,16 @@ canvas {
 </form>
 
 <canvas id="game" width="400" height="300"></canvas>
+  
+<div id="sideUI">
+  <img id="zoneImage" src="" />
+  <div id="zoneText"></div>
+
+  <div class="volumeBox">
+    <label>BGM音量</label>
+    <input type="range" id="bgmVolume" min="0" max="1" step="0.01" value="0.6">
+  </div>
+</div>
 
 <div id="touchControls" style="display:none;">
   <div class="touchButton" data-key="w">↑</div>
@@ -177,6 +213,18 @@ const albumBgmAudio = new Audio();
 albumBgmAudio.loop = false;
 albumBgmAudio.volume = 0.6;
 
+
+
+  // ===== 音量調整バー =====
+const bgmVolume = document.getElementById('bgmVolume');
+
+bgmVolume.addEventListener('input', ()=>{
+  singleBgmAudio.volume = bgmVolume.value;
+  albumBgmAudio.volume  = bgmVolume.value;
+});
+
+
+  
 // アルバム管理
 let albumList = [];
 let albumIndex = 0;
@@ -294,6 +342,27 @@ sprites.crouch.right.src = 'https://raw.githubusercontent.com/yumemiru28000/yume
 
 const otherPlayers = {};
 const otherImages = {};
+  
+const worldUiZones = [
+  {
+    id:'townUI',
+    mapX1:-7,
+    mapY1:-7,
+    mapX2:7,
+    mapY2:7,
+    image:'https://example.com/town.png',
+    text:'地図'
+  },
+  {
+    id:'forestUI',
+    mapX1:10,
+    mapY1:10,
+    mapX2:20,
+    mapY2:20,
+    image:'https://example.com/forest.png',
+    text:'白の扉を探せ'
+  }
+];
 
 const worldBgmZones = [
   {
@@ -2626,8 +2695,35 @@ if(obj.type==='warp'){
 
 
   checkBgmZone();
+  checkUiZone();
 
+const zoneImage = document.getElementById('zoneImage');
+const zoneText  = document.getElementById('zoneText');
 
+function checkUiZone(){
+  let hit = null;
+
+  for(const zone of worldUiZones){
+    if(
+      mapX >= zone.mapX1 &&
+      mapX <= zone.mapX2 &&
+      mapY >= zone.mapY1 &&
+      mapY <= zone.mapY2
+    ){
+      hit = zone;
+      break;
+    }
+  }
+
+  if(hit){
+    zoneImage.src = hit.image;
+    zoneImage.style.display = 'block';
+    zoneText.textContent = hit.text;
+  }else{
+    zoneImage.style.display = 'none';
+    zoneText.textContent = '';
+  }
+}
 
   
 }
