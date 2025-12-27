@@ -2553,47 +2553,46 @@ function checkUiZone(){
   
 
   
-function update(){
+function update() {
+  let gateMessage = null;  // 毎フレームリセット
+  let gatePos = {x: 0, y: 0};  // 位置も初期化
 
-  gateMessage = null;  // 毎フレームリセット
-gatePos = {x:0, y:0};
+  for (const obj of map.objects) {
+    if (obj.type === 'gate') {
+      const need = countPlayersInRange(obj.range);
+      const near = playersNearGate(obj);
 
-for(const obj of map.objects){
-  if(obj.type==='gate'){
-    const need = countPlayersInRange(obj.range);
-    const near = playersNearGate(obj);
-
-    if(near >= need){
-      // 全員TP
-      for(const id in otherPlayers){
-        const p = otherPlayers[id];
-        if(
-          p.mapX>=obj.range.mapX1 &&
-          p.mapX<=obj.range.mapX2 &&
-          p.mapY>=obj.range.mapY1 &&
-          p.mapY<=obj.range.mapY2
-        ){
-          set(ref(db,'players/'+id),{
-            ...p,
-            mapX:obj.to.mapX,
-            mapY:obj.to.mapY,
-            x:obj.to.x,
-            y:obj.to.y,
-            timestamp:Date.now()
-          });
+      if (near >= need) {
+        // 全員TP
+        for (const id in otherPlayers) {
+          const p = otherPlayers[id];
+          if (
+            p.mapX >= obj.range.mapX1 &&
+            p.mapX <= obj.range.mapX2 &&
+            p.mapY >= obj.range.mapY1 &&
+            p.mapY <= obj.range.mapY2
+          ) {
+            set(ref(db, 'players/' + id), {
+              ...p,
+              mapX: obj.to.mapX,
+              mapY: obj.to.mapY,
+              x: obj.to.x,
+              y: obj.to.y,
+              timestamp: Date.now()
+            });
+          }
         }
-      }
 
-      mapX = obj.to.mapX;
-      mapY = obj.to.mapY;
-      player.x = obj.to.x;
-      player.y = obj.to.y;
-    }else if(near > 0){
-      gateMessage = `残り${need - near}人`;
-      gatePos = {x:obj.x, y:obj.y};
+        mapX = obj.to.mapX;
+        mapY = obj.to.mapY;
+        player.x = obj.to.x;
+        player.y = obj.to.y;
+      } else if (near > 0) {
+        gateMessage = `残り${need - near}人`;
+        gatePos = {x: obj.x, y: obj.y};
+      }
     }
   }
-}
 
   const key = `${mapX},${mapY}`;
   if(!maps[key]) return;
