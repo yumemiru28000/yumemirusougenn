@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ユメっ子探aせ</title>
+<title>ユメっ子探a1せ</title>
 <style>
 body {
   margin: 0;
@@ -145,43 +145,7 @@ playerShiftImg.src = 'https://picsum.photos/seed/playerShift/48';
 
 // 他プレイヤー
 const otherPlayers = {};
-
-
-  player.dir = 'down';
-player.state = 'idle';
-
-  // ====================== スプライト定義 ======================
-const SPRITES = {
-  walk: {
-    up:    'walk_up.gif',
-    down:  'walk_down.gif',
-    left:  'walk_left.gif',
-    right: 'walk_right.gif'
-  },
-  idle: {
-    up:    'idle_up.png',
-    down:  'idle_down.png',
-    left:  'idle_left.png',
-    right: 'idle_right.png'
-  },
-  crouch: {
-    up:    'crouch_up.png',
-    down:  'crouch_down.png',
-    left:  'crouch_left.png',
-    right: 'crouch_right.png'
-  }
-};
-
-const spriteImages = {};
-for (const state in SPRITES) {
-  spriteImages[state] = {};
-  for (const dir in SPRITES[state]) {
-    const img = new Image();
-    img.src = SPRITES[state][dir];
-    spriteImages[state][dir] = img;
-  }
-}
-
+const otherImages = {};
 
 // ====================== マップ ======================
 const maps = {
@@ -271,27 +235,34 @@ let mapX=0, mapY=0;
 // ====================== Firebase送信 ======================
 function sendPosition(){
   if(player.hidden) return;
-  set(ref(db,'players/'+userId),{
-    x: player.x,
-    y: player.y,
-    mapX,
-    mapY,
-    name: playerName,
-    dir: player.dir,
-    state: player.state,
-    timestamp: Date.now()
+  const playerRef=ref(db,'players/'+userId);
+  set(playerRef,{
+    x:player.x,
+    y:player.y,
+    mapX:mapX,
+    mapY:mapY,
+    name:playerName,
+    imgUrl: player.shift ? playerShiftImg.src : player.img.src,
+    shift: player.shift,
+    timestamp:Date.now()
   });
 }
-
 
 // ====================== 他プレイヤー取得 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
   for(const id in data){
-
-     
-    
+    if(id!==userId){
+      otherPlayers[id]=data[id];
+      if(!otherImages[id]){
+        const img = new Image();
+        img.src = data[id].imgUrl || 'https://picsum.photos/seed/player/48';
+        otherImages[id] = { img, loaded:false };
+        img.onload = ()=>otherImages[id].loaded=true;
+      }
+      else otherImages[id].img.src = data[id].imgUrl; // Shift共有反映
+    }
   }
 });
 
@@ -299,7 +270,7 @@ onValue(playersRef,(snapshot)=>{
 onChildRemoved(playersRef, snapshot=>{
   const id = snapshot.key;
   delete otherPlayers[id];
- 
+  delete otherImages[id];
 });
 
 // ====================== 入室通知 ======================
@@ -372,36 +343,10 @@ function update(){
   const map = maps[key];
   const ox=player.x, oy=player.y;
 
-  let moving = false;
-
-if (keyState.w) {
-  player.y -= player.speed;
-  player.dir = 'up';
-  moving = true;
-}
-if (keyState.s) {
-  player.y += player.speed;
-  player.dir = 'down';
-  moving = true;
-}
-if (keyState.a) {
-  player.x -= player.speed;
-  player.dir = 'left';
-  moving = true;
-}
-if (keyState.d) {
-  player.x += player.speed;
-  player.dir = 'right';
-  moving = true;
-}
-
-if (player.shift) {
-  player.state = 'crouch';
-} else if (moving) {
-  player.state = 'walk';
-} else {
-  player.state = 'idle';
-}
+  if(keyState.w) player.y-=player.speed;
+  if(keyState.s) player.y+=player.speed;
+  if(keyState.a) player.x-=player.speed;
+  if(keyState.d) player.x+=player.speed;
 
   for(const obj of map.objects){
     if(hit(player,obj)){
@@ -441,45 +386,24 @@ function draw(){
     if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
   });
 
- for (const id in otherPlayers) {
-  const p = otherPlayers[id];
-  if (p.mapX === mapX && p.mapY === mapY) {
-    const state = p.state || 'idle';
-const dir   = p.dir   || 'down';
-const img = spriteImages[state]?.[dir];
-
-    if (img) {
-      ctx.drawImage(img, p.x, p.y, player.size, player.size);
-    } else {
-      ctx.fillStyle = '#0f0';
-      ctx.fillRect(p.x, p.y, player.size, player.size);
+  for(const id in otherPlayers){
+    const p = otherPlayers[id];
+    if(p.mapX===mapX && p.mapY===mapY){
+      const oi = otherImages[id];
+      if(oi.loaded) ctx.drawImage(oi.img, p.x, p.y, player.size, player.size);
+      else ctx.fillStyle='#0f0', ctx.fillRect(p.x,p.y,player.size,player.size);
+      ctx.fillStyle='#fff';
+      ctx.font='12px sans-serif';
+      ctx.fillText(p.name||id, p.x, p.y-5);
     }
-
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(p.name || id, p.x, p.y - 5);
-  }
-}
-
- if (!player.hidden) {
-  const myState = player.state || 'idle';
-const myDir   = player.dir   || 'down';
-const myImg = spriteImages[myState]?.[myDir];
-
-  if (myImg) {
-    ctx.drawImage(myImg, player.x, player.y, player.size, player.size);
-  } else {
-    ctx.fillStyle = '#f55';
-    ctx.fillRect(player.x, player.y, player.size, player.size);
   }
 
-  if (playerName) {
-    ctx.fillStyle = '#fff';
-    ctx.font = '16px sans-serif';
-    ctx.fillText(playerName, player.x, player.y - 5);
+  if(!player.hidden){
+    const imgToDraw = player.shift ? playerShiftImg : player.img;
+    if(player.imgLoaded) ctx.drawImage(imgToDraw,player.x,player.y,player.size,player.size);
+    else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
+    if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
   }
-}
-
 
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
   const now = new Date();
