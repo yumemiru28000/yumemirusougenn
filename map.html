@@ -185,12 +185,7 @@ let albumActive = false;
 
 
   
-function stopBgm(){
-  bgmAudio.pause();
-  bgmAudio.currentTime = 0;
-  currentBgmZoneId = null;
-  albumMode = false;
-}
+
 function playSingleBgm(url){
   if(singleBgmAudio.src !== url){
     singleBgmAudio.src = url;
@@ -202,7 +197,6 @@ function stopSingleBgm(){
   singleBgmAudio.pause();
   singleBgmAudio.currentTime = 0;
 }
-
 
 function playAlbum(list){
   if(albumActive && JSON.stringify(albumList) === JSON.stringify(list)) return;
@@ -227,8 +221,6 @@ function stopAlbum(){
   albumBgmAudio.pause();
   albumBgmAudio.currentTime = 0;
 }
-
-
 
   
 function checkBgmZone(){
@@ -321,10 +313,11 @@ const worldBgmZones = [
     mapX2: 7,
     mapY2: 7,
     type:'album',
-    list:[
-   　 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zzbgm1.mp3',
-      'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zzbgm3.mp3'
-    ]
+   list:[
+  'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zzbgm1.mp3',
+  'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/zzbgm3.mp3'
+]
+
   }
 ];
 
