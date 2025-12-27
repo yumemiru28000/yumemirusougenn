@@ -56,7 +56,7 @@ canvas {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onChildAdded, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // ====================== Firebase 設定 ======================
 const firebaseConfig = {
@@ -93,7 +93,7 @@ nameForm.addEventListener('submit', async (e)=>{
   nameForm.style.display='none';
 
   // 同じ名前のユーザーを削除
-  const playersSnapshot = await new Promise(resolve => onValue(ref(db,'players'), snap => resolve(snap), {onlyOnce:true}));
+  const playersSnapshot = await get(ref(db,'players'));
   const playersData = playersSnapshot.val() || {};
   for(const id in playersData){
     if(playersData[id].name === playerName && id !== userId){
@@ -113,7 +113,7 @@ const W = canvas.width, H = canvas.height;
 
 // ====================== プレイヤー ======================
 const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false };
-player.img.src = 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/yume.png';
+player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
 
 const otherPlayers = {};
@@ -121,9 +121,9 @@ const otherImages = {};
 
 // ====================== マップ ======================
 const maps = {
-  '0,0': { name:'始まりの地', bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'} ] },
-  '1,0':{ name:'雑談エリア', bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png', block:{up:false,down:true,left:false,right:true}, objects:[ {type:'block',x:220,y:120,w:64,h:64,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png'} ] },
-  '-1,0':{ name:'ユメっ子エリア', bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'} ] }
+  '0,0': { name:'スタート', bg:'https://picsum.photos/id/1015/400/300', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'} ] },
+  '1,0':{ name:'右の森', bg:'https://picsum.photos/id/1020/400/300', block:{up:false,down:true,left:false,right:true}, objects:[ {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'} ] },
+  '-1,0':{ name:'左の森', bg:'https://picsum.photos/id/1016/400/300', block:{up:false,down:false,left:false,right:false}, objects:[ {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'}, {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'} ] }
 };
 
 const images = {};
@@ -149,7 +149,7 @@ addEventListener('keydown', e=>{
   // 草ブロック上でスペースキー
   if(e.key===' '){
     if(isOnGrass()){
-      const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kusa.mp3');
+      const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
       chatSound.play();
       if(Math.random() < 1/20){ // 1/20で動画イベント
         player.hidden=true;
@@ -258,10 +258,33 @@ onChildAdded(chatsRef, snapshot=>{
   }
 });
 
+// ====================== 古いプレイヤー・チャット自動削除 ======================
+setInterval(async ()=>{
+  const now = Date.now();
+
+  // プレイヤー削除（5分無操作）
+  const playersSnap = await get(ref(db,'players'));
+  const playersData = playersSnap.val() || {};
+  for(const id in playersData){
+    if(now - playersData[id].timestamp > 300000){ // 5分
+      remove(ref(db,'players/'+id));
+    }
+  }
+
+  // 古いチャット削除（15分以上）
+  const chatsSnap = await get(ref(db,'chats'));
+  const chatsData = chatsSnap.val() || {};
+  for(const chatId in chatsData){
+    if(now - chatsData[chatId].timestamp > 900000){ // 15分
+      remove(ref(db,'chats/'+chatId));
+    }
+  }
+},60000); // 1分ごとにチェック
+
 // ====================== 更新 ======================
 function update(){
   const key = `${mapX},${mapY}`;
-  if(!maps[key]) return; // 存在しないマップには行けない
+  if(!maps[key]) return;
   const map = maps[key];
   const ox=player.x, oy=player.y;
 
@@ -273,11 +296,9 @@ function update(){
   for(const obj of map.objects){
     if(hit(player,obj)){
       if(obj.type==='block'){ player.x=ox; player.y=oy; }
-      // 草ブロックは通過可能だが上でスペースキー処理は別
     }
   }
 
-  // マップ境界チェック
   let nextMapX = mapX, nextMapY = mapY;
   if(player.x<0) nextMapX--; 
   if(player.x+player.size>W) nextMapX++; 
@@ -289,7 +310,7 @@ function update(){
     if(player.x+player.size>W) player.x=0;
     if(player.y<0) player.y=H-player.size;
     if(player.y+player.size>H) player.y=0;
-  } else { player.x=ox; player.y=oy; } // 存在しないマップは戻す
+  } else { player.x=ox; player.y=oy; }
 
   if(playerName) sendPosition();
 }
@@ -342,7 +363,6 @@ function draw(){
     ctx.fillText(`${n.name}さんが出撃`,10,35);
   }
 
-  // ===== チャット描画 =====
   for(let i=activeChats.length-1;i>=0;i--){
     const c = activeChats[i];
     if(nowTime - c.time > 15000){ activeChats.splice(i,1); continue; }
