@@ -2,89 +2,82 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>ユメっ子1せ</title>
-
+<title>ユメっ子探a1せ</title>
 <style>
-/* ====================== 基本スタイル ====================== */
-body{
-  margin:0;
-  background:#222;
-  color:#fff;
-  font-family:sans-serif;
-  overflow:hidden;
-  position:relative;
-  height:100vh;
+body {
+  margin: 0;
+  background: #222;
+  color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+  position: relative;
+  height: 100vh;
 }
-canvas{
-  background:#000;
-  border:4px solid #fff;
-  width:400px;
-  height:300px;
-  display:block;
+canvas {
+  background: #000;
+  border: 4px solid #fff;
+  width: 400px;
+  height: 300px;
+  display: block;
 }
-#nameForm,#chatForm{
-  display:flex;
-  gap:5px;
-  margin-bottom:5px;
-  position:absolute;
-  z-index:10;
+#nameForm, #chatForm {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+  position: absolute;
+  z-index: 10;
 }
-#nameForm input,#chatForm input{
-  padding:5px;
-  font-size:16px;
+#nameForm input, #chatForm input {
+  padding: 5px;
+  font-size: 16px;
 }
-#chatForm input{flex:1;}
-#touchControls{
-  position:absolute;
-  bottom:80px;
+#chatForm input { flex: 1; }
+#touchControls {
+  position: absolute;
+  bottom: 80px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+.touchButton {
+  width: 60px;
+  height: 60px;
+  background: rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  user-select: none;
+  touch-action: none;
+}
+#extraButtons {
+  position: absolute;
+  bottom: 150px;
   display:flex;
   gap:10px;
-  z-index:10;
+  z-index: 10;
 }
-.touchButton{
-  width:60px;
-  height:60px;
-  background:rgba(255,255,255,0.3);
-  color:#fff;
-  font-size:24px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:10px;
-  user-select:none;
-  touch-action:none;
-}
-#extraButtons{
-  position:absolute;
-  bottom:150px;
-  display:flex;
-  gap:10px;
-  z-index:10;
-}
-#extraButtons .touchButton{
-  background:rgba(0,200,255,0.4);
+#extraButtons .touchButton {
+  background: rgba(0,200,255,0.4);
 }
 </style>
 </head>
-
 <body>
 
-<!-- ====================== 名前入力 ====================== -->
 <form id="nameForm">
   <input type="text" id="playerName" placeholder="名前を入力" maxlength="10">
   <button type="submit">決定</button>
 </form>
 
-<!-- ====================== チャット ====================== -->
-<form id="chatForm" style="top:10px;left:10px;">
+<form id="chatForm" style="top: 10px; left: 10px;">
   <input type="text" id="chatInput" placeholder="チャットを入力" maxlength="50">
   <button type="submit">送信</button>
 </form>
 
-<!-- ====================== ゲーム画面 ====================== -->
 <canvas id="game" width="400" height="300"></canvas>
 
-<!-- ====================== タッチ操作 ====================== -->
 <div id="touchControls" style="display:none;">
   <div class="touchButton" data-key="w">↑</div>
   <div class="touchButton" data-key="s">↓</div>
@@ -98,294 +91,355 @@ canvas{
 </div>
 
 <script type="module">
-/* =========================================================
-   Firebase
-========================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import {
-  getDatabase, ref, set, onValue,
-  remove, onChildAdded, onChildRemoved,
-  push, get
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-const firebaseConfig={
-  apiKey:"AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
-  authDomain:"zzonline.firebaseapp.com",
-  databaseURL:"https://zzonline-default-rtdb.firebaseio.com",
-  projectId:"zzonline",
-  storageBucket:"zzonline.firebasestorage.app",
-  messagingSenderId:"50179905692",
-  appId:"1:50179905692:web:12b9664ac730e6a58d3559"
+const firebaseConfig = {
+  apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
+  authDomain: "zzonline.firebaseapp.com",
+  databaseURL: "https://zzonline-default-rtdb.firebaseio.com",
+  projectId: "zzonline",
+  storageBucket: "zzonline.firebasestorage.app",
+  messagingSenderId: "50179905692",
+  appId: "1:50179905692:web:12b9664ac730e6a58d3559",
+  measurementId: "G-NMVHG2XN1F"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-/* =========================================================
-   ユーザーID管理
-========================================================= */
-let userId=sessionStorage.getItem("userId");
+let userId = sessionStorage.getItem('userId');
 if(!userId){
-  userId="user_"+Date.now()+"_"+Math.floor(Math.random()*1000);
-  sessionStorage.setItem("userId",userId);
+  userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  sessionStorage.setItem('userId', userId);
 }
 
-/* =========================================================
-   名前処理
-========================================================= */
-let playerName=localStorage.getItem("playerName")||"";
-const nameForm=document.getElementById("nameForm");
-const nameInput=document.getElementById("playerName");
-if(playerName) nameForm.style.display="none";
+let playerName = localStorage.getItem('playerName') || '';
+const nameForm = document.getElementById('nameForm');
+const nameInput = document.getElementById('playerName');
+if(playerName) nameForm.style.display='none';
 
-nameForm.addEventListener("submit",async e=>{
+nameForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  if(!nameInput.value.trim()) return;
-  playerName=nameInput.value.trim();
-  localStorage.setItem("playerName",playerName);
-  nameForm.style.display="none";
+  if(nameInput.value.trim()==='') return;
+  playerName = nameInput.value.trim();
+  localStorage.setItem('playerName', playerName);
+  nameForm.style.display='none';
 
-  const snap=await get(ref(db,"players"));
-  const data=snap.val()||{};
-  for(const id in data){
-    if(data[id].name===playerName && id!==userId){
-      remove(ref(db,"players/"+id));
+  const playersSnapshot = await get(ref(db,'players'));
+  const playersData = playersSnapshot.val() || {};
+  for(const id in playersData){
+    if(playersData[id].name === playerName && id !== userId){
+      remove(ref(db,'players/'+id));
     }
   }
   sendPosition();
+  sessionStorage.setItem('enterTime', Date.now());
 });
 
-/* =========================================================
-   Canvas
-========================================================= */
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const W=canvas.width;
-const H=canvas.height;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
 
 function resizeCanvas(){
-  const s=Math.min(window.innerWidth/W,window.innerHeight/H);
-  canvas.style.transform=`scale(${s})`;
-  canvas.style.transformOrigin="top left";
-  canvas.style.left=(window.innerWidth-W*s)/2+"px";
-  canvas.style.top=(window.innerHeight-H*s)/2+"px";
-  canvas.style.position="absolute";
+  const scaleX = window.innerWidth / W;
+  const scaleY = window.innerHeight / H;
+  const scale = Math.min(scaleX, scaleY);
+  canvas.style.transform = `scale(${scale})`;
+  canvas.style.transformOrigin = 'top left';
+  canvas.style.left = `${(window.innerWidth - W*scale)/2}px`;
+  canvas.style.top  = `${(window.innerHeight - H*scale)/2}px`;
+  canvas.style.position = 'absolute';
 }
-addEventListener("resize",resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
-
-/* =========================================================
-   プレイヤー（拡張版）
-========================================================= */
-const player={
+const player = {
   x:80,
   y:30,
   size:24,
   speed:1.2,
-  direction:"down",
-  state:"idle",   // idle / walk / crouch
-  moving:false,
+  img:new Image(),
+  imgLoaded:false,
+  hidden:false,
   shift:false,
-  hidden:false
+  dir:'down',
+  moving:false,
+  crouch:false
 };
 
-/* =========================================================
-   スプライト管理
-========================================================= */
-const sprite={
-  walk:{up:new Image(),down:new Image(),left:new Image(),right:new Image()},
-  idle:{up:new Image(),down:new Image(),left:new Image(),right:new Image()},
-  crouch:{up:new Image(),down:new Image(),left:new Image(),right:new Image()}
+player.img.src = 'https://picsum.photos/seed/player/48';
+player.img.onload = ()=>player.imgLoaded = true;
+
+const playerShiftImg = new Image();
+playerShiftImg.src = 'https://picsum.photos/seed/playerShift/48';
+
+const sprites = {
+  walk:{
+    up:new Image(),down:new Image(),left:new Image(),right:new Image()
+  },
+  idle:{
+    up:new Image(),down:new Image(),left:new Image(),right:new Image()
+  },
+  crouch:{
+    up:new Image(),down:new Image(),left:new Image(),right:new Image()
+  }
 };
 
-// ★ 各自の実画像URLに変更してください
-sprite.walk.up.src="walk_up.gif";
-sprite.walk.down.src="walk_down.gif";
-sprite.walk.left.src="walk_left.gif";
-sprite.walk.right.src="walk_right.gif";
+sprites.walk.up.src = 'walk_up.gif';
+sprites.walk.down.src = 'walk_down.gif';
+sprites.walk.left.src = 'walk_left.gif';
+sprites.walk.right.src = 'walk_right.gif';
 
-sprite.idle.up.src="idle_up.png";
-sprite.idle.down.src="idle_down.png";
-sprite.idle.left.src="idle_left.png";
-sprite.idle.right.src="idle_right.png";
+sprites.idle.up.src = 'idle_up.png';
+sprites.idle.down.src = 'idle_down.png';
+sprites.idle.left.src = 'idle_left.png';
+sprites.idle.right.src = 'idle_right.png';
 
-sprite.crouch.up.src="crouch_up.png";
-sprite.crouch.down.src="crouch_down.png";
-sprite.crouch.left.src="crouch_left.png";
-sprite.crouch.right.src="crouch_right.png";
+sprites.crouch.up.src = 'crouch_up.png';
+sprites.crouch.down.src = 'crouch_down.png';
+sprites.crouch.left.src = 'crouch_left.png';
+sprites.crouch.right.src = 'crouch_right.png';
 
-/* =========================================================
-   他プレイヤー
-========================================================= */
-const otherPlayers={};
+const otherPlayers = {};
+const otherImages = {};
 
-/* =========================================================
-   入力管理
-========================================================= */
-const keyState={};
-
-addEventListener("keydown",e=>{
-  keyState[e.key.toLowerCase()]=true;
-  if(e.key==="Shift") player.shift=true;
-  if(e.key===" "||e.key==="Space") triggerSpaceEvent();
-});
-addEventListener("keyup",e=>{
-  keyState[e.key.toLowerCase()]=false;
-  if(e.key==="Shift") player.shift=false;
-});
-
-/* =========================================================
-   タッチ操作
-========================================================= */
-const isMobile=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-if(isMobile){
-  document.getElementById("touchControls").style.display="flex";
-  document.getElementById("extraButtons").style.display="flex";
-}
-document.querySelectorAll(".touchButton").forEach(b=>{
-  const k=b.dataset.key;
-  b.addEventListener("touchstart",e=>{
-    e.preventDefault();
-    if(k==="shift") player.shift=true;
-    else if(k==="space") triggerSpaceEvent();
-    else keyState[k]=true;
-  });
-  b.addEventListener("touchend",e=>{
-    e.preventDefault();
-    if(k==="shift") player.shift=false;
-    else keyState[k]=false;
-  });
-});
-
-/* =========================================================
-   マップ
-========================================================= */
-const maps={
-  "0,0":{
-    name:"スタート",
-    bg:"https://picsum.photos/id/1015/400/300",
+const maps = {
+  '0,0': {
+    name:'スタート',
+    bg:'https://picsum.photos/id/1015/400/300',
+    block:{up:false,down:false,left:false,right:false},
     objects:[
-      {type:"block",x:150,y:80,w:64,h:64},
-      {type:"grass",x:60,y:200,w:80,h:40}
+      {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
+      {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'},
+      {type:'warp',x:200,y:200,w:40,h:40,img:'https://picsum.photos/id/1025/40/40',to:{x:0,y:0}}
+    ]
+  },
+  '1,0': {
+    name:'右の森',
+    bg:'https://picsum.photos/id/1020/400/300',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[
+      {type:'block',x:220,y:120,w:64,h:64,img:'https://picsum.photos/id/1062/64/64'}
+    ]
+  },
+  '-1,0': {
+    name:'左の森',
+    bg:'https://picsum.photos/id/1016/400/300',
+    block:{up:false,down:false,left:false,right:false},
+    objects:[
+      {type:'block',x:150,y:80,w:64,h:64,img:'https://picsum.photos/id/1056/64/64'},
+      {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}
     ]
   }
 };
 
-let mapX=0,mapY=0;
+const images = {};
+const status = {};
 
-/* =========================================================
-   当たり判定
-========================================================= */
-function hit(a,b){
-  return a.x<b.x+b.w &&
-         a.x+a.size>b.x &&
-         a.y<b.y+b.h &&
-         a.y+a.size>b.y;
+function loadImage(key,src){
+  const img = new Image();
+  status[key] = 'loading';
+  img.onload = ()=>status[key]='loaded';
+  img.onerror = ()=>status[key]='error';
+  img.src = src;
+  images[key] = img;
 }
 
+for(const k in maps){
+  loadImage(`bg_${k}`, maps[k].bg);
+  maps[k].objects.forEach((o,i)=>{
+    if(o.img) loadImage(`obj_${k}_${i}`, o.img);
+  });
+}
+
+const keyState = {};
+
+addEventListener('keydown', e=>{
+  keyState[e.key.toLowerCase()] = true;
+  if(e.key === 'Shift') player.shift = true;
+  if(e.key === ' ' || e.key === 'Space') triggerSpaceEvent();
+});
+
+addEventListener('keyup', e=>{
+  keyState[e.key.toLowerCase()] = false;
+  if(e.key === 'Shift') player.shift = false;
+});
+
+const touchControls = document.getElementById('touchControls');
+const extraButtons = document.getElementById('extraButtons');
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+if(isMobile){
+  touchControls.style.display='flex';
+  extraButtons.style.display='flex';
+}
+
+document.querySelectorAll('.touchButton').forEach(btn=>{
+  const key = btn.dataset.key;
+  btn.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(key==='shift') player.shift=true;
+    else if(key==='space') triggerSpaceEvent();
+    else keyState[key]=true;
+  });
+  btn.addEventListener('touchend', e=>{
+    e.preventDefault();
+    if(key==='shift') player.shift=false;
+    else keyState[key]=false;
+  });
+});
+
+function hit(a,b){
+  return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
+}
+
+let mapX = 0;
+let mapY = 0;
+
 function isOnGrass(){
-  const map=maps[`${mapX},${mapY}`];
-  for(const o of map.objects){
-    if(o.type==="grass" && hit(player,o)) return true;
+  const key = `${mapX},${mapY}`;
+  const map = maps[key];
+  for(const obj of map.objects){
+    if(obj.type==='grass' && hit(player,obj)) return true;
   }
   return false;
 }
 
-/* =========================================================
-   草イベント
-========================================================= */
 function triggerSpaceEvent(){
-  if(!isOnGrass()) return;
-  if(Math.random()<1/20){
-    player.hidden=true;
-    remove(ref(db,"players/"+userId));
-    location.href="index.html";
+  if(isOnGrass()){
+    const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
+    chatSound.play();
+    if(Math.random()<1/20){
+      player.hidden=true;
+      remove(ref(db,'players/'+userId));
+      localStorage.setItem('playVideo','true');
+      location.href='index.html';
+    }
   }
 }
 
-/* =========================================================
-   Firebase送信（拡張）
-========================================================= */
 function sendPosition(){
   if(player.hidden) return;
-  set(ref(db,"players/"+userId),{
+  set(ref(db,'players/'+userId),{
     x:player.x,
     y:player.y,
-    mapX,mapY,
+    mapX,
+    mapY,
     name:playerName,
-    direction:player.direction,
-    state:player.state,
+    dir:player.dir,
+    moving:player.moving,
+    crouch:player.crouch,
     timestamp:Date.now()
   });
 }
-/* =========================================================
-   他プレイヤー同期取得
-========================================================= */
-const playersRef = ref(db,"players");
 
-onValue(playersRef,snapshot=>{
-  const data=snapshot.val()||{};
+const playersRef = ref(db,'players');
+
+onValue(playersRef,snap=>{
+  const data = snap.val()||{};
   for(const id in data){
-    if(id!==userId){
-      otherPlayers[id]=data[id];
-    }
+    if(id!==userId) otherPlayers[id]=data[id];
   }
 });
 
 onChildRemoved(playersRef,snap=>{
-  delete otherPlayers[snap.key];
+  const id = snap.key;
+  delete otherPlayers[id];
+});
+const joinNotifications = [];
+const notifiedUsers = new Set();
+const chime = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3');
+const enterTime = Date.now();
+
+onChildAdded(playersRef, snapshot=>{
+  const data = snapshot.val();
+  const id = snapshot.key;
+  if(id!==userId && !notifiedUsers.has(id)){
+    notifiedUsers.add(id);
+    if(Date.now()-enterTime>5000){
+      chime.currentTime=0;
+      chime.play();
+      joinNotifications.push({ name:data.name||'名無し', time:Date.now() });
+    }
+  }
 });
 
-/* =========================================================
-   更新処理（移動＋状態管理）
-========================================================= */
-function update(){
-  const map=maps[`${mapX},${mapY}`];
-  if(!map) return;
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatsRef = ref(db,'chats');
+let activeChats = [];
 
-  const ox=player.x;
-  const oy=player.y;
-  player.moving=false;
+chatForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const msg = chatInput.value.trim();
+  if(!msg) return;
+  chatInput.value='';
+  push(chatsRef,{
+    userId,
+    name:playerName,
+    msg,
+    mapX,
+    mapY,
+    timestamp:Date.now()
+  });
+});
 
-  if(keyState.w){
-    player.y-=player.speed;
-    player.direction="up";
-    player.moving=true;
+onChildAdded(chatsRef, snapshot=>{
+  const chat = snapshot.val();
+  if(chat.mapX===mapX && chat.mapY===mapY){
+    if(Date.now()-enterTime<5000) return;
+    activeChats = activeChats.filter(c=>c.userId!==chat.userId);
+    activeChats.push({...chat,time:Date.now()});
+    new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3').play();
   }
-  if(keyState.s){
-    player.y+=player.speed;
-    player.direction="down";
-    player.moving=true;
-  }
-  if(keyState.a){
-    player.x-=player.speed;
-    player.direction="left";
-    player.moving=true;
-  }
-  if(keyState.d){
-    player.x+=player.speed;
-    player.direction="right";
-    player.moving=true;
-  }
+});
 
-  // ===== 状態決定 =====
-  if(player.shift){
-    player.state="crouch";
-  }else if(player.moving){
-    player.state="walk";
-  }else{
-    player.state="idle";
-  }
+setInterval(async ()=>{
+  const now = Date.now();
 
-  // ===== 当たり判定 =====
-  for(const o of map.objects){
-    if(o.type==="block" && hit(player,o)){
-      player.x=ox;
-      player.y=oy;
+  const playersSnap = await get(ref(db,'players'));
+  const playersData = playersSnap.val() || {};
+  for(const id in playersData){
+    if(now - playersData[id].timestamp > 300000){
+      remove(ref(db,'players/'+id));
     }
   }
 
-  // ===== マップ端 =====
+  const chatsSnap = await get(ref(db,'chats'));
+  const chatsData = chatsSnap.val() || {};
+  for(const id in chatsData){
+    if(now - chatsData[id].timestamp > 900000){
+      remove(ref(db,'chats/'+id));
+    }
+  }
+},60000);
+
+function update(){
+  const key = `${mapX},${mapY}`;
+  if(!maps[key]) return;
+  const map = maps[key];
+  const ox = player.x;
+  const oy = player.y;
+
+  player.moving = false;
+  player.crouch = player.shift;
+
+  if(keyState.w){ player.y-=player.speed; player.dir='up'; player.moving=true; }
+  if(keyState.s){ player.y+=player.speed; player.dir='down'; player.moving=true; }
+  if(keyState.a){ player.x-=player.speed; player.dir='left'; player.moving=true; }
+  if(keyState.d){ player.x+=player.speed; player.dir='right'; player.moving=true; }
+
+  for(const obj of map.objects){
+    if(hit(player,obj)){
+      if(obj.type==='block'){ player.x=ox; player.y=oy; }
+      if(obj.type==='warp'){
+        player.x=obj.to.x;
+        player.y=obj.to.y;
+        mapX=0; mapY=0;
+      }
+    }
+  }
+
   let nx=mapX, ny=mapY;
   if(player.x<0) nx--;
   if(player.x+player.size>W) nx++;
@@ -393,118 +447,108 @@ function update(){
   if(player.y+player.size>H) ny++;
 
   if(maps[`${nx},${ny}`]){
-    mapX=nx;
-    mapY=ny;
+    mapX=nx; mapY=ny;
     if(player.x<0) player.x=W-player.size;
     if(player.x+player.size>W) player.x=0;
     if(player.y<0) player.y=H-player.size;
     if(player.y+player.size>H) player.y=0;
   }else{
-    player.x=ox;
-    player.y=oy;
+    player.x=ox; player.y=oy;
   }
 
   if(playerName) sendPosition();
 }
 
-/* =========================================================
-   描画：背景
-========================================================= */
-function drawBackground(){
-  ctx.fillStyle="#333";
-  ctx.fillRect(0,0,W,H);
+function getImage(p){
+  if(p.crouch) return sprites.crouch[p.dir];
+  if(p.moving) return sprites.walk[p.dir];
+  return sprites.idle[p.dir];
 }
 
-/* =========================================================
-   描画：オブジェクト
-========================================================= */
-function drawObjects(){
-  const map=maps[`${mapX},${mapY}`];
-  for(const o of map.objects){
-    if(o.type==="block"){
-      ctx.fillStyle="#555";
-      ctx.fillRect(o.x,o.y,o.w,o.h);
-    }
-    if(o.type==="grass"){
-      ctx.fillStyle="#0a0";
-      ctx.fillRect(o.x,o.y,o.w,o.h);
-    }
-  }
-}
-
-/* =========================================================
-   描画：プレイヤー
-========================================================= */
-function drawPlayerEntity(p,isSelf){
-  const img =
-    p.state==="walk"   ? sprite.walk[p.direction] :
-    p.state==="crouch" ? sprite.crouch[p.direction] :
-                         sprite.idle[p.direction];
-
-  ctx.drawImage(img,p.x,p.y,player.size,player.size);
-
-  ctx.fillStyle="#fff";
-  ctx.font="12px sans-serif";
-  ctx.fillText(p.name||"",p.x,p.y-5);
-}
-
-/* =========================================================
-   描画メイン
-========================================================= */
 function draw(){
-  drawBackground();
-  drawObjects();
+  const key = `${mapX},${mapY}`;
+  const map = maps[key];
 
-  // 他プレイヤー
+  if(status[`bg_${key}`]==='loaded'){
+    ctx.drawImage(images[`bg_${key}`],0,0,W,H);
+  }else{
+    ctx.fillStyle='#333';
+    ctx.fillRect(0,0,W,H);
+  }
+
+  map.objects.forEach((o,i)=>{
+    if(o.img && status[`obj_${key}_${i}`]==='loaded'){
+      ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
+    }
+  });
+
   for(const id in otherPlayers){
-    const p=otherPlayers[id];
+    const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
-      drawPlayerEntity(p,false);
+      const img = getImage(p);
+      if(img) ctx.drawImage(img,p.x,p.y,player.size,player.size);
+      ctx.fillStyle='#fff';
+      ctx.font='12px sans-serif';
+      ctx.fillText(p.name||id,p.x,p.y-5);
     }
   }
 
-  // 自分
   if(!player.hidden){
-    drawPlayerEntity({
-      x:player.x,
-      y:player.y,
-      state:player.state,
-      direction:player.direction,
-      name:playerName
-    },true);
+    const img = getImage(player);
+    if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
+    ctx.fillStyle='#fff';
+    ctx.font='16px sans-serif';
+    if(playerName) ctx.fillText(playerName,player.x,player.y-5);
   }
 
-  // マップ名
-  ctx.fillStyle="#fff";
-  ctx.font="16px sans-serif";
-  ctx.fillText(maps[`${mapX},${mapY}`].name,10,20);
+  ctx.fillStyle='#fff';
+  ctx.font='16px sans-serif';
+  ctx.fillText(map.name,10,20);
 
-  // 時計
-  const now=new Date();
-  ctx.font="18px monospace";
+  const now = new Date();
+  ctx.font='20px monospace';
   ctx.fillText(
-    `${now.getHours().toString().padStart(2,"0")}:`+
-    `${now.getMinutes().toString().padStart(2,"0")}:`+
-    `${now.getSeconds().toString().padStart(2,"0")}`,
-    W-110,22
+    `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`,
+    W-110,24
   );
+
+  const t = Date.now();
+  for(let i=joinNotifications.length-1;i>=0;i--){
+    if(t-joinNotifications[i].time>3000){
+      joinNotifications.splice(i,1);
+    }else{
+      ctx.fillStyle='yellow';
+      ctx.font='16px sans-serif';
+      ctx.fillText(`${joinNotifications[i].name}さんが出撃`,10,35);
+    }
+  }
+
+  for(let i=activeChats.length-1;i>=0;i--){
+    const c = activeChats[i];
+    if(t-c.time>15000){
+      activeChats.splice(i,1);
+      continue;
+    }
+    const x = c.userId===userId ? player.x : otherPlayers[c.userId]?.x || 0;
+    const y = c.userId===userId ? player.y-20 : (otherPlayers[c.userId]?.y-20 || 0);
+    ctx.font='14px sans-serif';
+    const w = ctx.measureText(c.msg).width;
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.fillRect(x-4,y-20,w+8,20);
+    ctx.fillStyle='black';
+    ctx.fillText(c.msg,x,y-5);
+  }
 }
 
-/* =========================================================
-   メインループ
-========================================================= */
 function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
+loop();
 
-/* =========================================================
-   切断処理
-========================================================= */
-addEventListener("beforeunload",()=>{
-  remove(ref(db,"players/"+userId));
+window.addEventListener('beforeunload',()=>{
+  remove(ref(db,'players/'+userId));
 });
 </script>
 </body>
