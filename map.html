@@ -2554,22 +2554,10 @@ function checkUiZone(){
 
   
 function update(){
-  const key = `${mapX},${mapY}`;
-  if(!maps[key]) return;
-  const map = maps[key];
-  const ox = player.x;
-  const oy = player.y;
 
-  player.moving = false;
-  player.crouch = player.shift;
+  gateMessage = null;  // 毎フレームリセット
+gatePos = {x:0, y:0};
 
-  if(keyState.w){ player.y-=player.speed; player.dir='up'; player.moving=true; }
-  if(keyState.s){ player.y+=player.speed; player.dir='down'; player.moving=true; }
-  if(keyState.a){ player.x-=player.speed; player.dir='left'; player.moving=true; }
-  if(keyState.d){ player.x+=player.speed; player.dir='right'; player.moving=true; }
-
-
-  
 for(const obj of map.objects){
   if(obj.type==='gate'){
     const need = countPlayersInRange(obj.range);
@@ -2602,10 +2590,28 @@ for(const obj of map.objects){
       player.y = obj.to.y;
     }else if(near > 0){
       gateMessage = `残り${need - near}人`;
-      gatePos = {x:obj.x,y:obj.y};
+      gatePos = {x:obj.x, y:obj.y};
     }
   }
 }
+
+  const key = `${mapX},${mapY}`;
+  if(!maps[key]) return;
+  const map = maps[key];
+  const ox = player.x;
+  const oy = player.y;
+
+  player.moving = false;
+  player.crouch = player.shift;
+
+  if(keyState.w){ player.y-=player.speed; player.dir='up'; player.moving=true; }
+  if(keyState.s){ player.y+=player.speed; player.dir='down'; player.moving=true; }
+  if(keyState.a){ player.x-=player.speed; player.dir='left'; player.moving=true; }
+  if(keyState.d){ player.x+=player.speed; player.dir='right'; player.moving=true; }
+
+
+  
+
 
 
   
