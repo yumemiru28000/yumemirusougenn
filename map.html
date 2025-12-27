@@ -4,33 +4,13 @@
 <meta charset="utf-8">
 <title>ユメっ子探せ</title>
 <style>
-body {
-  margin: 0;
-  background: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  color: #fff;
-  font-family: sans-serif;
-  overflow: hidden;
-}
-canvas {
-  background: #000;
-  border: 4px solid #fff;
-}
+body { margin: 0; background: #222; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; color: #fff; font-family: sans-serif; overflow: hidden; }
+canvas { background: #000; border: 4px solid #fff; }
 #nameForm, #chatForm { display: flex; gap: 5px; margin-bottom: 5px; }
 #nameForm input, #chatForm input { padding: 5px; font-size: 16px; }
 #chatForm input { flex: 1; }
-#touchControls { position: absolute; bottom: 10px; display: flex; gap: 10px; }
-.touchButton {
-  width: 60px; height: 60px;
-  background: rgba(255,255,255,0.3); color: #fff;
-  font-size: 24px; display: flex;
-  align-items: center; justify-content: center;
-  border-radius: 10px; user-select: none; touch-action: none;
-}
+#touchControls { position: absolute; bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+.touchButton { width: 60px; height: 60px; background: rgba(255,255,255,0.3); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; border-radius: 10px; user-select: none; touch-action: none; }
 </style>
 </head>
 <body>
@@ -52,6 +32,8 @@ canvas {
   <div class="touchButton" data-key="s">↓</div>
   <div class="touchButton" data-key="a">←</div>
   <div class="touchButton" data-key="d">→</div>
+  <div class="touchButton" data-key=" ">⎵</div>
+  <div class="touchButton" data-key="shift">⇧</div>
 </div>
 
 <script type="module">
@@ -92,7 +74,6 @@ nameForm.addEventListener('submit', async (e)=>{
   localStorage.setItem('playerName', playerName);
   nameForm.style.display='none';
 
-  // 同じ名前のユーザーを削除
   const playersSnapshot = await get(ref(db,'players'));
   const playersData = playersSnapshot.val() || {};
   for(const id in playersData){
@@ -100,8 +81,6 @@ nameForm.addEventListener('submit', async (e)=>{
       remove(ref(db,'players/'+id));
     }
   }
-
-  // 自分のデータを登録
   sendPosition();
   sessionStorage.setItem('enterTime', Date.now());
 });
@@ -112,9 +91,14 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 // ====================== プレイヤー ======================
-const player = { x:80, y:30, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false };
+const player = { 
+  x:80, y:30, size:24, speed:1.2, 
+  img:new Image(), imgShift:new Image(), imgLoaded:false, shiftLoaded:false, hidden:false 
+};
 player.img.src = 'https://picsum.photos/seed/player/48';
+player.imgShift.src = 'https://picsum.photos/seed/player/49'; // シフト用
 player.img.onload = ()=>player.imgLoaded = true;
+player.imgShift.onload = ()=>player.shiftLoaded = true;
 
 const otherPlayers = {};
 const otherImages = {};
@@ -145,22 +129,10 @@ for(const k in maps){
 const keyState={};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()]=true;
-
-  // 草ブロック上でスペースキー
-  if(e.key===' '){
-    if(isOnGrass()){
-      const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
-      chatSound.play();
-      if(Math.random() < 1/20){ // 1/20で動画イベント
-        player.hidden=true;
-        remove(ref(db,'players/'+userId));
-        localStorage.setItem('playVideo','true');
-        location.href='index.html';
-      }
-    }
-  }
 });
-addEventListener('keyup', e=>keyState[e.key.toLowerCase()]=false);
+addEventListener('keyup', e=>{
+  keyState[e.key.toLowerCase()]=false;
+});
 
 // ====================== スマホ操作ボタン ======================
 const touchControls = document.getElementById('touchControls');
@@ -211,11 +183,17 @@ function sendPosition(){
   });
 }
 
-// ====================== 他プレイヤー取得 ======================
+// ====================== 他プレイヤー取得・自動削除反映 ======================
 const playersRef = ref(db,'players');
 onValue(playersRef,(snapshot)=>{
   const data = snapshot.val()||{};
-  for(const id in data){ if(id!==userId) otherPlayers[id]=data[id]; }
+  // 削除されたプレイヤーを消す
+  for(const id in otherPlayers){
+    if(!data[id]) delete otherPlayers[id];
+  }
+  for(const id in data){
+    if(id!==userId) otherPlayers[id]=data[id];
+  }
 });
 
 // ====================== 入室通知 ======================
@@ -250,7 +228,7 @@ chatForm.addEventListener('submit',(e)=>{
 onChildAdded(chatsRef, snapshot=>{
   const chat = snapshot.val();
   if(chat.mapX===mapX && chat.mapY===mapY){
-    if(Date.now()-enterTime<5000) return; // 入室5秒間無効
+    if(Date.now()-enterTime<5000) return; 
     activeChats = activeChats.filter(c=>!(c.userId===chat.userId));
     activeChats.push({...chat, time:Date.now()});
     const chatSound = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3');
@@ -261,25 +239,13 @@ onChildAdded(chatsRef, snapshot=>{
 // ====================== 古いプレイヤー・チャット自動削除 ======================
 setInterval(async ()=>{
   const now = Date.now();
-
-  // プレイヤー削除（5分無操作）
   const playersSnap = await get(ref(db,'players'));
   const playersData = playersSnap.val() || {};
-  for(const id in playersData){
-    if(now - playersData[id].timestamp > 300000){ // 5分
-      remove(ref(db,'players/'+id));
-    }
-  }
-
-  // 古いチャット削除（15分以上）
+  for(const id in playersData){ if(now - playersData[id].timestamp > 300000){ remove(ref(db,'players/'+id)); } }
   const chatsSnap = await get(ref(db,'chats'));
   const chatsData = chatsSnap.val() || {};
-  for(const chatId in chatsData){
-    if(now - chatsData[chatId].timestamp > 900000){ // 15分
-      remove(ref(db,'chats/'+chatId));
-    }
-  }
-},60000); // 1分ごとにチェック
+  for(const chatId in chatsData){ if(now - chatsData[chatId].timestamp > 900000){ remove(ref(db,'chats/'+chatId)); } }
+},60000);
 
 // ====================== 更新 ======================
 function update(){
@@ -322,9 +288,7 @@ function draw(){
   if(status[`bg_${key}`]==='loaded') ctx.drawImage(images[`bg_${key}`],0,0,W,H);
   else ctx.fillStyle='#333', ctx.fillRect(0,0,W,H);
 
-  map.objects.forEach((o,i)=>{
-    if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h);
-  });
+  map.objects.forEach((o,i)=>{ if(o.img && status[`obj_${key}_${i}`]==='loaded') ctx.drawImage(images[`obj_${key}_${i}`],o.x,o.y,o.w,o.h); });
 
   for(const id in otherPlayers){
     const p = otherPlayers[id];
@@ -345,8 +309,8 @@ function draw(){
   }
 
   if(!player.hidden){
-    if(player.imgLoaded) ctx.drawImage(player.img,player.x,player.y,player.size,player.size);
-    else ctx.fillStyle='#f55', ctx.fillRect(player.x,player.y,player.size,player.size);
+    const imgToDraw = keyState['shift'] && player.shiftLoaded ? player.imgShift : player.img;
+    ctx.drawImage(imgToDraw,player.x,player.y,player.size,player.size);
     if(playerName) ctx.fillStyle='#fff', ctx.font='16px sans-serif', ctx.fillText(playerName, player.x, player.y-5);
   }
 
