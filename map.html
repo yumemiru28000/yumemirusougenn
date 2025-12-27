@@ -2648,7 +2648,38 @@ setInterval(async ()=>{
     }
   }
 },60000);
+  
+const zoneImage = document.getElementById('zoneImage');
+const zoneText  = document.getElementById('zoneText');
 
+function checkUiZone(){
+  let hit = null;
+
+  for(const zone of worldUiZones){
+    if(
+      mapX >= zone.mapX1 &&
+      mapX <= zone.mapX2 &&
+      mapY >= zone.mapY1 &&
+      mapY <= zone.mapY2
+    ){
+      hit = zone;
+      break;
+    }
+  }
+
+  if(hit){
+    zoneImage.src = hit.image;
+    zoneImage.style.display = 'block';
+    zoneText.textContent = hit.text;
+  }else{
+    zoneImage.style.display = 'none';
+    zoneText.textContent = '';
+  }
+}
+
+  
+
+  
 function update(){
   const key = `${mapX},${mapY}`;
   if(!maps[key]) return;
@@ -2699,36 +2730,9 @@ if(obj.type==='warp'){
   checkBgmZone();
   checkUiZone();
 
-const zoneImage = document.getElementById('zoneImage');
-const zoneText  = document.getElementById('zoneText');
-
-function checkUiZone(){
-  let hit = null;
-
-  for(const zone of worldUiZones){
-    if(
-      mapX >= zone.mapX1 &&
-      mapX <= zone.mapX2 &&
-      mapY >= zone.mapY1 &&
-      mapY <= zone.mapY2
-    ){
-      hit = zone;
-      break;
-    }
-  }
-
-  if(hit){
-    zoneImage.src = hit.image;
-    zoneImage.style.display = 'block';
-    zoneText.textContent = hit.text;
-  }else{
-    zoneImage.style.display = 'none';
-    zoneText.textContent = '';
-  }
 }
 
-  
-}
+
 
 function getImage(p){
   if(p.crouch) return sprites.crouch[p.dir];
