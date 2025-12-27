@@ -2329,14 +2329,7 @@ function updatePlayerPosition() {
 const images = {};
 const status = {};
 
-function loadImage(key,src){
-  const img = new Image();
-  status[key] = 'loading';
-  img.onload = ()=>status[key]='loaded';
-  img.onerror = ()=>status[key]='error';
-  img.src = src;
-  images[key] = img;
-}
+
 
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
