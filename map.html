@@ -29,6 +29,9 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 - mask は描画しません（見えない）。マップごとの通行可否を簡単に作れるようになります。
 - CORS（crossOrigin）ヘッダが付いていない外部ホストだと getImageData が失敗し、矩形フォールバックになります。確実に動かすには同一ドメインか CORS 設定されたホスト推奨。
 - sampleStep の値を調整すると判定の負荷を下げられます（間引きサンプリング）。
+- 当たり判定：プレイヤーの当たり判定は「足元の丸い当たり判定」に変更されています。
+  - 直径 = プレイヤーサイズの 1/3（つまり幅は元の約1/3）
+  - 丸はプレイヤー画像の一番下中央に配置されます。
 -->
 
 <form id="nameForm">
@@ -145,12 +148,7 @@ function checkBgmZone(){
   if(albumHit) playAlbum(albumHit.list); else stopAlbum();
 }
 
-/* --- 歩行音 / シフト音（ここを追加） --- */
-/* 要件:
- - WASD のいずれかを押している間、押している本人だけに歩行音をループで再生（長押しで継続）。
- - Shift 押下時は sihuto.mp3 を最初の押下時のみ再生（長押しで繰り返さない）。
- - 既存ロジックは極力壊さない。
-*/
+/* --- 歩行音 / シフト音（既存） --- */
 const footstepAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asioto.mp3');
 footstepAudio.loop = true;
 footstepAudio.volume = 0.6;
@@ -159,8 +157,8 @@ const shiftAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yu
 shiftAudio.loop = false;
 shiftAudio.volume = 0.6;
 
-let footstepPlaying = false;      // 現在歩行音を再生中か
-let shiftSoundPlayed = false;     // Shift が押されている間に既に一度音を鳴らしたか（押しっぱなしで繰り返さないため）
+let footstepPlaying = false;
+let shiftSoundPlayed = false;
 
 /* --- スプライト（既存） --- */
 player.img.src = 'https://picsum.photos/seed/player/48';
@@ -192,8 +190,7 @@ const worldBgmZones = [
   ] }
 ];
 
-//☆ 新しいPNG画像をマップに追加
-// 例: 元の定義をこう変更
+//☆ 新しいPNG画像をマップに追加（非表示マスク用など）
 const newPNGObject = {
   type: 'block',
   x: 0,
@@ -208,14 +205,13 @@ const maps = {
   '50,0': {
     name: '仮ホーム',
     bg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari.png',
-    collisionMask: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png', // ← マスクの例（ここを置き換えてください）
+    collisionMask: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png',
     block: { up: false, down: true, left: false, right: true },
     objects: [
-      { type: 'warp', x: 50, y: 260, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa1.png', to: { x: 200, y: 80, mapX: -4, mapY: -2 } },
+      { type: 'warp', x: 50, y: 280, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png', to: { x: 50, y: 200, mapX: -4, mapY: -2 } },
       newPNGObject
     ]
   },
-  
   '0,0': {
     name:'ZZ病院前',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',  
@@ -2074,12 +2070,8 @@ const maps = {
     ]
   }
 };
-/* --- 画像 / ピクセルデータキャッシュ --- 
-   keys:
-     bg_${mapKey}    : 背景画像
-     obj_${mapKey}_${i}: マップ内オブジェクト画像
-     mask_${mapKey}  : collisionMask のピクセルデータ（存在すればピクセル判定に使用）
-*/
+
+/* --- 画像 / ピクセルデータキャッシュ --- */
 const imagePixelData = {}; // key -> { data, width, height } か null
 const images = {};
 const status = {};
@@ -2088,11 +2080,10 @@ function loadImage(key, src){
   if(!src) { status[key] = 'none'; imagePixelData[key] = null; return; }
   const img = new Image();
   status[key] = 'loading';
-  img.crossOrigin = 'anonymous'; // getImageData を使えるように（CORS 必須）
+  img.crossOrigin = 'anonymous';
   img.onload = ()=>{
     status[key] = 'loaded';
     images[key] = img;
-    // オフスクリーンに描画してピクセルデータをキャッシュ
     try{
       const c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
@@ -2101,9 +2092,7 @@ function loadImage(key, src){
       const imageData = cx.getImageData(0,0,c.width,c.height);
       imagePixelData[key] = { data: imageData.data, width: imageData.width, height: imageData.height };
     }catch(e){
-      // CORS などで取得できない場合は null にしてフォールバック
       imagePixelData[key] = null;
-      // console.warn('getImageData failed for', key, e);
     }
   };
   img.onerror = ()=>{ status[key] = 'error'; imagePixelData[key] = null; images[key]=img; };
@@ -2124,7 +2113,6 @@ const keyState = {};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()] = true;
 
-  // Shift の押下（最初の押下で一回だけ shift 音を鳴らす）
   if(e.key === 'Shift'){
     player.shift = true;
     if(!shiftSoundPlayed){
@@ -2138,7 +2126,6 @@ addEventListener('keyup', e=>{
   keyState[e.key.toLowerCase()] = false;
   if(e.key === 'Shift'){
     player.shift = false;
-    // Shift を離したらフラグをリセットして次回押下時にまた音が鳴るようにする
     shiftSoundPlayed = false;
   }
 });
@@ -2171,7 +2158,42 @@ document.querySelectorAll('.touchButton').forEach(btn=>{
   });
 });
 
-function hit(a,b){ return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y; }
+/* --- 旧矩形当たり判定関数（他で使う場合のため残すが、プレイヤー用には円を使う） --- */
+function rectsOverlap(a,b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* --- 新: プレイヤー足元の丸い当たり判定 --- */
+/*
+  仕様:
+  - 直径 = player.size * (1/3)
+  - 中心はプレイヤー画像の一番下中央に配置 (x + size/2, y + size - r)
+  - これを用いてオブジェクトやマップマスクと当たり判定を行います
+*/
+function getPlayerFootCircle(p){
+  const diameter = Math.max(1, p.size / 3); // 幅は元の約1/3
+  const r = diameter / 2;
+  const cx = p.x + p.size / 2;              // 中央の x
+  const cy = p.y + p.size - r;             // 画像の一番下中央寄り
+  return { cx, cy, r };
+}
+
+// 円と矩形の当たり判定（距離ベース）
+function circleRectOverlap(circle, rect){
+  // rect: {x,y,w,h}
+  const nearestX = Math.max(rect.x, Math.min(circle.cx, rect.x + rect.w));
+  const nearestY = Math.max(rect.y, Math.min(circle.cy, rect.y + rect.h));
+  const dx = circle.cx - nearestX;
+  const dy = circle.cy - nearestY;
+  return (dx * dx + dy * dy) <= (circle.r * circle.r);
+}
+
+// 円内判定（点が円の内部か）
+function pointInCircle(circle, x, y){
+  const dx = circle.cx - x;
+  const dy = circle.cy - y;
+  return (dx*dx + dy*dy) <= (circle.r * circle.r);
+}
 
 let mapX = SPAWN.mapX;
 let mapY = SPAWN.mapY;
@@ -2180,8 +2202,11 @@ let mapY = SPAWN.mapY;
 function isOnGrass(){
   const key = `${mapX},${mapY}`;
   const map = maps[key];
+  const foot = getPlayerFootCircle(player);
   for(const obj of map.objects){
-    if(obj.type==='grass' && hit(player,obj)) return true;
+    if(obj.type==='grass'){
+      if(circleRectOverlap(foot, obj)) return true;
+    }
   }
   return false;
 }
@@ -2226,7 +2251,7 @@ setInterval(async ()=>{
   const playersData = playersSnap.val() || {};
   for(const id in playersData) if(now - playersData[id].timestamp > 300000) remove(ref(db,'players/'+id));
   const chatsSnap = await get(ref(db,'chats')); const chatsData = chatsSnap.val() || {};
-  for(const id in chatsData) if(now - chatsData[id].timestamp >600000) remove(ref(db,'chats/'+id));
+  for(const id in chatsData) if(now - chatsData[id].timestamp > 900000) remove(ref(db,'chats/'+id));
 },60000);
 
 /* --- UI zone --- */
@@ -2240,71 +2265,66 @@ function checkUiZone(){
   if(hitZone){ zoneImage.src = hitZone.image; zoneImage.style.display = 'block'; zoneText.textContent = hitZone.text; } else { zoneImage.style.display = 'none'; zoneText.textContent = ''; }
 }
 
-/* --- 新しい: マップマスク判定関数 --- 
-   概要: maps の collisionMask を使って (mapKey, x, y) の位置にプレイヤーを置けるか判定します。
-   返り値: true => 通行可, false => ブロック
-*/
-function isPassableByMapMask(mapKey, px, py, playerSize){
+/* --- マップマスク判定（円対応） --- */
+function isPassableByMapMask(mapKey, footCircle){
   const maskKey = `mask_${mapKey}`;
   const pixel = imagePixelData[maskKey];
   if(!pixel) return true; // マスクがない or 取得不可なら通行可（フォールバック）
 
-  // マップは canvas 上で W x H に描画される想定。
-  // mask のピクセル解像度が異なる場合にスケーリングして参照する。
   const pw = W, ph = H;
   const scaleX = pixel.width / pw;
   const scaleY = pixel.height / ph;
+  const sampleStep = Math.max(1, Math.floor((footCircle.r * 2) / 4)); // sample density relative to circle size
 
-  // サンプリング間引き（負荷軽減）: 小さい値にすると厳密だが重い
-  const sampleStep = Math.max(1, Math.floor(playerSize / 6)); // 例: size 24 -> step 4
-
-  // プレイヤー矩形内をサンプリングして、マスク側でアルファが十分大きければブロック
-  const startX = Math.max(0, Math.floor(px));
-  const startY = Math.max(0, Math.floor(py));
-  const endX = Math.min(pw - 1, Math.floor(px + playerSize - 1));
-  const endY = Math.min(ph - 1, Math.floor(py + playerSize - 1));
+  // サンプリング領域は円の外接矩形
+  const startX = Math.max(0, Math.floor(footCircle.cx - footCircle.r));
+  const startY = Math.max(0, Math.floor(footCircle.cy - footCircle.r));
+  const endX = Math.min(pw - 1, Math.floor(footCircle.cx + footCircle.r));
+  const endY = Math.min(ph - 1, Math.floor(footCircle.cy + footCircle.r));
 
   for(let yy = startY; yy <= endY; yy += sampleStep){
     for(let xx = startX; xx <= endX; xx += sampleStep){
+      // 点が足円の中に入っているか確認
+      if(!pointInCircle(footCircle, xx, yy)) continue;
       const mx = Math.floor(xx * scaleX);
       const my = Math.floor(yy * scaleY);
       if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
-      const idx = (my * pixel.width + mx) * 4 + 3; // alpha
-      if(pixel.data[idx] > 10){ // しきい値（10）より大きければ「塗られている」＝ブロック
-        return false;
-      }
+      const idx = (my * pixel.width + mx) * 4 + 3;
+      if(pixel.data[idx] > 10) return false; // 不透明 -> ブロック
     }
   }
   return true;
 }
 
-/* --- 既存のオブジェクト用ピクセル判定（obj_{key}_{i}） --- 
-   obj の img がある場合、オブジェクト画像に不透明ピクセルがあればブロックとします。
-*/
-function isPassableByObjectPixel(mapKey, objIndex, px, py, playerSize, obj){
+/* --- オブジェクト画像ピクセル判定（円対応） --- */
+function isPassableByObjectPixel(mapKey, objIndex, footCircle, obj){
   const pixelKey = `obj_${mapKey}_${objIndex}`;
   const pixel = imagePixelData[pixelKey];
-  if(!pixel) return null; // null => データなし（矩形で判定する側に任せる）
-  // obj は o.x, o.y, o.w, o.h の座標（描画サイズ）
+  if(!pixel) return null; // データなし => 矩形で判定する側に任せる
+
   const scaleX = pixel.width / obj.w;
   const scaleY = pixel.height / obj.h;
+  const sampleStep = Math.max(1, Math.floor((footCircle.r * 2) / 4));
 
-  const startX = Math.max(0, Math.floor(px - obj.x));
-  const startY = Math.max(0, Math.floor(py - obj.y));
-  const endX = Math.min(obj.w - 1, Math.floor(px + playerSize - 1 - obj.x));
-  const endY = Math.min(obj.h - 1, Math.floor(py + playerSize - 1 - obj.y));
+  // 足円の外接矩形を obj 座標系に変換してサンプリング
+  const startX = Math.max(0, Math.floor((footCircle.cx - footCircle.r) - obj.x));
+  const startY = Math.max(0, Math.floor((footCircle.cy - footCircle.r) - obj.y));
+  const endX = Math.min(obj.w - 1, Math.floor((footCircle.cx + footCircle.r) - obj.x));
+  const endY = Math.min(obj.h - 1, Math.floor((footCircle.cy + footCircle.r) - obj.y));
 
-  const sampleStep = Math.max(1, Math.floor(playerSize / 6));
   for(let yy = startY; yy <= endY; yy += sampleStep){
     for(let xx = startX; xx <= endX; xx += sampleStep){
+      const worldX = obj.x + xx;
+      const worldY = obj.y + yy;
+      if(!pointInCircle(footCircle, worldX, worldY)) continue;
       const mx = Math.floor(xx * scaleX);
       const my = Math.floor(yy * scaleY);
       if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
       const idx = (my * pixel.width + mx) * 4 + 3;
-      if(pixel.data[idx] > 10) return false; // 不透明が見つかった => ブロック
+      if(pixel.data[idx] > 10) return false; // 不透明 -> ブロック
     }
   }
-  return true; // 全て透明っぽい => 通れる
+  return true;
 }
 
 /* --- 更新 / 描画 --- */
@@ -2322,18 +2342,15 @@ function update() {
   if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
   if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
 
-  // === ここで歩行音の開始/停止を制御（既存ロジックを壊さずに追加） ===
+  // 歩行音開始/停止（既存ロジックを壊さず追加）
   const anyMoveKey = keyState['w'] || keyState['a'] || keyState['s'] || keyState['d'];
   if(anyMoveKey && !footstepPlaying){
-    // 移動開始 -> 歩行音をループ再生
     try{ footstepAudio.currentTime = 0; footstepAudio.play(); }catch(e){}
     footstepPlaying = true;
   }else if(!anyMoveKey && footstepPlaying){
-    // 移動終了 -> 歩行音を停止（先頭へ戻す）
     try{ footstepAudio.pause(); footstepAudio.currentTime = 0; }catch(e){}
     footstepPlaying = false;
   }
-  // ===============================================================
 
   // ゲート処理（既存）
   for (const obj of map.objects){
@@ -2352,38 +2369,40 @@ function update() {
     }
   }
 
-  // すべてのオブジェクトとの衝突判定（矩形→ピクセル）とマップマスク判定を組み合わせる
+  // オブジェクト衝突判定（円ベース）
+  const foot = getPlayerFootCircle(player);
   let blockedByObject = false;
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
-    if(hit(player,obj)){
-      if(obj.type === 'block'){
-        // 1) まずオブジェクト個別のピクセル判定（存在する場合）
-        const objPixelResult = isPassableByObjectPixel(key, i, player.x, player.y, player.size, obj);
-        if(objPixelResult === false){
-          blockedByObject = true;
-          break;
-        }else if(objPixelResult === null){
-          // ピクセルデータなしなら矩形ブロックでフォールバック
-          blockedByObject = true;
-          break;
-        }
+    // まず簡易に外接矩形で早期判定（負荷軽減）
+    if(!circleRectOverlap(foot, obj)) continue;
+
+    if(obj.type === 'block'){
+      const objPixelResult = isPassableByObjectPixel(key, i, foot, obj);
+      if(objPixelResult === false){
+        blockedByObject = true;
+        break;
+      }else if(objPixelResult === null){
+        // ピクセルデータなしなら矩形ブロックでフォールバック（円と矩形の距離で判定）
+        blockedByObject = circleRectOverlap(foot, obj);
+        if(blockedByObject) break;
       }
-      if(obj.type === 'warp'){
+    }
+    if(obj.type === 'warp'){
+      // warp の領域判定も円で行う
+      if(circleRectOverlap(foot, obj)){
         player.x = obj.to.x; player.y = obj.to.y; mapX = obj.to.mapX; mapY = obj.to.mapY;
-        // warp したら map を変えたのでそれ以降のマスク/オブジェクト判定は新 map で行われる
       }
     }
   }
 
-  // 2) マップの collisionMask による判定
+  // マップの collisionMask による判定（円ベース）
   let blockedByMapMask = false;
   if(!blockedByObject){
-    const passable = isPassableByMapMask(key, player.x, player.y, player.size);
+    const passable = isPassableByMapMask(key, foot);
     if(!passable) blockedByMapMask = true;
   }
 
-  // 衝突があれば元に戻す
   if(blockedByObject || blockedByMapMask){
     player.x = ox; player.y = oy;
   }
@@ -2401,9 +2420,6 @@ function update() {
     if (player.x + player.size > W) player.x = 0;
     if (player.y < 0) player.y = H - player.size;
     if (player.y + player.size > H) player.y = 0;
-  } else {
-    // 端で移動できない場合は元に戻す（マップ外への移動を禁止）
-    // ただし warp によって map が変わった場合はこの処理はスキップされる
   }
 
   if (playerName) sendPosition();
@@ -2417,17 +2433,13 @@ function draw(){
   const key = `${mapX},${mapY}`; const map = maps[key];
   if(status[`bg_${key}`]==='loaded'){ ctx.drawImage(images[`bg_${key}`],0,0,W,H); }else{ ctx.fillStyle='#333'; ctx.fillRect(0,0,W,H); }
 
-  // 注意: collisionMask は描画しない（見えないマスクとして使うため）
-  // map.objects を描画（既存）
-// 変更後:
-map.objects.forEach((o,i)=>{
-  // mask フラグがある場合は描画しない（ピクセル判定は保持）
-  if (o.mask) return;
-
-  if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
-    ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
-  }
-});
+  // map.objects を描画（mask オブジェクトは描画しない）
+  map.objects.forEach((o,i)=>{
+    if (o.mask) return;
+    if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
+      ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+    }
+  });
 
   for(const id in otherPlayers){
     const p = otherPlayers[id];
@@ -2443,6 +2455,13 @@ map.objects.forEach((o,i)=>{
     if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
     ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
     if(playerName) ctx.fillText(playerName,player.x,player.y-5);
+
+    // デバッグ表示（足元の丸い当たり判定を確認したい場合はコメント解除）
+    // const f = getPlayerFootCircle(player);
+    // ctx.beginPath();
+    // ctx.arc(f.cx, f.cy, f.r, 0, Math.PI*2);
+    // ctx.fillStyle='rgba(255,0,0,0.3)';
+    // ctx.fill();
   }
 
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
