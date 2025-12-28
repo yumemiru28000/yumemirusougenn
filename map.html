@@ -22,13 +22,21 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 <body>
 
 <!--
-使い方（重要）
-- 各マップ（maps オブジェクト）に collisionMask プロパティを追加します:
-    collisionMask: 'https://.../mask_image.png'
-  mask_image.png はマップ背景と同サイズ（や比率）で、透明部分が「通れる場所」、不透明部分が「通れない場所（ブロック）」になります。
-- mask は描画しません（見えない）。マップごとの通行可否を簡単に作れるようになります。
-- CORS（crossOrigin）ヘッダが付いていない外部ホストだと getImageData が失敗し、矩形フォールバックになります。確実に動かすには同一ドメインか CORS 設定されたホスト推奨。
-- sampleStep の値を調整すると判定の負荷を下げられます（間引きサンプリング）。
+追加機能: 色駆動・仮想視点マップギミック 組み込み版
+使い方（短縮）
+- 各 maps[mapKey] に次の任意プロパティを追加できます:
+  - collisionBlack: URL (黒 PNG、通行不可判定用) ─ 非表示。存在すれば最優先でブロック判定に使われます。
+  - areaColor: URL (色エリア判定 PNG) ─ 非表示。プレイヤーがどの color_xxx を使うか決めます。
+  - colorSets: { yellow: baseUrl, green: baseUrl, orange: baseUrl, pink: baseUrl }
+    baseUrl はその色フォルダのルート URL（例: https://.../map_xxx/color_yellow）
+    フォルダ内のファイル名は仕様に従います:
+      - white.png   (上下位置制御)
+      - purple.png  (可視性制御)
+      - blue.png    (スケール制御)
+      - red.png     (横位置制御)
+      - view_side.png (横視点背景、表示される)
+- 既存の collisionMask（以前の実装）も互換性のため残しています（mask_${key}）。
+- color PNGs と mask PNGs は CORS ヘッダが必要です（getImageData を使うため）。
 -->
 
 <form id="nameForm">
@@ -68,7 +76,7 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-/* --- 設定（変更しないで） --- */
+/* --- 既存コード設定 --- */
 const SPAWN = { mapX: 50, mapY: 0, x: 150, y: 120 };
 
 const firebaseConfig = {
@@ -85,7 +93,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* --- ユーザー情報 --- */
 let userId = sessionStorage.getItem('userId');
 if(!userId){ userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000); sessionStorage.setItem('userId', userId); }
 let playerName = localStorage.getItem('playerName') || '';
@@ -111,7 +118,7 @@ nameForm.addEventListener('submit', async (e)=>{
   sessionStorage.setItem('enterTime', Date.now());
 });
 
-/* --- Canvas / プレイヤー --- */
+/* --- Canvas / Player --- */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
@@ -120,7 +127,7 @@ window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
 const player = { x: SPAWN.x, y: SPAWN.y, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false, shift:false, dir:'down', moving:false, crouch:false };
 
-/* --- BGM / UI 省略 --- (既存のまま動作) */
+/* --- BGM / UI --- */
 let currentBgmZoneId = null;
 const singleBgmAudio = new Audio(); singleBgmAudio.loop = true; singleBgmAudio.volume = 0.6;
 const albumBgmAudio = new Audio(); albumBgmAudio.loop = false; albumBgmAudio.volume = 0.6;
@@ -145,12 +152,7 @@ function checkBgmZone(){
   if(albumHit) playAlbum(albumHit.list); else stopAlbum();
 }
 
-/* --- 歩行音 / シフト音（ここを追加） --- */
-/* 要件:
- - WASD のいずれかを押している間、押している本人だけに歩行音をループで再生（長押しで継続）。
- - Shift 押下時は sihuto.mp3 を最初の押下時のみ再生（長押しで繰り返さない）。
- - 既存ロジックは極力壊さない。
-*/
+/* --- 歩行音 / シフト音 --- */
 const footstepAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asioto.mp3');
 footstepAudio.loop = true;
 footstepAudio.volume = 0.6;
@@ -159,10 +161,10 @@ const shiftAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yu
 shiftAudio.loop = false;
 shiftAudio.volume = 0.6;
 
-let footstepPlaying = false;      // 現在歩行音を再生中か
-let shiftSoundPlayed = false;     // Shift が押されている間に既に一度音を鳴らしたか（押しっぱなしで繰り返さないため）
+let footstepPlaying = false;
+let shiftSoundPlayed = false;
 
-/* --- スプライト（既存） --- */
+/* --- Sprites --- */
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
 const sprites = { walk:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() }, idle:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() }, crouch:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() } };
@@ -177,7 +179,7 @@ sprites.crouch.down.src = sprites.crouch.right.src = 'https://raw.githubusercont
 const otherPlayers = {};
 const otherImages = {};
 
-/* --- UI / BGM ゾーン（既存） --- */
+/* --- UI/BGM zones --- */
 const worldUiZones = [
   { id:'townUI', mapX1:-7, mapY1:-7, mapX2:7, mapY2:7, image:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/map.png', text:'地図' },
   { id:'forestUI', mapX1:10, mapY1:10, mapX2:20, mapY2:20, image:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTA.png', text:'白の扉を探せ' }
@@ -192,8 +194,7 @@ const worldBgmZones = [
   ] }
 ];
 
-//☆ 新しいPNG画像をマップに追加
-// 例: 元の定義をこう変更
+/* --- newPNGObject (masked object example) --- */
 const newPNGObject = {
   type: 'block',
   x: 0,
@@ -201,14 +202,27 @@ const newPNGObject = {
   w: 400,
   h: 300,
   img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png',
-  mask: true,     // 描画しないがピクセル判定用に読み込む
+  mask: true,     // 描画はしないがピクセル判定用に読み込む
 };
-    
+
+/* --- maps: add optional properties:
+     - collisionBlack: URL for collision_black.png (non-visible)
+     - areaColor: URL for area_color.png (non-visible)
+     - colorSets: { yellow: baseUrl, green: baseUrl, orange: baseUrl, pink: baseUrl }
+       each baseUrl should contain white.png, purple.png, blue.png, red.png, view_side.png as needed.
+--- */
 const maps = {
   '50,0': {
     name: '仮ホーム',
     bg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari.png',
-    collisionMask: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png', // ← マスクの例（ここを置き換えてください）
+    collisionMask: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png', // 既存互換（mask_${key}）
+    collisionBlack: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/collision_black_kari.png', // optional (black = impassable)
+    areaColor: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/area_color_kari.png', // optional (color area map)
+    // example colorSets (optional) - point base URLs to folders containing white.png purple.png blue.png red.png view_side.png
+    colorSets: {
+      yellow: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/color_yellow_kari',
+      green:  'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/color_green_kari'
+    },
     block: { up: false, down: true, left: false, right: true },
     objects: [
       { type: 'warp', x: 50, y: 260, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa1.png', to: { x: 200, y: 80, mapX: -4, mapY: -2 } },
@@ -2074,13 +2088,28 @@ const maps = {
     ]
   }
 };
+ '100,0': {
+    name:'ユメの草原',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
+    block:{up:false,down:false,left:false,right:false},
+    objects:[
+      {type:'block',x:150,y:80,w:64,h:64,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTB.png'},
+      {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}
+    ]
+  }
+};
+
 /* --- 画像 / ピクセルデータキャッシュ --- 
-   keys:
-     bg_${mapKey}    : 背景画像
-     obj_${mapKey}_${i}: マップ内オブジェクト画像
-     mask_${mapKey}  : collisionMask のピクセルデータ（存在すればピクセル判定に使用）
+   keys used:
+     - bg_${key}
+     - obj_${key}_${i}
+     - mask_${key}       (legacy collisionMask / per-map PNG)
+     - black_${key}      (collisionBlack)
+     - area_${key}       (areaColor)
+     - color_${key}_${c}_white / _purple / _blue / _red  (color rule images)
+     - view_${key}_${c}  (view_side for that color)
 */
-const imagePixelData = {}; // key -> { data, width, height } か null
+const imagePixelData = {}; // key -> { data, width, height } | null
 const images = {};
 const status = {};
 
@@ -2088,11 +2117,10 @@ function loadImage(key, src){
   if(!src) { status[key] = 'none'; imagePixelData[key] = null; return; }
   const img = new Image();
   status[key] = 'loading';
-  img.crossOrigin = 'anonymous'; // getImageData を使えるように（CORS 必須）
+  img.crossOrigin = 'anonymous';
   img.onload = ()=>{
     status[key] = 'loaded';
     images[key] = img;
-    // オフスクリーンに描画してピクセルデータをキャッシュ
     try{
       const c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
@@ -2101,30 +2129,45 @@ function loadImage(key, src){
       const imageData = cx.getImageData(0,0,c.width,c.height);
       imagePixelData[key] = { data: imageData.data, width: imageData.width, height: imageData.height };
     }catch(e){
-      // CORS などで取得できない場合は null にしてフォールバック
       imagePixelData[key] = null;
-      // console.warn('getImageData failed for', key, e);
     }
   };
   img.onerror = ()=>{ status[key] = 'error'; imagePixelData[key] = null; images[key]=img; };
   img.src = src;
 }
 
-// 事前読み込み: bg / objects / masks
+/* --- preload images for maps:
+   bg, collisionMask, collisionBlack, areaColor, objects, and colorSets (white/purple/blue/red/view_side)
+*/
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
   if(maps[k].collisionMask) loadImage(`mask_${k}`, maps[k].collisionMask);
+  if(maps[k].collisionBlack) loadImage(`black_${k}`, maps[k].collisionBlack);
+  if(maps[k].areaColor) loadImage(`area_${k}`, maps[k].areaColor);
+
+  // objects
   maps[k].objects.forEach((o,i)=>{
     if(o.img) loadImage(`obj_${k}_${i}`, o.img);
   });
+
+  // colorSets
+  const sets = maps[k].colorSets;
+  if(sets){
+    for(const color in sets){
+      const base = sets[color].replace(/\/$/, '');
+      loadImage(`color_${k}_${color}_white`, `${base}/white.png`);
+      loadImage(`color_${k}_${color}_purple`, `${base}/purple.png`);
+      loadImage(`color_${k}_${color}_blue`, `${base}/blue.png`);
+      loadImage(`color_${k}_${color}_red`, `${base}/red.png`);
+      loadImage(`view_${k}_${color}`, `${base}/view_side.png`);
+    }
+  }
 }
 
-/* --- 入力 --- */
+/* --- Input handling --- */
 const keyState = {};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()] = true;
-
-  // Shift の押下（最初の押下で一回だけ shift 音を鳴らす）
   if(e.key === 'Shift'){
     player.shift = true;
     if(!shiftSoundPlayed){
@@ -2138,7 +2181,6 @@ addEventListener('keyup', e=>{
   keyState[e.key.toLowerCase()] = false;
   if(e.key === 'Shift'){
     player.shift = false;
-    // Shift を離したらフラグをリセットして次回押下時にまた音が鳴るようにする
     shiftSoundPlayed = false;
   }
 });
@@ -2157,26 +2199,25 @@ document.querySelectorAll('.touchButton').forEach(btn=>{
         try{ shiftAudio.currentTime = 0; shiftAudio.play(); }catch(e){}
         shiftSoundPlayed = true;
       }
-    }
-    else if(key==='space') triggerSpaceEvent();
+    } else if(key==='space') triggerSpaceEvent();
     else keyState[key]=true;
   });
   btn.addEventListener('touchend', e=>{
     e.preventDefault();
-    if(key==='shift'){
-      player.shift=false;
-      shiftSoundPlayed = false;
-    }
+    if(key==='shift'){ player.shift=false; shiftSoundPlayed=false; }
     else keyState[key]=false;
   });
 });
 
+/* --- basic utilities --- */
 function hit(a,b){ return a.x<b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a) * t; }
 
 let mapX = SPAWN.mapX;
 let mapY = SPAWN.mapY;
 
-/* --- 草イベントなど（既存） --- */
+/* --- grass / space event --- */
 function isOnGrass(){
   const key = `${mapX},${mapY}`;
   const map = maps[key];
@@ -2197,7 +2238,7 @@ function triggerSpaceEvent(){
   }
 }
 
-/* --- Firebase 送信 --- */
+/* --- Firebase position send --- */
 function sendPosition(){
   if(player.hidden) return;
   set(ref(db,'players/'+userId),{
@@ -2240,74 +2281,166 @@ function checkUiZone(){
   if(hitZone){ zoneImage.src = hitZone.image; zoneImage.style.display = 'block'; zoneText.textContent = hitZone.text; } else { zoneImage.style.display = 'none'; zoneText.textContent = ''; }
 }
 
-/* --- 新しい: マップマスク判定関数 --- 
-   概要: maps の collisionMask を使って (mapKey, x, y) の位置にプレイヤーを置けるか判定します。
-   返り値: true => 通行可, false => ブロック
+/* --- Pixel sampling helper ---
+   samplePixel(key, mapKey, canvasX, canvasY)
+   - key: imagePixelData key (eg. 'area_50,0', 'black_50,0', 'color_50,0_yellow_white', etc)
+   - canvasX/canvasY: coordinates in canvas space (0..W-1, 0..H-1)
+   returns {r,g,b,a} or null if no pixel data
 */
-function isPassableByMapMask(mapKey, px, py, playerSize){
-  const maskKey = `mask_${mapKey}`;
-  const pixel = imagePixelData[maskKey];
-  if(!pixel) return true; // マスクがない or 取得不可なら通行可（フォールバック）
+function samplePixel(key, canvasX, canvasY){
+  const pixel = imagePixelData[key];
+  if(!pixel) return null;
+  // image drawn/scaled to W x H on canvas; map image resolution may differ -> scale canvas coords to image coords
+  const ix = Math.floor(canvasX * (pixel.width / W));
+  const iy = Math.floor(canvasY * (pixel.height / H));
+  if(ix < 0 || ix >= pixel.width || iy < 0 || iy >= pixel.height) return null;
+  const idx = (iy * pixel.width + ix) * 4;
+  return { r: pixel.data[idx], g: pixel.data[idx+1], b: pixel.data[idx+2], a: pixel.data[idx+3] };
+}
 
-  // マップは canvas 上で W x H に描画される想定。
-  // mask のピクセル解像度が異なる場合にスケーリングして参照する。
-  const pw = W, ph = H;
-  const scaleX = pixel.width / pw;
-  const scaleY = pixel.height / ph;
-
-  // サンプリング間引き（負荷軽減）: 小さい値にすると厳密だが重い
-  const sampleStep = Math.max(1, Math.floor(playerSize / 6)); // 例: size 24 -> step 4
-
-  // プレイヤー矩形内をサンプリングして、マスク側でアルファが十分大きければブロック
-  const startX = Math.max(0, Math.floor(px));
-  const startY = Math.max(0, Math.floor(py));
-  const endX = Math.min(pw - 1, Math.floor(px + playerSize - 1));
-  const endY = Math.min(ph - 1, Math.floor(py + playerSize - 1));
-
-  for(let yy = startY; yy <= endY; yy += sampleStep){
-    for(let xx = startX; xx <= endX; xx += sampleStep){
-      const mx = Math.floor(xx * scaleX);
-      const my = Math.floor(yy * scaleY);
-      if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
-      const idx = (my * pixel.width + mx) * 4 + 3; // alpha
-      if(pixel.data[idx] > 10){ // しきい値（10）より大きければ「塗られている」＝ブロック
-        return false;
+/* --- Collision: black mask (highest priority) ---
+   returns true if blocked
+*/
+function isBlockedByBlack(mapKey, px, py, playerSize){
+  const key = `black_${mapKey}`;
+  // fallback: if black not provided, try legacy mask key if user used that as black
+  const pixelKey = imagePixelData[key] ? key : (imagePixelData[`mask_${mapKey}`] ? `mask_${mapKey}` : null);
+  if(!pixelKey) return false;
+  // sample region inside the player's rectangle
+  const step = Math.max(1, Math.floor(playerSize / 6));
+  for(let y = Math.floor(py); y <= Math.floor(py + playerSize - 1); y += step){
+    for(let x = Math.floor(px); x <= Math.floor(px + playerSize - 1); x += step){
+      const p = samplePixel(pixelKey, x, y);
+      if(p && p.a > 10){
+        // black mask normally should be pure black; we only check alpha > threshold
+        return true;
       }
     }
   }
-  return true;
+  return false;
 }
 
-/* --- 既存のオブジェクト用ピクセル判定（obj_{key}_{i}） --- 
-   obj の img がある場合、オブジェクト画像に不透明ピクセルがあればブロックとします。
+/* --- Legacy map mask passability (keeps earlier behavior) ---
+   was isPassableByMapMask, now renamed
 */
-function isPassableByObjectPixel(mapKey, objIndex, px, py, playerSize, obj){
-  const pixelKey = `obj_${mapKey}_${objIndex}`;
-  const pixel = imagePixelData[pixelKey];
-  if(!pixel) return null; // null => データなし（矩形で判定する側に任せる）
-  // obj は o.x, o.y, o.w, o.h の座標（描画サイズ）
-  const scaleX = pixel.width / obj.w;
-  const scaleY = pixel.height / obj.h;
-
-  const startX = Math.max(0, Math.floor(px - obj.x));
-  const startY = Math.max(0, Math.floor(py - obj.y));
-  const endX = Math.min(obj.w - 1, Math.floor(px + playerSize - 1 - obj.x));
-  const endY = Math.min(obj.h - 1, Math.floor(py + playerSize - 1 - obj.y));
-
+function isPassableByMapMaskLegacy(mapKey, px, py, playerSize){
+  const maskKey = `mask_${mapKey}`;
+  const pixel = imagePixelData[maskKey];
+  if(!pixel) return true;
+  const scaleX = pixel.width / W;
+  const scaleY = pixel.height / H;
   const sampleStep = Math.max(1, Math.floor(playerSize / 6));
+  const startX = Math.max(0, Math.floor(px));
+  const startY = Math.max(0, Math.floor(py));
+  const endX = Math.min(W - 1, Math.floor(px + playerSize - 1));
+  const endY = Math.min(H - 1, Math.floor(py + playerSize - 1));
   for(let yy = startY; yy <= endY; yy += sampleStep){
     for(let xx = startX; xx <= endX; xx += sampleStep){
       const mx = Math.floor(xx * scaleX);
       const my = Math.floor(yy * scaleY);
       if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
       const idx = (my * pixel.width + mx) * 4 + 3;
-      if(pixel.data[idx] > 10) return false; // 不透明が見つかった => ブロック
+      if(pixel.data[idx] > 10) return false;
     }
   }
-  return true; // 全て透明っぽい => 通れる
+  return true;
 }
 
-/* --- 更新 / 描画 --- */
+/* --- Virtual view calculation for a given player (local or remote)
+   returns an object:
+   {
+     virtualActive: boolean,
+     viewImageKey: 'view_mapKey_color' or null,
+     params: { white:0..1, purple:0..1, blue:0..1, red:0..1 }
+   }
+*/
+function computeVirtualForPlayer(mapKey, px, py){
+  const areaKey = `area_${mapKey}`;
+  const areaPixel = samplePixel(areaKey, px + Math.floor(player.size/2), py + Math.floor(player.size/2));
+  if(!areaPixel) return { virtualActive:false };
+
+  // If transparent (alpha == 0) -> no virtual view
+  if(areaPixel.a === 0) return { virtualActive:false };
+
+  // Map the sampled color to one of the four: yellow / green / orange / pink
+  // The design assumes pure colors. We'll compare by RGB.
+  const r = areaPixel.r, g = areaPixel.g, b = areaPixel.b;
+  const colorName = (() => {
+    // simple matching (pure colors):
+    if(r > 200 && g > 200 && b < 100) return 'yellow'; // r+g high
+    if(g > 200 && r < 100 && b < 100) return 'green';
+    if(r > 200 && g > 120 && b < 120 && g < r) return 'orange'; // heuristic
+    if(r > 200 && b > 200 && g < 120) return 'pink'; // r+b
+    // fallback: try specific exact matches if necessary
+    return null;
+  })();
+
+  if(!colorName) return { virtualActive:false };
+
+  // check whether colorSet exists for this map/color
+  const sets = maps[mapKey] && maps[mapKey].colorSets;
+  if(!sets || !sets[colorName]) return { virtualActive:false };
+
+  const prefixWhite = `color_${mapKey}_${colorName}_white`;
+  const prefixPurple = `color_${mapKey}_${colorName}_purple`;
+  const prefixBlue   = `color_${mapKey}_${colorName}_blue`;
+  const prefixRed    = `color_${mapKey}_${colorName}_red`;
+  const viewKey      = `view_${mapKey}_${colorName}`;
+
+  // sample each rule png at player's center
+  const cx = px + player.size/2;
+  const cy = py + player.size/2;
+
+  const whiteP = samplePixel(prefixWhite, cx, cy);
+  const purpleP = samplePixel(prefixPurple, cx, cy);
+  const blueP   = samplePixel(prefixBlue, cx, cy);
+  const redP    = samplePixel(prefixRed, cx, cy);
+
+  // convert sampled pixel to intensity 0..1
+  const intensity = (p)=> {
+    if(!p) return 0;
+    // if using grayscale images, use average of RGB or alpha
+    const alphaBased = p.a / 255;
+    const lum = ((p.r + p.g + p.b) / 3) / 255;
+    // prefer alpha if present, otherwise luminance
+    return p.a > 10 ? alphaBased : lum;
+  };
+
+  const whiteV = intensity(whiteP);
+  const purpleV = intensity(purpleP);
+  const blueV = intensity(blueP);
+  const redV = intensity(redP);
+
+  return {
+    virtualActive: true,
+    colorName,
+    viewImageKey: status[viewKey] === 'loaded' ? viewKey : null,
+    params: { white: whiteV, purple: purpleV, blue: blueV, red: redV }
+  };
+}
+
+/* --- Drawing helpers for virtual avatar ---
+   Draw an avatar (image) at given virtual screen position with scale/alpha/blur
+*/
+function drawVirtualAvatar(img, x, y, size, {scale=1, alpha=1, blur=false}, name){
+  ctx.save();
+  if(blur) ctx.filter = 'blur(2px)';
+  ctx.globalAlpha = alpha;
+  const drawW = size * scale;
+  const drawH = size * scale;
+  ctx.drawImage(img, x - drawW/2, y - drawH/2, drawW, drawH);
+  ctx.globalAlpha = 1.0;
+  ctx.filter = 'none';
+  // name
+  if(name){
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.font = '12px sans-serif';
+    ctx.fillText(name, x - drawW/2, y - drawH/2 - 6);
+  }
+  ctx.restore();
+}
+
+/* --- Update / Draw --- */
 function update() {
   const key = mapX + ',' + mapY;
   if(!maps[key]) return;
@@ -2322,20 +2455,17 @@ function update() {
   if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
   if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
 
-  // === ここで歩行音の開始/停止を制御（既存ロジックを壊さずに追加） ===
+  // footstep audio handling
   const anyMoveKey = keyState['w'] || keyState['a'] || keyState['s'] || keyState['d'];
   if(anyMoveKey && !footstepPlaying){
-    // 移動開始 -> 歩行音をループ再生
     try{ footstepAudio.currentTime = 0; footstepAudio.play(); }catch(e){}
     footstepPlaying = true;
   }else if(!anyMoveKey && footstepPlaying){
-    // 移動終了 -> 歩行音を停止（先頭へ戻す）
     try{ footstepAudio.pause(); footstepAudio.currentTime = 0; }catch(e){}
     footstepPlaying = false;
   }
-  // ===============================================================
 
-  // ゲート処理（既存）
+  // Gate handling (existing)
   for (const obj of map.objects){
     if (obj.type === 'gate'){
       const need = (typeof countPlayersInRange === 'function') ? countPlayersInRange(obj) : (obj.need || 1);
@@ -2352,43 +2482,42 @@ function update() {
     }
   }
 
-  // すべてのオブジェクトとの衝突判定（矩形→ピクセル）とマップマスク判定を組み合わせる
+  // Object collisions (obj pixel/mask), same as before
   let blockedByObject = false;
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
     if(hit(player,obj)){
       if(obj.type === 'block'){
-        // 1) まずオブジェクト個別のピクセル判定（存在する場合）
         const objPixelResult = isPassableByObjectPixel(key, i, player.x, player.y, player.size, obj);
         if(objPixelResult === false){
           blockedByObject = true;
           break;
         }else if(objPixelResult === null){
-          // ピクセルデータなしなら矩形ブロックでフォールバック
           blockedByObject = true;
           break;
         }
       }
       if(obj.type === 'warp'){
         player.x = obj.to.x; player.y = obj.to.y; mapX = obj.to.mapX; mapY = obj.to.mapY;
-        // warp したら map を変えたのでそれ以降のマスク/オブジェクト判定は新 map で行われる
       }
     }
   }
 
-  // 2) マップの collisionMask による判定
+  // Collision black (highest priority)
+  let blockedByBlack = isBlockedByBlack(key, player.x, player.y, player.size);
+
+  // Legacy mask passability (if exists)
   let blockedByMapMask = false;
-  if(!blockedByObject){
-    const passable = isPassableByMapMask(key, player.x, player.y, player.size);
+  if(!blockedByObject && !blockedByBlack){
+    const passable = isPassableByMapMaskLegacy(key, player.x, player.y, player.size);
     if(!passable) blockedByMapMask = true;
   }
 
-  // 衝突があれば元に戻す
-  if(blockedByObject || blockedByMapMask){
+  if(blockedByObject || blockedByBlack || blockedByMapMask){
     player.x = ox; player.y = oy;
   }
 
-  // マップ端の移動（タイル遷移）
+  // Map bounds / tile transitions
   let nx = mapX, ny = mapY;
   if (player.x < 0) nx--;
   if (player.x + player.size > W) nx++;
@@ -2402,8 +2531,7 @@ function update() {
     if (player.y < 0) player.y = H - player.size;
     if (player.y + player.size > H) player.y = 0;
   } else {
-    // 端で移動できない場合は元に戻す（マップ外への移動を禁止）
-    // ただし warp によって map が変わった場合はこの処理はスキップされる
+    // do nothing
   }
 
   if (playerName) sendPosition();
@@ -2411,40 +2539,108 @@ function update() {
   checkUiZone();
 }
 
+/* --- helper: getImage(p) --- */
 function getImage(p){ if(p.crouch) return sprites.crouch[p.dir]; if(p.moving) return sprites.walk[p.dir]; return sprites.idle[p.dir]; }
 
+/* --- Draw --- */
 function draw(){
-  const key = `${mapX},${mapY}`; const map = maps[key];
-  if(status[`bg_${key}`]==='loaded'){ ctx.drawImage(images[`bg_${key}`],0,0,W,H); }else{ ctx.fillStyle='#333'; ctx.fillRect(0,0,W,H); }
+  const key = `${mapX},${mapY}`;
+  const map = maps[key];
 
-  // 注意: collisionMask は描画しない（見えないマスクとして使うため）
-  // map.objects を描画（既存）
-// 変更後:
-map.objects.forEach((o,i)=>{
-  // mask フラグがある場合は描画しない（ピクセル判定は保持）
-  if (o.mask) return;
+  // compute virtual state for local player
+  const localVirtual = computeVirtualForPlayer(key, player.x, player.y);
 
-  if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
-    ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+  // If virtualActive and has view image -> draw view_side background
+  if(localVirtual.virtualActive && localVirtual.viewImageKey && status[localVirtual.viewImageKey] === 'loaded'){
+    ctx.drawImage(images[localVirtual.viewImageKey], 0, 0, W, H);
+  } else if(status[`bg_${key}`]==='loaded'){
+    ctx.drawImage(images[`bg_${key}`],0,0,W,H);
+  } else {
+    ctx.fillStyle='#333';
+    ctx.fillRect(0,0,W,H);
   }
-});
 
+  // When in virtual mode, we skip drawing top-down objects (they belong to a different visual).
+  // We still want to draw other players and local player using virtual parameters.
+  if(!(localVirtual.virtualActive && localVirtual.viewImageKey)){
+    // draw top-down objects as before (but skip those with mask:true)
+    map.objects.forEach((o,i)=>{
+      if (o.mask) return;
+      if (o.img && status[`obj_${key}_${i}`]==='loaded'){
+        ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+      }
+    });
+  } else {
+    // Optionally, you could draw some overlay objects here mapped to the side view.
+    // For now we keep it simple and don't draw map.objects in side view.
+  }
+
+  // Draw other players:
   for(const id in otherPlayers){
     const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
       const img = getImage(p);
-      if(img) ctx.drawImage(img,p.x,p.y,player.size,player.size);
-      ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText(p.name||id,p.x,p.y-5);
+      // compute virtual representation for that remote player
+      const v = computeVirtualForPlayer(`${p.mapX},${p.mapY}`, p.x, p.y);
+      if(v.virtualActive && v.viewImageKey && status[v.viewImageKey] === 'loaded'){
+        // side view rendering: compute position from red/white/blue/purple params
+        // red -> horizontal placement; white -> vertical offset; blue -> scale; purple -> visibility/blur
+        const params = v.params;
+        const red = params.red || 0;   // 0..1
+        const white = params.white || 0;
+        const blue = params.blue || 0;
+        const purple = params.purple || 0;
+
+        // compute screen X from red: 100% -> left, 50% -> center, 0% -> right
+        const screenX = lerp(W - p.size, p.size, red); // mapping reversed so red=1 => left
+        // compute screenY baseline: put near bottom of view (e.g., H*0.75) then lift by white*offset
+        const baseY = H * 0.75;
+        const yOffset = lerp(0, -60, white); // white pushes up if non-zero
+        const screenY = baseY + yOffset;
+
+        const scale = lerp(0.8, 1.6, blue); // blue scales between min and max
+        const alpha = clamp(1 - purple, 0, 1); // purple=1 => fully hidden
+        const blur = purple > 0.4 && purple < 0.99; // intermediate -> blur
+
+        if(img) drawVirtualAvatar(img, screenX, screenY, p.size, {scale, alpha, blur}, p.name);
+      } else {
+        // draw top-down avatar (legacy)
+        const imgToDraw = img;
+        if(imgToDraw) ctx.drawImage(imgToDraw, p.x, p.y, player.size, player.size);
+        ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText(p.name||id,p.x,p.y-5);
+      }
     }
   }
 
+  // Draw local player (virtual or top-down)
   if(!player.hidden){
     const img = getImage(player);
-    if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
-    ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
-    if(playerName) ctx.fillText(playerName,player.x,player.y-5);
+    if(localVirtual.virtualActive && localVirtual.viewImageKey && status[localVirtual.viewImageKey] === 'loaded'){
+      const params = localVirtual.params;
+      const red = params.red || 0;
+      const white = params.white || 0;
+      const blue = params.blue || 0;
+      const purple = params.purple || 0;
+
+      const screenX = lerp(W - player.size, player.size, red);
+      const baseY = H * 0.75;
+      const yOffset = lerp(0, -60, white);
+      const screenY = baseY + yOffset;
+
+      const scale = lerp(0.8, 1.6, blue);
+      const alpha = clamp(1 - purple, 0, 1);
+      const blur = purple > 0.4 && purple < 0.99;
+
+      if(img) drawVirtualAvatar(img, screenX, screenY, player.size, {scale, alpha, blur}, playerName);
+    } else {
+      // top-down draw
+      const imgToDraw = img;
+      if(imgToDraw) ctx.drawImage(imgToDraw, player.x, player.y, player.size, player.size);
+      ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; if(playerName) ctx.fillText(playerName,player.x,player.y-5);
+    }
   }
 
+  // HUD: map name, clock, notifications, chats (existing)
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
   const now = new Date();
   ctx.font='20px monospace';
@@ -2473,6 +2669,27 @@ function loop(){ update(); draw(); requestAnimationFrame(loop); }
 loop();
 
 window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId)); });
+
+/* --- Notes for designers / how to add a color-set for a map ---
+1) Prepare the following files (matching canvas size or higher; CORS enabled):
+   - collision_black.png (optional)         -> set as maps['x,y'].collisionBlack
+   - area_color.png                         -> set as maps['x,y'].areaColor
+   - color_yellow/white.png
+   - color_yellow/purple.png
+   - color_yellow/blue.png
+   - color_yellow/red.png
+   - color_yellow/view_side.png
+2) In maps['x,y'] set:
+   colorSets: { yellow: 'https://.../color_yellow' }
+   areaColor: 'https://.../area_color.png'
+   collisionBlack: 'https://.../collision_black.png'
+3) Behavior:
+   - If player's center pixel in areaColor is transparent -> normal top-down.
+   - If that pixel is yellow/green/orange/pink -> the matching colorSets folder is activated.
+   - white/purple/blue/red are sampled at player's center to compute vertical offset, visibility, scale, and x-position.
+   - view_side.png will be drawn as the background while in virtual mode.
+   - collisionBlack (or legacy collisionMask) still controls passability.
+*/
 
 </script>
 </body>
