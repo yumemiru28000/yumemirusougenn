@@ -23,19 +23,10 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 
 <!--
 使い方（重要）
-- 各マップ（maps オブジェクト）に collisionMask プロパティを追加します:
-    collisionMask: 'https://.../mask_image.png'
-  mask_image.png はマップ背景と同サイズ（や比率）で、透明部分が「通れる場所」、不透明部分が「通れない場所（ブロック）」になります。
-- mask は描画しません（見えない）。マップごとの通行可否を簡単に作れるようになります。
-- CORS（crossOrigin）ヘッダが付いていない外部ホストだと getImageData が失敗し、矩形フォールバックになります。確実に動かすには同一ドメインか CORS 設定されたホスト推奨。
-- sampleStep の値を調整すると判定の負荷を下げられます（間引きサンプリング）。
-- 当たり判定：プレイヤーの当たり判定は「足元の丸い当たり判定」に変更されています。
-  - 直径 = プレイヤーサイズの 1/3（つまり幅は元の約1/3）
-  - 丸はプレイヤー画像の一番下中央に配置されます。
-- オブジェクトの使用（E）:
-  - オブジェクト定義に対して type:'radio' などで使用可能オブジェクトを作れます。
-  - 近くに来ると画面に「E: 使用」と表示され、E を押すと全員に作用（DB に状態を更新→同マップの人は音が聞こえる）。
-  - 試しに '100,0' マップにラジオオブジェクトを追加しています（kyokurajio.mp3）。
+- collisionMask をマップに設定すると、その PNG の不透明部分が通行不可になります（透過部分は通行可）。
+- オブジェクトに type:'radio' を設定すると E で操作できる例を追加しました（100,0 マップに例あり）。
+- 「E」表示は小さめ（約1/3）で、3秒で消えます。W/A/S/D の操作で再表示されます。
+- ラジオは同じマップの人だけが聞こえ、距離で音量が小さくなります。ループしません。再生中はオブジェクト下に残り時間が表示されます。
 -->
 
 <form id="nameForm">
@@ -75,9 +66,8 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-/* --- 設定（変更しないで） --- */
+/* --- 基本設定 --- */
 const SPAWN = { mapX: 50, mapY: 0, x: 150, y: 120 };
-
 const firebaseConfig = {
   apiKey: "AIzaSyAXO76mF3C0TQAHkFsFUqDsI6JXOqGgMlw",
   authDomain: "zzonline.firebaseapp.com",
@@ -88,25 +78,22 @@ const firebaseConfig = {
   appId: "1:50179905692:web:12b9664ac730e6a58d3559",
   measurementId: "G-NMVHG2XN1F"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* --- ユーザー情報 --- */
+/* --- ユーザー --- */
 let userId = sessionStorage.getItem('userId');
 if(!userId){ userId = 'user_' + Date.now() + '_' + Math.floor(Math.random()*1000); sessionStorage.setItem('userId', userId); }
 let playerName = localStorage.getItem('playerName') || '';
 const nameForm = document.getElementById('nameForm');
 const nameInput = document.getElementById('playerName');
 if(playerName) nameForm.style.display='none';
-
 nameForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(nameInput.value.trim()==='') return;
   playerName = nameInput.value.trim();
   localStorage.setItem('playerName', playerName);
   nameForm.style.display='none';
-
   const playersSnapshot = await get(ref(db,'players'));
   const playersData = playersSnapshot.val() || {};
   for(const id in playersData){
@@ -118,7 +105,7 @@ nameForm.addEventListener('submit', async (e)=>{
   sessionStorage.setItem('enterTime', Date.now());
 });
 
-/* --- Canvas / プレイヤー --- */
+/* --- Canvas / Player --- */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
@@ -127,7 +114,7 @@ window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
 const player = { x: SPAWN.x, y: SPAWN.y, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false, shift:false, dir:'down', moving:false, crouch:false };
 
-/* --- BGM / UI 省略 --- (既存のまま動作) */
+/* --- BGM 管理 --- */
 let currentBgmZoneId = null;
 const singleBgmAudio = new Audio(); singleBgmAudio.loop = true; singleBgmAudio.volume = 0.6;
 const albumBgmAudio = new Audio(); albumBgmAudio.loop = false; albumBgmAudio.volume = 0.6;
@@ -139,7 +126,6 @@ function stopSingleBgm(){ singleBgmAudio.pause(); singleBgmAudio.currentTime = 0
 let albumList=[], albumIndex=0, albumActive=false;
 function playAlbum(list){ if(albumActive && JSON.stringify(albumList)===JSON.stringify(list)) return; albumList=list; albumIndex=0; albumActive=true; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play(); albumBgmAudio.onended=()=>{ if(!albumActive) return; albumIndex=(albumIndex+1)%albumList.length; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play(); }; }
 function stopAlbum(){ albumActive=false; albumBgmAudio.pause(); albumBgmAudio.currentTime=0; }
-
 function checkBgmZone(){
   let singleHit=null, albumHit=null;
   for(const zone of worldBgmZones){
@@ -152,19 +138,17 @@ function checkBgmZone(){
   if(albumHit) playAlbum(albumHit.list); else stopAlbum();
 }
 
-/* --- 歩行音 / シフト音（既存） --- */
+/* --- 歩行/シフト音 --- */
 const footstepAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/asioto.mp3');
 footstepAudio.loop = true;
 footstepAudio.volume = 0.6;
-
 const shiftAudio = new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sihuto.mp3');
 shiftAudio.loop = false;
 shiftAudio.volume = 0.6;
-
 let footstepPlaying = false;
 let shiftSoundPlayed = false;
 
-/* --- スプライト（既存） --- */
+/* --- スプライト --- */
 player.img.src = 'https://picsum.photos/seed/player/48';
 player.img.onload = ()=>player.imgLoaded = true;
 const sprites = { walk:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() }, idle:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() }, crouch:{ up:new Image(),down:new Image(),left:new Image(),right:new Image() } };
@@ -179,7 +163,7 @@ sprites.crouch.down.src = sprites.crouch.right.src = 'https://raw.githubusercont
 const otherPlayers = {};
 const otherImages = {};
 
-/* --- UI / BGM ゾーン（既存） --- */
+/* --- ワールド設定（省略パターンはそのまま） --- */
 const worldUiZones = [
   { id:'townUI', mapX1:-7, mapY1:-7, mapX2:7, mapY2:7, image:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/map.png', text:'地図' },
   { id:'forestUI', mapX1:10, mapY1:10, mapX2:20, mapY2:20, image:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTA.png', text:'白の扉を探せ' }
@@ -194,17 +178,15 @@ const worldBgmZones = [
   ] }
 ];
 
-//☆ 新しいPNG画像をマップに追加（非表示マスク用など）
+/* --- マップ / オブジェクト定義 --- */
+/* newPNGObject はマスク用に読み込むが描画しない設定 */
 const newPNGObject = {
   type: 'block',
-  x: 0,
-  y: 0,
-  w: 400,
-  h: 300,
+  x: 0, y: 0, w: 400, h: 300,
   img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kari1.png',
-  mask: true,     // 描画しないがピクセル判定用に読み込む
+  mask: true
 };
-    
+
 const maps = {
   '50,0': {
     name: '仮ホーム',
@@ -2063,39 +2045,38 @@ const maps = {
     objects:[
     ]
   },
-      
-   '100,0': {
+  '100,0': {
     name:'ユメの草原',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
     block:{up:false,down:false,left:false,right:false},
     objects:[
       {type:'block',x:150,y:80,w:64,h:64,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTB.png'},
       {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'},
-      // ラジオプレイヤーを追加（example）
+      // ラジオプレイヤー（試作）
       {
         type: 'radio',
         id: 'radio_01',
-        x: 200, y: 140, w: 8, h: 12, // キャラの3分の1くらい（player.size=24 を想定して小さめ）
-        img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png', // 任意のPNG
+        x: 200, y: 140, w: 8, h: 12, // 縦長でキャラの約1/3幅に相当（調整可）
+        img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png',
         audio: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kyokurajio.mp3',
-        interactText: 'E: 再生/停止'
+        interactText: 'E: 使用'
       }
     ]
   }
 };
-/* --- 画像 / ピクセルデータキャッシュ --- */
-const imagePixelData = {}; // key -> { data, width, height } か null
+
+/* --- 画像／ピクセルデータ読み込み --- */
+const imagePixelData = {}; // key -> {data,width,height} or null
 const images = {};
 const status = {};
-
 function loadImage(key, src){
-  if(!src) { status[key] = 'none'; imagePixelData[key] = null; return; }
+  if(!src){ status[key]='none'; imagePixelData[key]=null; return; }
   const img = new Image();
-  status[key] = 'loading';
+  status[key]='loading';
   img.crossOrigin = 'anonymous';
   img.onload = ()=>{
-    status[key] = 'loaded';
-    images[key] = img;
+    status[key]='loaded';
+    images[key]=img;
     try{
       const c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
@@ -2107,17 +2088,13 @@ function loadImage(key, src){
       imagePixelData[key] = null;
     }
   };
-  img.onerror = ()=>{ status[key] = 'error'; imagePixelData[key] = null; images[key]=img; };
+  img.onerror = ()=>{ status[key]='error'; imagePixelData[key] = null; images[key]=img; };
   img.src = src;
 }
-
-// 事前読み込み: bg / objects / masks
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
   if(maps[k].collisionMask) loadImage(`mask_${k}`, maps[k].collisionMask);
-  maps[k].objects.forEach((o,i)=>{
-    if(o.img) loadImage(`obj_${k}_${i}`, o.img);
-  });
+  maps[k].objects.forEach((o,i)=>{ if(o.img) loadImage(`obj_${k}_${i}`, o.img); });
 }
 
 /* --- 入力 --- */
@@ -2125,27 +2102,7 @@ const keyState = {};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()] = true;
 
-  // movement keys: show remaining time for nearby playing audios
-  if(['w','a','s','d'].includes(e.key.toLowerCase())){
-    const now = Date.now();
-    for(const key in playingAudios){
-      const entry = playingAudios[key];
-      // only consider same map
-      if(entry.mapKey !== `${mapX},${mapY}`) continue;
-      // distance check (use object center)
-      const obj = entry.obj;
-      const objCenterX = obj.x + obj.w/2;
-      const objCenterY = obj.y + obj.h/2;
-      const dx = (player.x + player.size/2) - objCenterX;
-      const dy = (player.y + player.size/2) - objCenterY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if(dist <= RADIO_MAX_DIST){
-        entry.lastShown = now; // 再表示
-      }
-    }
-  }
-
-  // Shift の押下（最初の押下で一回だけ shift 音を鳴らす）
+  // Shift (single play)
   if(e.key === 'Shift'){
     player.shift = true;
     if(!shiftSoundPlayed){
@@ -2155,21 +2112,24 @@ addEventListener('keydown', e=>{
   }
   if(e.key === ' ' || e.key === 'Space') triggerSpaceEvent();
 
-  // E キーで使用トリガー
+  // E: interact toggle
   if(e.key.toLowerCase() === 'e'){
-    if(currentInteract) {
+    if(currentInteract){
       toggleObjectActive(currentInteract.mapKey, currentInteract.index);
-      // show immediately when toggling local object
-      const ukey = `${currentInteract.mapKey}_${currentInteract.index}`;
-      if(playingAudios[ukey]) playingAudios[ukey].lastShown = Date.now();
+      // keep prompt visible when toggled
+      lastInteractDisplayTime = Date.now();
     }
+  }
+
+  // If movement keys pressed, refresh interaction prompt visibility
+  if(['w','a','s','d'].includes(e.key.toLowerCase())){
+    lastInteractDisplayTime = Date.now();
   }
 });
 addEventListener('keyup', e=>{
   keyState[e.key.toLowerCase()] = false;
   if(e.key === 'Shift'){
     player.shift = false;
-    // Shift を離したらフラグをリセットして次回押下時にまた音が鳴るようにする
     shiftSoundPlayed = false;
   }
 });
@@ -2188,31 +2148,25 @@ document.querySelectorAll('.touchButton').forEach(btn=>{
         try{ shiftAudio.currentTime = 0; shiftAudio.play(); }catch(e){}
         shiftSoundPlayed = true;
       }
+      lastInteractDisplayTime = Date.now();
     }
     else if(key==='space') triggerSpaceEvent();
-    else keyState[key]=true;
+    else { keyState[key]=true; lastInteractDisplayTime = Date.now(); }
   });
   btn.addEventListener('touchend', e=>{
     e.preventDefault();
-    if(key==='shift'){
-      player.shift=false;
-      shiftSoundPlayed = false;
-    }
+    if(key==='shift'){ player.shift=false; shiftSoundPlayed = false; }
     else keyState[key]=false;
   });
 });
 
-/* --- 旧矩形当たり判定関数（他で使う場合のため残すが、プレイヤー用には円を使う） --- */
-function rectsOverlap(a,b){
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
-
-/* --- 新: プレイヤー足元の丸い当たり判定 --- */
+/* --- 衝突判定（円: 足元） --- */
+function rectsOverlap(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
 function getPlayerFootCircle(p){
-  const diameter = Math.max(1, p.size / 3); // 幅は元の約1/3
+  const diameter = Math.max(1, p.size / 3); // 幅は約1/3
   const r = diameter / 2;
-  const cx = p.x + p.size / 2;              // 中央の x
-  const cy = p.y + p.size - r;             // 画像の一番下中央寄り
+  const cx = p.x + p.size / 2;
+  const cy = p.y + p.size - r;
   return { cx, cy, r };
 }
 function circleRectOverlap(circle, rect){
@@ -2222,59 +2176,42 @@ function circleRectOverlap(circle, rect){
   const dy = circle.cy - nearestY;
   return (dx * dx + dy * dy) <= (circle.r * circle.r);
 }
-function pointInCircle(circle, x, y){
-  const dx = circle.cx - x;
-  const dy = circle.cy - y;
-  return (dx*dx + dy*dy) <= (circle.r * circle.r);
-}
+function pointInCircle(circle, x, y){ const dx = circle.cx - x; const dy = circle.cy - y; return (dx*dx + dy*dy) <= (circle.r * circle.r); }
 
 let mapX = SPAWN.mapX;
 let mapY = SPAWN.mapY;
 
-/* --- 草イベントなど（既存） --- */
+/* --- 草イベント --- */
 function isOnGrass(){
   const key = `${mapX},${mapY}`;
   const map = maps[key];
   const foot = getPlayerFootCircle(player);
   for(const obj of map.objects){
-    if(obj.type==='grass'){
-      if(circleRectOverlap(foot, obj)) return true;
-    }
+    if(obj.type==='grass' && circleRectOverlap(foot, obj)) return true;
   }
   return false;
 }
 function triggerSpaceEvent(){
   if(isOnGrass()){
     new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kusa.mp3').play();
-    if(Math.random()<1/20){
-      player.hidden=true;
-      remove(ref(db,'players/'+userId));
-      localStorage.setItem('playVideo','true');
-      location.href='index.html';
-    }
+    if(Math.random()<1/20){ player.hidden=true; remove(ref(db,'players/'+userId)); localStorage.setItem('playVideo','true'); location.href='index.html'; }
   }
 }
 
 /* --- Firebase 送信 --- */
-function sendPosition(){
-  if(player.hidden) return;
-  set(ref(db,'players/'+userId),{
-    x:player.x, y:player.y, mapX, mapY, name:playerName, dir:player.dir, moving:player.moving, crouch:player.crouch, timestamp:Date.now()
-  });
-}
+function sendPosition(){ if(player.hidden) return; set(ref(db,'players/'+userId),{ x:player.x, y:player.y, mapX, mapY, name:playerName, dir:player.dir, moving:player.moving, crouch:player.crouch, timestamp:Date.now() }); }
 const playersRef = ref(db,'players');
 onValue(playersRef,snap=>{ const data = snap.val()||{}; for(const id in data) if(id!==userId) otherPlayers[id]=data[id]; });
 onChildRemoved(playersRef,snap=>{ const id = snap.key; delete otherPlayers[id]; });
+
 const joinNotifications=[]; const notifiedUsers=new Set(); const chime=new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/Chime.mp3'); const enterTime = Date.now();
 onChildAdded(playersRef,snapshot=>{
   const data=snapshot.val(); const id=snapshot.key;
   if(id!==userId && !notifiedUsers.has(id)){ notifiedUsers.add(id); if(Date.now()-enterTime>5000){ chime.currentTime=0; chime.play(); joinNotifications.push({ name:data.name||'名無し', time:Date.now() }); } }
 });
 
-const chatForm = document.getElementById('chatForm');
-const chatInput = document.getElementById('chatInput');
-const chatsRef = ref(db,'chats');
-let activeChats = [];
+const chatForm = document.getElementById('chatForm'); const chatInput = document.getElementById('chatInput');
+const chatsRef = ref(db,'chats'); let activeChats = [];
 chatForm.addEventListener('submit', e=>{ e.preventDefault(); const msg = chatInput.value.trim(); if(!msg) return; chatInput.value=''; push(chatsRef,{ userId, name:playerName, msg, mapX, mapY, timestamp:Date.now() }); });
 onChildAdded(chatsRef, snapshot=>{ const chat = snapshot.val(); if(chat.mapX===mapX && chat.mapY===mapY){ if(Date.now()-enterTime<5000) return; activeChats = activeChats.filter(c=>c.userId!==chat.userId); activeChats.push({...chat,time:Date.now()}); new Audio('https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/chat.mp3').play(); } });
 
@@ -2292,59 +2229,46 @@ const zoneImage = document.getElementById('zoneImage');
 const zoneText  = document.getElementById('zoneText');
 function checkUiZone(){
   let hitZone = null;
-  for(const zone of worldUiZones){
-    if(mapX>=zone.mapX1 && mapX<=zone.mapX2 && mapY>=zone.mapY1 && mapY<=zone.mapY2){ hitZone = zone; break; }
-  }
+  for(const zone of worldUiZones){ if(mapX>=zone.mapX1 && mapX<=zone.mapX2 && mapY>=zone.mapY1 && mapY<=zone.mapY2){ hitZone = zone; break; } }
   if(hitZone){ zoneImage.src = hitZone.image; zoneImage.style.display = 'block'; zoneText.textContent = hitZone.text; } else { zoneImage.style.display = 'none'; zoneText.textContent = ''; }
 }
 
-/* --- マップマスク判定（円対応） --- */
+/* --- マスク判定（円サポート） --- */
 function isPassableByMapMask(mapKey, footCircle){
   const maskKey = `mask_${mapKey}`;
   const pixel = imagePixelData[maskKey];
-  if(!pixel) return true; // マスクがない or 取得不可なら通行可（フォールバック）
-
+  if(!pixel) return true;
   const pw = W, ph = H;
-  const scaleX = pixel.width / pw;
-  const scaleY = pixel.height / ph;
-  const sampleStep = Math.max(1, Math.floor((footCircle.r * 2) / 4)); // sample density relative to circle size
-
-  // サンプリング領域は円の外接矩形
+  const scaleX = pixel.width / pw, scaleY = pixel.height / ph;
+  const sampleStep = Math.max(1, Math.floor((footCircle.r * 2) / 4));
   const startX = Math.max(0, Math.floor(footCircle.cx - footCircle.r));
   const startY = Math.max(0, Math.floor(footCircle.cy - footCircle.r));
   const endX = Math.min(pw - 1, Math.floor(footCircle.cx + footCircle.r));
   const endY = Math.min(ph - 1, Math.floor(footCircle.cy + footCircle.r));
-
   for(let yy = startY; yy <= endY; yy += sampleStep){
     for(let xx = startX; xx <= endX; xx += sampleStep){
-      // 点が足円の中に入っているか確認
       if(!pointInCircle(footCircle, xx, yy)) continue;
       const mx = Math.floor(xx * scaleX);
       const my = Math.floor(yy * scaleY);
       if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
       const idx = (my * pixel.width + mx) * 4 + 3;
-      if(pixel.data[idx] > 10) return false; // 不透明 -> ブロック
+      if(pixel.data[idx] > 10) return false;
     }
   }
   return true;
 }
 
-/* --- オブジェクト画像ピクセル判定（円対応） --- */
+/* --- オブジェクト用のピクセル判定（円） --- */
 function isPassableByObjectPixel(mapKey, objIndex, footCircle, obj){
   const pixelKey = `obj_${mapKey}_${objIndex}`;
   const pixel = imagePixelData[pixelKey];
-  if(!pixel) return null; // データなし => 矩形で判定する側に任せる
-
-  const scaleX = pixel.width / obj.w;
-  const scaleY = pixel.height / obj.h;
+  if(!pixel) return null;
+  const scaleX = pixel.width / obj.w, scaleY = pixel.height / obj.h;
   const sampleStep = Math.max(1, Math.floor((footCircle.r * 2) / 4));
-
-  // 足円の外接矩形を obj 座標系に変換してサンプリング
   const startX = Math.max(0, Math.floor((footCircle.cx - footCircle.r) - obj.x));
   const startY = Math.max(0, Math.floor((footCircle.cy - footCircle.r) - obj.y));
   const endX = Math.min(obj.w - 1, Math.floor((footCircle.cx + footCircle.r) - obj.x));
   const endY = Math.min(obj.h - 1, Math.floor((footCircle.cy + footCircle.r) - obj.y));
-
   for(let yy = startY; yy <= endY; yy += sampleStep){
     for(let xx = startX; xx <= endX; xx += sampleStep){
       const worldX = obj.x + xx;
@@ -2354,122 +2278,118 @@ function isPassableByObjectPixel(mapKey, objIndex, footCircle, obj){
       const my = Math.floor(yy * scaleY);
       if(mx < 0 || mx >= pixel.width || my < 0 || my >= pixel.height) continue;
       const idx = (my * pixel.width + mx) * 4 + 3;
-      if(pixel.data[idx] > 10) return false; // 不透明 -> ブロック
+      if(pixel.data[idx] > 10) return false;
     }
   }
   return true;
 }
 
 /* ------------------------------------------------------------------
-   オブジェクト使用 (E) システム
-   - activeObjects/<mapKey>/<objIndex> に { active:true, startedBy, timestamp } を set/remove して状態を共有
-   - 各クライアントは activeObjects の変化を監視して、再生/停止を行う
-   - 再生音は距離に応じて音量を調整（maxDistance を超えると聞こえない）
-   - ラジオの音は loop=false（指定）、再生が終わったら active を自動で解除
+   オブジェクト使用 (E) システム（改善）
+   - DB: activeObjects/<mapKey>/<index> に { active:true, startedBy, timestamp }
+   - ローカルは playingAudios keyed by "<mapKey>#<index>"
+   - 重要: 音は「同じマップ」にいるクライアントだけ再生する（要望）
    ------------------------------------------------------------------*/
-
 const activeObjectsRef = ref(db, 'activeObjects');
-let activeObjects = {}; // local snapshot of DB activeObjects
-const playingAudios = {}; // key -> { audio: Audio, mapKey, index, obj, lastShown }
-const objectNotes = {};   // key -> array of little note particles
-
-// 音の聞こえる最大距離（ピクセル）
+let activeObjects = {};
+const playingAudios = {}; // uniqueKey -> { audio, mapKey, index, obj }
+const objectNotes = {};   // uniqueKey -> particles array
 const RADIO_MAX_DIST = 220;
 
-// DB の activeObjects 全体を監視（簡易実装）
 onValue(activeObjectsRef, snap=>{
   activeObjects = snap.val() || {};
-  // 更新に合わせて playingAudios を開始／停止する処理は update() 内や専用関数で行う
+  // sync will start/stop depending on current map (called every update too)
   syncPlayingAudiosWithActiveObjects();
 });
 
-function syncPlayingAudiosWithActiveObjects(){
-  // For each active entry in DB, ensure we have started local playback if on same map
-  for(const mapKey in activeObjects){
-    const mapEntry = activeObjects[mapKey] || {};
-    for(const idx in mapEntry){
-      const info = mapEntry[idx];
-      const uniqueKey = `${mapKey}_${idx}`;
-      const shouldBeActive = info && info.active;
-      if(shouldBeActive && !playingAudios[uniqueKey]){
-        // start audio if possible (only if object exists in maps)
-        if(maps[mapKey] && maps[mapKey].objects[idx]){
-          const obj = maps[mapKey].objects[idx];
-          startObjectAudio(mapKey, idx, obj);
-        }
-      }else if(!shouldBeActive && playingAudios[uniqueKey]){
-        stopObjectAudio(uniqueKey, /* remoteStop */ true);
-      }
-    }
-  }
-  // Stop any playingAudios that no longer have active flag
-  for(const key in playingAudios){
-    const lastUnderscore = key.lastIndexOf('_');
-    const mKey = key.substring(0,lastUnderscore);
-    const idx = key.substring(lastUnderscore+1);
-    if(!activeObjects[mKey] || !activeObjects[mKey][idx] || !activeObjects[mKey][idx].active){
-      stopObjectAudio(key, true);
-    }
-  }
+function makeUniqueKey(mapKey, idx){ return `${mapKey}#${idx}`; }
+function parseUniqueKey(uniqueKey){
+  const sep = uniqueKey.lastIndexOf('#');
+  return { mapKey: uniqueKey.substring(0, sep), index: uniqueKey.substring(sep+1) };
 }
 
 async function toggleObjectActive(mapKey, index){
-  // Toggle atomic: check DB
   const objRef = ref(db, `activeObjects/${mapKey}/${index}`);
   const snap = await get(objRef);
   if(snap.exists() && snap.val() && snap.val().active){
-    // stop
     remove(objRef).catch(()=>{});
   }else{
-    // start
     set(objRef, { active:true, startedBy:userId, timestamp:Date.now() }).catch(()=>{});
   }
 }
 
+function syncPlayingAudiosWithActiveObjects(){
+  const currentMapKey = `${mapX},${mapY}`;
+  // start playing audios only for active objects on the same map
+  for(const mapKey in activeObjects){
+    const mEntry = activeObjects[mapKey] || {};
+    for(const idx in mEntry){
+      const info = mEntry[idx];
+      const uniqueKey = makeUniqueKey(mapKey, idx);
+      const shouldBeActive = info && info.active;
+      if(shouldBeActive){
+        if(mapKey === currentMapKey && !playingAudios[uniqueKey]){
+          // start if object exists
+          if(maps[mapKey] && maps[mapKey].objects[idx]){
+            startObjectAudio(mapKey, idx, maps[mapKey].objects[idx]);
+          }
+        }
+      }
+    }
+  }
+  // stop playingAudios that are not active anymore or for different map
+  for(const uniq in Object.keys(playingAudios).map(k=>k)){
+    const uniqueKey = Object.keys(playingAudios)[uniq];
+    const parsed = parseUniqueKey(uniqueKey);
+    const mp = parsed.mapKey;
+    const idx = parsed.index;
+    if(!activeObjects[mp] || !activeObjects[mp][idx] || !activeObjects[mp][idx].active){
+      stopObjectAudio(uniqueKey, true);
+    } else {
+      // also stop if not on same map as player (we only want local playback on same-map clients)
+      if(mp !== `${mapX},${mapY}`){
+        stopObjectAudio(uniqueKey, true);
+      }
+    }
+  }
+}
+
 function startObjectAudio(mapKey, index, obj){
-  const uniqueKey = `${mapKey}_${index}`;
+  const uniqueKey = makeUniqueKey(mapKey, index);
   if(playingAudios[uniqueKey]) return;
   if(!obj || !obj.audio) return;
   const a = new Audio(obj.audio);
-  a.loop = false; // ループしない
+  a.loop = false;
   a.preload = 'auto';
-  // initial volume will be set in update() according to distance
+  // initial volume set by update() based on distance
+  a.volume = 0;
   try{ a.play().catch(()=>{}); }catch(e){}
-  // when audio ends naturally, clear active state in DB
   a.onended = async ()=>{
-    try{
-      // remove DB active flag (if still present)
-      await remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{});
-    }catch(e){}
+    // on end, clear db active flag
+    try{ await remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{}); }catch(e){}
     delete playingAudios[uniqueKey];
+    delete objectNotes[uniqueKey];
   };
-  // initialize lastShown so remaining-time displays briefly after start
-  playingAudios[uniqueKey] = { audio: a, mapKey, index, obj, lastShown: Date.now() };
+  playingAudios[uniqueKey] = { audio: a, mapKey, index, obj };
   objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
 }
 
 function stopObjectAudio(uniqueKey, remoteStop = false){
   const entry = playingAudios[uniqueKey];
   if(!entry) return;
-  try{
-    entry.audio.pause();
-    entry.audio.currentTime = 0;
-  }catch(e){}
+  try{ entry.audio.pause(); entry.audio.currentTime = 0; }catch(e){}
   delete playingAudios[uniqueKey];
-  // remove note particles
   delete objectNotes[uniqueKey];
   if(!remoteStop){
-    // if local triggered stop, also remove DB flag
-    const lastUnderscore = uniqueKey.lastIndexOf('_');
-    const mapKey = uniqueKey.substring(0, lastUnderscore);
-    const index = uniqueKey.substring(lastUnderscore+1);
-    remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{});
+    const p = parseUniqueKey(uniqueKey);
+    remove(ref(db, `activeObjects/${p.mapKey}/${p.index}`)).catch(()=>{});
   }
 }
 
-/* --- インタラクトターゲット管理 --- */
-let currentInteract = null; // { mapKey, index, obj } when near a usable object
-const INTERACT_DISTANCE = 36; // px - how close to be able to press E
+/* --- インタラクト管理 --- */
+let currentInteract = null; // { mapKey, index, obj }
+const INTERACT_DISTANCE = 36;
+let lastInteractDisplayTime = 0; // when the interact prompt was last reset (for 3s visibility)
 
 function findInteractableObject(){
   const key = `${mapX},${mapY}`;
@@ -2479,15 +2399,12 @@ function findInteractableObject(){
   const foot = getPlayerFootCircle(player);
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
-    // only objects with type 'radio' or other 'usable' types should be interactable
     if(obj.type === 'radio' || obj.usable){
-      // quick rectangle proximity test (use circleRectOverlap)
       if(circleRectOverlap(foot, obj)){
         currentInteract = { mapKey: key, index: i, obj };
+        lastInteractDisplayTime = Date.now();
         return;
       }else{
-        // also allow slightly further interaction (e.g., INTERACT_DISTANCE px)
-        // compute distance from foot center to object's center
         const objCenterX = obj.x + obj.w/2;
         const objCenterY = obj.y + obj.h/2;
         const dx = foot.cx - objCenterX;
@@ -2495,6 +2412,7 @@ function findInteractableObject(){
         const dist = Math.sqrt(dx*dx + dy*dy);
         if(dist <= INTERACT_DISTANCE){
           currentInteract = { mapKey: key, index: i, obj };
+          lastInteractDisplayTime = Date.now();
           return;
         }
       }
@@ -2502,63 +2420,15 @@ function findInteractableObject(){
   }
 }
 
-/* --- オブジェクトの♪ノートパーティクル管理 --- */
+/* --- ノートパーティクル --- */
 function spawnNoteForObject(uniqueKey, obj){
   objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
-  // position above object
   const x = obj.x + obj.w/2;
   const y = obj.y - 6;
   objectNotes[uniqueKey].push({ x, y, alpha: 1, dy: -0.25, vx: (Math.random()-0.5)*0.3 });
 }
 
-/* ------------------------------------------------------------------
-   補助: 時間表示と再生残り表示ロジック
-   ------------------------------------------------------------------*/
-function formatTime(sec){
-  if(!isFinite(sec) || sec <= 0) return '0:00';
-  const s = Math.floor(sec % 60);
-  const m = Math.floor(sec / 60);
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
-
-function drawRemainingTimes(){
-  const now = Date.now();
-  const displayDuration = 3000; // ms (3秒)
-  for(const uniqueKey in playingAudios){
-    const entry = playingAudios[uniqueKey];
-    // only show if same map as the local player
-    if(entry.mapKey !== `${mapX},${mapY}`) continue;
-    const last = entry.lastShown || 0;
-    if(now - last > displayDuration) continue; // 表示期限切れ
-
-    const obj = entry.obj;
-    // get remaining seconds if available
-    let remaining = null;
-    try{
-      const d = entry.audio.duration;
-      const ct = entry.audio.currentTime;
-      if(isFinite(d) && d > 0) remaining = Math.max(0, Math.floor(d - ct));
-    }catch(e){
-      remaining = null;
-    }
-    const text = remaining === null ? '--:--' : formatTime(remaining);
-    // small, faint text: font ~10px, alpha ~0.6, positioned just under object
-    ctx.save();
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px sans-serif'; // 小さめ
-    const textW = ctx.measureText(text).width;
-    const tx = obj.x + (obj.w - textW) / 2;
-    const ty = obj.y + obj.h + 12; // オブジェクトの下に少しスペースを取る
-    ctx.fillText(text, tx, ty);
-    ctx.restore();
-  }
-}
-
-/* ------------------------------------------------------------------
-   update/draw にて playingAudios の距離減衰・ノート描画を行う
-   ------------------------------------------------------------------*/
-
+/* --- 更新 / 描画 --- */
 function update() {
   const key = mapX + ',' + mapY;
   if(!maps[key]) return;
@@ -2573,7 +2443,7 @@ function update() {
   if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
   if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
 
-  // 歩行音開始/停止（既存ロジックを壊さず追加）
+  // walk sound
   const anyMoveKey = keyState['w'] || keyState['a'] || keyState['s'] || keyState['d'];
   if(anyMoveKey && !footstepPlaying){
     try{ footstepAudio.currentTime = 0; footstepAudio.play(); }catch(e){}
@@ -2583,7 +2453,10 @@ function update() {
     footstepPlaying = false;
   }
 
-  // ゲート処理（既存）
+  // If player moved (or pressed WASD), refresh interact prompt visibility
+  if(anyMoveKey) lastInteractDisplayTime = Date.now();
+
+  // gate handling (unchanged)
   for (const obj of map.objects){
     if (obj.type === 'gate'){
       const need = (typeof countPlayersInRange === 'function') ? countPlayersInRange(obj) : (obj.need || 1);
@@ -2600,51 +2473,34 @@ function update() {
     }
   }
 
-  // オブジェクト衝突判定（円ベース）
+  // object collision (circle-based)
   const foot = getPlayerFootCircle(player);
   let blockedByObject = false;
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
-    // まず簡易に外接矩形で早期判定（負荷軽減）
     if(!circleRectOverlap(foot, obj)) continue;
-
     if(obj.type === 'block'){
       const objPixelResult = isPassableByObjectPixel(key, i, foot, obj);
-      if(objPixelResult === false){
-        blockedByObject = true;
-        break;
-      }else if(objPixelResult === null){
-        // ピクセルデータなしなら矩形ブロックでフォールバック（円と矩形の距離で判定）
-        blockedByObject = circleRectOverlap(foot, obj);
-        if(blockedByObject) break;
-      }
+      if(objPixelResult === false){ blockedByObject = true; break; }
+      else if(objPixelResult === null){ blockedByObject = circleRectOverlap(foot, obj); if(blockedByObject) break; }
     }
-    if(obj.type === 'warp'){
-      // warp の領域判定も円で行う
-      if(circleRectOverlap(foot, obj)){
-        player.x = obj.to.x; player.y = obj.to.y; mapX = obj.to.mapX; mapY = obj.to.mapY;
-      }
-    }
+    if(obj.type === 'warp'){ if(circleRectOverlap(foot, obj)){ player.x = obj.to.x; player.y = obj.to.y; mapX = obj.to.mapX; mapY = obj.to.mapY; } }
   }
 
-  // マップの collisionMask による判定（円ベース）
+  // map mask
   let blockedByMapMask = false;
   if(!blockedByObject){
     const passable = isPassableByMapMask(key, foot);
     if(!passable) blockedByMapMask = true;
   }
+  if(blockedByObject || blockedByMapMask){ player.x = ox; player.y = oy; }
 
-  if(blockedByObject || blockedByMapMask){
-    player.x = ox; player.y = oy;
-  }
-
-  // マップ端の移動（タイル遷移）
+  // tile transitions
   let nx = mapX, ny = mapY;
   if (player.x < 0) nx--;
   if (player.x + player.size > W) nx++;
   if (player.y < 0) ny--;
   if (player.y + player.size > H) ny++;
-
   if (maps[nx + ',' + ny]) {
     mapX = nx; mapY = ny;
     if (player.x < 0) player.x = W - player.size;
@@ -2653,19 +2509,20 @@ function update() {
     if (player.y + player.size > H) player.y = 0;
   }
 
-  // find interactable object near player each frame
+  // find interactable objects every frame
   findInteractableObject();
 
-  // Sync playingAudios with activeObjects (in case changes came from DB)
+  // sync playing audios with DB (this will ensure only same-map playback)
   syncPlayingAudiosWithActiveObjects();
 
-  // Update volumes for playing audios based on distance to this client player
-  for(const key in playingAudios){
-    const entry = playingAudios[key];
+  // update volumes for playing audios (distance-based) and update notes
+  for(const uniqueKey in playingAudios){
+    const entry = playingAudios[uniqueKey];
     const obj = entry.obj;
+    if(!obj) continue;
+    // distance from player's center to object center
     const objCenterX = obj.x + obj.w/2;
     const objCenterY = obj.y + obj.h/2;
-    // distance from player foot center (or player center)
     const dx = (player.x + player.size/2) - objCenterX;
     const dy = (player.y + player.size/2) - objCenterY;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -2674,20 +2531,18 @@ function update() {
     try{ entry.audio.volume = vol; }catch(e){}
   }
 
-  // Occasionally spawn note particles for active objects
-  for(const uniqueKey in objectNotes){
+  // occasionally spawn note particles for active objects
+  for(const uniqueKey in playingAudios){
     if(Math.random() < 0.008){
-      const lastUnderscore = uniqueKey.lastIndexOf('_');
-      const mKey = uniqueKey.substring(0, lastUnderscore);
-      const idx = uniqueKey.substring(lastUnderscore+1);
-      if(!maps[mKey]) continue;
-      const obj = maps[mKey].objects[idx];
+      const parsed = parseUniqueKey(uniqueKey);
+      if(!maps[parsed.mapKey]) continue;
+      const obj = maps[parsed.mapKey].objects[parsed.index];
       if(!obj) continue;
       spawnNoteForObject(uniqueKey, obj);
     }
   }
 
-  // Update note particles alpha/position
+  // update particles
   for(const k in objectNotes){
     const arr = objectNotes[k];
     for(let i=arr.length-1;i>=0;i--){
@@ -2703,20 +2558,30 @@ function update() {
   checkUiZone();
 }
 
+/* --- getImage --- */
 function getImage(p){ if(p.crouch) return sprites.crouch[p.dir]; if(p.moving) return sprites.walk[p.dir]; return sprites.idle[p.dir]; }
+
+/* --- 描画 --- */
+function formatTimeSec(sec){
+  if(!isFinite(sec) || isNaN(sec)) return '--:--';
+  const s = Math.max(0, Math.floor(sec));
+  const mm = Math.floor(s/60).toString().padStart(2,'0');
+  const ss = (s%60).toString().padStart(2,'0');
+  return `${mm}:${ss}`;
+}
 
 function draw(){
   const key = `${mapX},${mapY}`; const map = maps[key];
   if(status[`bg_${key}`]==='loaded'){ ctx.drawImage(images[`bg_${key}`],0,0,W,H); }else{ ctx.fillStyle='#333'; ctx.fillRect(0,0,W,H); }
 
-  // map.objects を描画（mask オブジェクトは描画しない）
+  // draw objects (skip mask-type)
   map.objects.forEach((o,i)=>{
     if (o.mask) return;
     if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
       ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
     } else if (o.type === 'radio') {
-      // fallback simple radio rectangle if image not loaded yet
-      ctx.fillStyle = 'rgba(180,180,255,0.8)';
+      // fallback rectangle for radio if no image
+      ctx.fillStyle = 'rgba(180,180,255,0.9)';
       ctx.fillRect(o.x, o.y, o.w, o.h);
     }
   });
@@ -2737,18 +2602,13 @@ function draw(){
     if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
     ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
     if(playerName) ctx.fillText(playerName,player.x,player.y-5);
-    // debug foot circle (commented by default)
-    // const f = getPlayerFootCircle(player);
-    // ctx.beginPath(); ctx.arc(f.cx, f.cy, f.r, 0, Math.PI*2); ctx.fillStyle='rgba(255,0,0,0.25)'; ctx.fill();
   }
 
-  // draw active-object notes (♪)
+  // draw active-object note symbols (♪)
   for(const uniqueKey in objectNotes){
-    const lastUnderscore = uniqueKey.lastIndexOf('_');
-    const mKey = uniqueKey.substring(0, lastUnderscore);
-    const idx = uniqueKey.substring(lastUnderscore+1);
-    if(!maps[mKey]) continue;
-    const obj = maps[mKey].objects[idx];
+    const parsed = parseUniqueKey(uniqueKey);
+    if(!maps[parsed.mapKey]) continue;
+    const obj = maps[parsed.mapKey].objects[parsed.index];
     if(!obj) continue;
     const arr = objectNotes[uniqueKey];
     for(const n of arr){
@@ -2759,9 +2619,6 @@ function draw(){
       ctx.globalAlpha = 1;
     }
   }
-
-  // draw remaining-time displays for playing audios (small, faint under object)
-  drawRemainingTimes();
 
   // draw map name and clock
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
@@ -2789,29 +2646,69 @@ function draw(){
     ctx.fillText(c.msg,x,y-5);
   }
 
-  // Draw interaction prompt if nearby a usable object
-  if(currentInteract){
+  // Draw interaction prompt if nearby a usable object (visible for 3s since lastInteractDisplayTime)
+  const SHOW_DURATION = 3000;
+  if(currentInteract && (Date.now() - lastInteractDisplayTime) <= SHOW_DURATION){
     const obj = currentInteract.obj;
-    // draw text above player
     const text = obj.interactText || 'E: 使用';
+    // Use small font (about 1/3 of previous) - choose 6px for readability/size compromise
+    const smallFont = '6px sans-serif';
+    ctx.font = smallFont;
+    const textWidth = ctx.measureText(text).width;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(player.x - 6, player.y - 34, ctx.measureText(text).width + 12, 22);
+    ctx.fillRect(player.x - 6, player.y - 34, textWidth + 12, 14);
     ctx.fillStyle = '#fff';
-    ctx.font = '14px sans-serif';
-    ctx.fillText(text, player.x + 0, player.y - 20);
-    // If the object is active, show status near the object
+    ctx.fillText(text, player.x + 0, player.y - 24);
+
+    // If object is active, show "再生中 (E:停止)" smaller and also show remaining time under the object
     const activeFlag = (activeObjects && activeObjects[`${currentInteract.mapKey}`] && activeObjects[`${currentInteract.mapKey}`][currentInteract.index] && activeObjects[`${currentInteract.mapKey}`][currentInteract.index].active);
     if(activeFlag){
-      // show "再生中 (E:停止)" above object
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
       const sText = '再生中 (E:停止)';
-      ctx.fillRect(obj.x - 6, obj.y - 26, ctx.measureText(sText).width + 12, 20);
+      ctx.font = smallFont;
+      const sWidth = ctx.measureText(sText).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(obj.x - 6, obj.y - 26, sWidth + 12, 12);
       ctx.fillStyle = '#fff';
-      ctx.fillText(sText, obj.x, obj.y - 12);
+      ctx.fillText(sText, obj.x, obj.y - 14);
+
+      // show remaining time under the object if playing locally
+      const uniqueKey = makeUniqueKey(currentInteract.mapKey, currentInteract.index);
+      const entry = playingAudios[uniqueKey];
+      if(entry && entry.audio){
+        const rem = entry.audio.duration && !isNaN(entry.audio.duration) ? Math.max(0, entry.audio.duration - entry.audio.currentTime) : null;
+        const timeText = rem !== null ? `残り ${formatTimeSec(rem)}` : '残り --:--';
+        ctx.font = '8px monospace';
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        const w2 = ctx.measureText(timeText).width;
+        ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
+      }
+    }
+  }
+
+  // Additionally, for any playing audio on this map, render remaining time under the object even if not the currentInteract
+  for(const uniqueKey in playingAudios){
+    const parsed = parseUniqueKey(uniqueKey);
+    if(parsed.mapKey !== `${mapX},${mapY}`) continue;
+    const idx = parsed.index;
+    const obj = maps[parsed.mapKey].objects[idx];
+    if(!obj) continue;
+    const entry = playingAudios[uniqueKey];
+    if(entry && entry.audio){
+      const rem = entry.audio.duration && !isNaN(entry.audio.duration) ? Math.max(0, entry.audio.duration - entry.audio.currentTime) : null;
+      const timeText = rem !== null ? `残り ${formatTimeSec(rem)}` : '残り --:--';
+      ctx.font = '8px monospace';
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      const w2 = ctx.measureText(timeText).width;
+      ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
     }
   }
 }
 
+/* --- メインループ --- */
 function loop(){ update(); draw(); requestAnimationFrame(loop); }
 loop();
 
@@ -2819,4 +2716,5 @@ window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId));
 
 </script>
 </body>
-</html>
+</html>     
+  
