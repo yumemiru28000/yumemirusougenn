@@ -2125,6 +2125,27 @@ const keyState = {};
 addEventListener('keydown', e=>{
   keyState[e.key.toLowerCase()] = true;
 
+  // movement keys: show remaining time for nearby playing audios
+  if(['w','a','s','d'].includes(e.key.toLowerCase())){
+    const now = Date.now();
+    for(const key in playingAudios){
+      const entry = playingAudios[key];
+      // only consider same map
+      if(entry.mapKey !== `${mapX},${mapY}`) continue;
+      // distance check (use object center)
+      const obj = entry.obj;
+      const objCenterX = obj.x + obj.w/2;
+      const objCenterY = obj.y + obj.h/2;
+      const dx = (player.x + player.size/2) - objCenterX;
+      const dy = (player.y + player.size/2) - objCenterY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist <= RADIO_MAX_DIST){
+        entry.lastShown = now; // 再表示
+      }
+    }
+  }
+
+  // Shift の押下（最初の押下で一回だけ shift 音を鳴らす）
   if(e.key === 'Shift'){
     player.shift = true;
     if(!shiftSoundPlayed){
@@ -2138,6 +2159,9 @@ addEventListener('keydown', e=>{
   if(e.key.toLowerCase() === 'e'){
     if(currentInteract) {
       toggleObjectActive(currentInteract.mapKey, currentInteract.index);
+      // show immediately when toggling local object
+      const ukey = `${currentInteract.mapKey}_${currentInteract.index}`;
+      if(playingAudios[ukey]) playingAudios[ukey].lastShown = Date.now();
     }
   }
 });
@@ -2145,6 +2169,7 @@ addEventListener('keyup', e=>{
   keyState[e.key.toLowerCase()] = false;
   if(e.key === 'Shift'){
     player.shift = false;
+    // Shift を離したらフラグをリセットして次回押下時にまた音が鳴るようにする
     shiftSoundPlayed = false;
   }
 });
@@ -2345,7 +2370,7 @@ function isPassableByObjectPixel(mapKey, objIndex, footCircle, obj){
 
 const activeObjectsRef = ref(db, 'activeObjects');
 let activeObjects = {}; // local snapshot of DB activeObjects
-const playingAudios = {}; // key -> { audio: Audio, mapKey, index, obj }
+const playingAudios = {}; // key -> { audio: Audio, mapKey, index, obj, lastShown }
 const objectNotes = {};   // key -> array of little note particles
 
 // 音の聞こえる最大距離（ピクセル）
@@ -2379,8 +2404,10 @@ function syncPlayingAudiosWithActiveObjects(){
   }
   // Stop any playingAudios that no longer have active flag
   for(const key in playingAudios){
-    const [mapKey, idx] = key.split('_');
-    if(!activeObjects[mapKey] || !activeObjects[mapKey][idx] || !activeObjects[mapKey][idx].active){
+    const lastUnderscore = key.lastIndexOf('_');
+    const mKey = key.substring(0,lastUnderscore);
+    const idx = key.substring(lastUnderscore+1);
+    if(!activeObjects[mKey] || !activeObjects[mKey][idx] || !activeObjects[mKey][idx].active){
       stopObjectAudio(key, true);
     }
   }
@@ -2416,7 +2443,8 @@ function startObjectAudio(mapKey, index, obj){
     }catch(e){}
     delete playingAudios[uniqueKey];
   };
-  playingAudios[uniqueKey] = { audio: a, mapKey, index, obj };
+  // initialize lastShown so remaining-time displays briefly after start
+  playingAudios[uniqueKey] = { audio: a, mapKey, index, obj, lastShown: Date.now() };
   objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
 }
 
@@ -2432,7 +2460,9 @@ function stopObjectAudio(uniqueKey, remoteStop = false){
   delete objectNotes[uniqueKey];
   if(!remoteStop){
     // if local triggered stop, also remove DB flag
-    const [mapKey, index] = uniqueKey.split('_');
+    const lastUnderscore = uniqueKey.lastIndexOf('_');
+    const mapKey = uniqueKey.substring(0, lastUnderscore);
+    const index = uniqueKey.substring(lastUnderscore+1);
     remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{});
   }
 }
@@ -2479,6 +2509,50 @@ function spawnNoteForObject(uniqueKey, obj){
   const x = obj.x + obj.w/2;
   const y = obj.y - 6;
   objectNotes[uniqueKey].push({ x, y, alpha: 1, dy: -0.25, vx: (Math.random()-0.5)*0.3 });
+}
+
+/* ------------------------------------------------------------------
+   補助: 時間表示と再生残り表示ロジック
+   ------------------------------------------------------------------*/
+function formatTime(sec){
+  if(!isFinite(sec) || sec <= 0) return '0:00';
+  const s = Math.floor(sec % 60);
+  const m = Math.floor(sec / 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function drawRemainingTimes(){
+  const now = Date.now();
+  const displayDuration = 3000; // ms (3秒)
+  for(const uniqueKey in playingAudios){
+    const entry = playingAudios[uniqueKey];
+    // only show if same map as the local player
+    if(entry.mapKey !== `${mapX},${mapY}`) continue;
+    const last = entry.lastShown || 0;
+    if(now - last > displayDuration) continue; // 表示期限切れ
+
+    const obj = entry.obj;
+    // get remaining seconds if available
+    let remaining = null;
+    try{
+      const d = entry.audio.duration;
+      const ct = entry.audio.currentTime;
+      if(isFinite(d) && d > 0) remaining = Math.max(0, Math.floor(d - ct));
+    }catch(e){
+      remaining = null;
+    }
+    const text = remaining === null ? '--:--' : formatTime(remaining);
+    // small, faint text: font ~10px, alpha ~0.6, positioned just under object
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px sans-serif'; // 小さめ
+    const textW = ctx.measureText(text).width;
+    const tx = obj.x + (obj.w - textW) / 2;
+    const ty = obj.y + obj.h + 12; // オブジェクトの下に少しスペースを取る
+    ctx.fillText(text, tx, ty);
+    ctx.restore();
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -2602,13 +2676,7 @@ function update() {
 
   // Occasionally spawn note particles for active objects
   for(const uniqueKey in objectNotes){
-    // small chance to spawn a note each frame
     if(Math.random() < 0.008){
-      const parts = uniqueKey.split('_');
-      const mapKey = `${parts[0]},${parts[1]}`; // careful: uniqueKey format is "mapKey_index" but mapKey itself contains comma
-      // our uniqueKey was built as `${mapKey}_${index}` so splitting on '_' yields parts where first part contains comma(s).
-      // We'll reconstruct properly:
-      // uniqueKey = "<mapKey>_<index>", find last '_' to split
       const lastUnderscore = uniqueKey.lastIndexOf('_');
       const mKey = uniqueKey.substring(0, lastUnderscore);
       const idx = uniqueKey.substring(lastUnderscore+1);
@@ -2676,7 +2744,6 @@ function draw(){
 
   // draw active-object notes (♪)
   for(const uniqueKey in objectNotes){
-    // reconstruct mapKey/index
     const lastUnderscore = uniqueKey.lastIndexOf('_');
     const mKey = uniqueKey.substring(0, lastUnderscore);
     const idx = uniqueKey.substring(lastUnderscore+1);
@@ -2692,6 +2759,9 @@ function draw(){
       ctx.globalAlpha = 1;
     }
   }
+
+  // draw remaining-time displays for playing audios (small, faint under object)
+  drawRemainingTimes();
 
   // draw map name and clock
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
