@@ -2387,7 +2387,7 @@ function stopObjectAudio(uniqueKey, remoteStop = false){
 
 /* --- インタラクト管理 --- */
 let currentInteract = null; // { mapKey, index, obj }
-const INTERACT_DISTANCE = 10;
+const INTERACT_DISTANCE = 7;
 let lastInteractDisplayTime = 0; // when the interact prompt was last reset (for 3s visibility)
 
 function findInteractableObject(){
@@ -2677,11 +2677,11 @@ function draw(){
         const rem = entry.audio.duration && !isNaN(entry.audio.duration) ? Math.max(0, entry.audio.duration - entry.audio.currentTime) : null;
         const timeText = rem !== null ? `残り ${formatTimeSec(rem)}` : '残り --:--';
         ctx.font = '8px monospace';
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        //ctx.fillStyle = 'rgba(0,0,0,0.6)';
         const w2 = ctx.measureText(timeText).width;
-        ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
+        //ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
+        //ctx.fillStyle = '#fff';
+        //ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
       }
     }
   }
