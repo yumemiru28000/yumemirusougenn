@@ -32,6 +32,10 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 - 当たり判定：プレイヤーの当たり判定は「足元の丸い当たり判定」に変更されています。
   - 直径 = プレイヤーサイズの 1/3（つまり幅は元の約1/3）
   - 丸はプレイヤー画像の一番下中央に配置されます。
+- オブジェクトの使用（E）:
+  - オブジェクト定義に対して type:'radio' などで使用可能オブジェクトを作れます。
+  - 近くに来ると画面に「E: 使用」と表示され、E を押すと全員に作用（DB に状態を更新→同マップの人は音が聞こえる）。
+  - 試しに '100,0' マップにラジオオブジェクトを追加しています（kyokurajio.mp3）。
 -->
 
 <form id="nameForm">
@@ -2060,17 +2064,25 @@ const maps = {
     ]
   },
       
-  '100,0': {
+   '100,0': {
     name:'ユメの草原',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
     block:{up:false,down:false,left:false,right:false},
     objects:[
       {type:'block',x:150,y:80,w:64,h:64,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/BOTB.png'},
-      {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'}
+      {type:'grass',x:60,y:200,w:80,h:40,img:null,event:'A'},
+      // ラジオプレイヤーを追加（example）
+      {
+        type: 'radio',
+        id: 'radio_01',
+        x: 200, y: 140, w: 8, h: 12, // キャラの3分の1くらい（player.size=24 を想定して小さめ）
+        img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png', // 任意のPNG
+        audio: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kyokurajio.mp3',
+        interactText: 'E: 再生/停止'
+      }
     ]
   }
 };
-
 /* --- 画像 / ピクセルデータキャッシュ --- */
 const imagePixelData = {}; // key -> { data, width, height } か null
 const images = {};
@@ -2121,6 +2133,13 @@ addEventListener('keydown', e=>{
     }
   }
   if(e.key === ' ' || e.key === 'Space') triggerSpaceEvent();
+
+  // E キーで使用トリガー
+  if(e.key.toLowerCase() === 'e'){
+    if(currentInteract) {
+      toggleObjectActive(currentInteract.mapKey, currentInteract.index);
+    }
+  }
 });
 addEventListener('keyup', e=>{
   keyState[e.key.toLowerCase()] = false;
@@ -2164,12 +2183,6 @@ function rectsOverlap(a,b){
 }
 
 /* --- 新: プレイヤー足元の丸い当たり判定 --- */
-/*
-  仕様:
-  - 直径 = player.size * (1/3)
-  - 中心はプレイヤー画像の一番下中央に配置 (x + size/2, y + size - r)
-  - これを用いてオブジェクトやマップマスクと当たり判定を行います
-*/
 function getPlayerFootCircle(p){
   const diameter = Math.max(1, p.size / 3); // 幅は元の約1/3
   const r = diameter / 2;
@@ -2177,18 +2190,13 @@ function getPlayerFootCircle(p){
   const cy = p.y + p.size - r;             // 画像の一番下中央寄り
   return { cx, cy, r };
 }
-
-// 円と矩形の当たり判定（距離ベース）
 function circleRectOverlap(circle, rect){
-  // rect: {x,y,w,h}
   const nearestX = Math.max(rect.x, Math.min(circle.cx, rect.x + rect.w));
   const nearestY = Math.max(rect.y, Math.min(circle.cy, rect.y + rect.h));
   const dx = circle.cx - nearestX;
   const dy = circle.cy - nearestY;
   return (dx * dx + dy * dy) <= (circle.r * circle.r);
 }
-
-// 円内判定（点が円の内部か）
 function pointInCircle(circle, x, y){
   const dx = circle.cx - x;
   const dy = circle.cy - y;
@@ -2327,7 +2335,156 @@ function isPassableByObjectPixel(mapKey, objIndex, footCircle, obj){
   return true;
 }
 
-/* --- 更新 / 描画 --- */
+/* ------------------------------------------------------------------
+   オブジェクト使用 (E) システム
+   - activeObjects/<mapKey>/<objIndex> に { active:true, startedBy, timestamp } を set/remove して状態を共有
+   - 各クライアントは activeObjects の変化を監視して、再生/停止を行う
+   - 再生音は距離に応じて音量を調整（maxDistance を超えると聞こえない）
+   - ラジオの音は loop=false（指定）、再生が終わったら active を自動で解除
+   ------------------------------------------------------------------*/
+
+const activeObjectsRef = ref(db, 'activeObjects');
+let activeObjects = {}; // local snapshot of DB activeObjects
+const playingAudios = {}; // key -> { audio: Audio, mapKey, index, obj }
+const objectNotes = {};   // key -> array of little note particles
+
+// 音の聞こえる最大距離（ピクセル）
+const RADIO_MAX_DIST = 220;
+
+// DB の activeObjects 全体を監視（簡易実装）
+onValue(activeObjectsRef, snap=>{
+  activeObjects = snap.val() || {};
+  // 更新に合わせて playingAudios を開始／停止する処理は update() 内や専用関数で行う
+  syncPlayingAudiosWithActiveObjects();
+});
+
+function syncPlayingAudiosWithActiveObjects(){
+  // For each active entry in DB, ensure we have started local playback if on same map
+  for(const mapKey in activeObjects){
+    const mapEntry = activeObjects[mapKey] || {};
+    for(const idx in mapEntry){
+      const info = mapEntry[idx];
+      const uniqueKey = `${mapKey}_${idx}`;
+      const shouldBeActive = info && info.active;
+      if(shouldBeActive && !playingAudios[uniqueKey]){
+        // start audio if possible (only if object exists in maps)
+        if(maps[mapKey] && maps[mapKey].objects[idx]){
+          const obj = maps[mapKey].objects[idx];
+          startObjectAudio(mapKey, idx, obj);
+        }
+      }else if(!shouldBeActive && playingAudios[uniqueKey]){
+        stopObjectAudio(uniqueKey, /* remoteStop */ true);
+      }
+    }
+  }
+  // Stop any playingAudios that no longer have active flag
+  for(const key in playingAudios){
+    const [mapKey, idx] = key.split('_');
+    if(!activeObjects[mapKey] || !activeObjects[mapKey][idx] || !activeObjects[mapKey][idx].active){
+      stopObjectAudio(key, true);
+    }
+  }
+}
+
+async function toggleObjectActive(mapKey, index){
+  // Toggle atomic: check DB
+  const objRef = ref(db, `activeObjects/${mapKey}/${index}`);
+  const snap = await get(objRef);
+  if(snap.exists() && snap.val() && snap.val().active){
+    // stop
+    remove(objRef).catch(()=>{});
+  }else{
+    // start
+    set(objRef, { active:true, startedBy:userId, timestamp:Date.now() }).catch(()=>{});
+  }
+}
+
+function startObjectAudio(mapKey, index, obj){
+  const uniqueKey = `${mapKey}_${index}`;
+  if(playingAudios[uniqueKey]) return;
+  if(!obj || !obj.audio) return;
+  const a = new Audio(obj.audio);
+  a.loop = false; // ループしない
+  a.preload = 'auto';
+  // initial volume will be set in update() according to distance
+  try{ a.play().catch(()=>{}); }catch(e){}
+  // when audio ends naturally, clear active state in DB
+  a.onended = async ()=>{
+    try{
+      // remove DB active flag (if still present)
+      await remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{});
+    }catch(e){}
+    delete playingAudios[uniqueKey];
+  };
+  playingAudios[uniqueKey] = { audio: a, mapKey, index, obj };
+  objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
+}
+
+function stopObjectAudio(uniqueKey, remoteStop = false){
+  const entry = playingAudios[uniqueKey];
+  if(!entry) return;
+  try{
+    entry.audio.pause();
+    entry.audio.currentTime = 0;
+  }catch(e){}
+  delete playingAudios[uniqueKey];
+  // remove note particles
+  delete objectNotes[uniqueKey];
+  if(!remoteStop){
+    // if local triggered stop, also remove DB flag
+    const [mapKey, index] = uniqueKey.split('_');
+    remove(ref(db, `activeObjects/${mapKey}/${index}`)).catch(()=>{});
+  }
+}
+
+/* --- インタラクトターゲット管理 --- */
+let currentInteract = null; // { mapKey, index, obj } when near a usable object
+const INTERACT_DISTANCE = 36; // px - how close to be able to press E
+
+function findInteractableObject(){
+  const key = `${mapX},${mapY}`;
+  const map = maps[key];
+  currentInteract = null;
+  if(!map) return;
+  const foot = getPlayerFootCircle(player);
+  for(let i=0;i<map.objects.length;i++){
+    const obj = map.objects[i];
+    // only objects with type 'radio' or other 'usable' types should be interactable
+    if(obj.type === 'radio' || obj.usable){
+      // quick rectangle proximity test (use circleRectOverlap)
+      if(circleRectOverlap(foot, obj)){
+        currentInteract = { mapKey: key, index: i, obj };
+        return;
+      }else{
+        // also allow slightly further interaction (e.g., INTERACT_DISTANCE px)
+        // compute distance from foot center to object's center
+        const objCenterX = obj.x + obj.w/2;
+        const objCenterY = obj.y + obj.h/2;
+        const dx = foot.cx - objCenterX;
+        const dy = foot.cy - objCenterY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist <= INTERACT_DISTANCE){
+          currentInteract = { mapKey: key, index: i, obj };
+          return;
+        }
+      }
+    }
+  }
+}
+
+/* --- オブジェクトの♪ノートパーティクル管理 --- */
+function spawnNoteForObject(uniqueKey, obj){
+  objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
+  // position above object
+  const x = obj.x + obj.w/2;
+  const y = obj.y - 6;
+  objectNotes[uniqueKey].push({ x, y, alpha: 1, dy: -0.25, vx: (Math.random()-0.5)*0.3 });
+}
+
+/* ------------------------------------------------------------------
+   update/draw にて playingAudios の距離減衰・ノート描画を行う
+   ------------------------------------------------------------------*/
+
 function update() {
   const key = mapX + ',' + mapY;
   if(!maps[key]) return;
@@ -2422,6 +2579,57 @@ function update() {
     if (player.y + player.size > H) player.y = 0;
   }
 
+  // find interactable object near player each frame
+  findInteractableObject();
+
+  // Sync playingAudios with activeObjects (in case changes came from DB)
+  syncPlayingAudiosWithActiveObjects();
+
+  // Update volumes for playing audios based on distance to this client player
+  for(const key in playingAudios){
+    const entry = playingAudios[key];
+    const obj = entry.obj;
+    const objCenterX = obj.x + obj.w/2;
+    const objCenterY = obj.y + obj.h/2;
+    // distance from player foot center (or player center)
+    const dx = (player.x + player.size/2) - objCenterX;
+    const dy = (player.y + player.size/2) - objCenterY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const falloff = Math.max(0, 1 - (dist / RADIO_MAX_DIST));
+    const vol = falloff * parseFloat(bgmVolume.value || 0.6);
+    try{ entry.audio.volume = vol; }catch(e){}
+  }
+
+  // Occasionally spawn note particles for active objects
+  for(const uniqueKey in objectNotes){
+    // small chance to spawn a note each frame
+    if(Math.random() < 0.008){
+      const parts = uniqueKey.split('_');
+      const mapKey = `${parts[0]},${parts[1]}`; // careful: uniqueKey format is "mapKey_index" but mapKey itself contains comma
+      // our uniqueKey was built as `${mapKey}_${index}` so splitting on '_' yields parts where first part contains comma(s).
+      // We'll reconstruct properly:
+      // uniqueKey = "<mapKey>_<index>", find last '_' to split
+      const lastUnderscore = uniqueKey.lastIndexOf('_');
+      const mKey = uniqueKey.substring(0, lastUnderscore);
+      const idx = uniqueKey.substring(lastUnderscore+1);
+      if(!maps[mKey]) continue;
+      const obj = maps[mKey].objects[idx];
+      if(!obj) continue;
+      spawnNoteForObject(uniqueKey, obj);
+    }
+  }
+
+  // Update note particles alpha/position
+  for(const k in objectNotes){
+    const arr = objectNotes[k];
+    for(let i=arr.length-1;i>=0;i--){
+      arr[i].alpha -= 0.01;
+      arr[i].x += arr[i].vx;
+      arr[i].y += arr[i].dy;
+      if(arr[i].alpha <= 0) arr.splice(i,1);
+    }
+  }
+
   if (playerName) sendPosition();
   checkBgmZone();
   checkUiZone();
@@ -2438,9 +2646,14 @@ function draw(){
     if (o.mask) return;
     if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
       ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+    } else if (o.type === 'radio') {
+      // fallback simple radio rectangle if image not loaded yet
+      ctx.fillStyle = 'rgba(180,180,255,0.8)';
+      ctx.fillRect(o.x, o.y, o.w, o.h);
     }
   });
 
+  // draw other players
   for(const id in otherPlayers){
     const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
@@ -2450,30 +2663,49 @@ function draw(){
     }
   }
 
+  // draw player
   if(!player.hidden){
     const img = getImage(player);
     if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
     ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
     if(playerName) ctx.fillText(playerName,player.x,player.y-5);
-
-    // デバッグ表示（足元の丸い当たり判定を確認したい場合はコメント解除）
+    // debug foot circle (commented by default)
     // const f = getPlayerFootCircle(player);
-    // ctx.beginPath();
-    // ctx.arc(f.cx, f.cy, f.r, 0, Math.PI*2);
-    // ctx.fillStyle='rgba(255,0,0,0.3)';
-    // ctx.fill();
+    // ctx.beginPath(); ctx.arc(f.cx, f.cy, f.r, 0, Math.PI*2); ctx.fillStyle='rgba(255,0,0,0.25)'; ctx.fill();
   }
 
+  // draw active-object notes (♪)
+  for(const uniqueKey in objectNotes){
+    // reconstruct mapKey/index
+    const lastUnderscore = uniqueKey.lastIndexOf('_');
+    const mKey = uniqueKey.substring(0, lastUnderscore);
+    const idx = uniqueKey.substring(lastUnderscore+1);
+    if(!maps[mKey]) continue;
+    const obj = maps[mKey].objects[idx];
+    if(!obj) continue;
+    const arr = objectNotes[uniqueKey];
+    for(const n of arr){
+      ctx.globalAlpha = n.alpha;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('♪', n.x, n.y);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // draw map name and clock
   ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.fillText(map.name,10,20);
   const now = new Date();
   ctx.font='20px monospace';
   ctx.fillText(`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`, W-110,24);
 
+  // join notifications
   const t = Date.now();
   for(let i=joinNotifications.length-1;i>=0;i--){
     if(t-joinNotifications[i].time>3000){ joinNotifications.splice(i,1); } else { ctx.fillStyle='yellow'; ctx.font='16px sans-serif'; ctx.fillText(`${joinNotifications[i].name}さんが出撃`,10,35); }
   }
 
+  // active chats
   for(let i=activeChats.length-1;i>=0;i--){
     const c = activeChats[i];
     if(t-c.time>15000){ activeChats.splice(i,1); continue; }
@@ -2485,6 +2717,28 @@ function draw(){
     ctx.fillRect(x-4,y-20,w+8,20);
     ctx.fillStyle='black';
     ctx.fillText(c.msg,x,y-5);
+  }
+
+  // Draw interaction prompt if nearby a usable object
+  if(currentInteract){
+    const obj = currentInteract.obj;
+    // draw text above player
+    const text = obj.interactText || 'E: 使用';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(player.x - 6, player.y - 34, ctx.measureText(text).width + 12, 22);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(text, player.x + 0, player.y - 20);
+    // If the object is active, show status near the object
+    const activeFlag = (activeObjects && activeObjects[`${currentInteract.mapKey}`] && activeObjects[`${currentInteract.mapKey}`][currentInteract.index] && activeObjects[`${currentInteract.mapKey}`][currentInteract.index].active);
+    if(activeFlag){
+      // show "再生中 (E:停止)" above object
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      const sText = '再生中 (E:停止)';
+      ctx.fillRect(obj.x - 6, obj.y - 26, ctx.measureText(sText).width + 12, 20);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(sText, obj.x, obj.y - 12);
+    }
   }
 }
 
