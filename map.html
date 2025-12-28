@@ -2387,7 +2387,7 @@ function stopObjectAudio(uniqueKey, remoteStop = false){
 
 /* --- インタラクト管理 --- */
 let currentInteract = null; // { mapKey, index, obj }
-const INTERACT_DISTANCE = 36;
+const INTERACT_DISTANCE = 10;
 let lastInteractDisplayTime = 0; // when the interact prompt was last reset (for 3s visibility)
 
 function findInteractableObject(){
