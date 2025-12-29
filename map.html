@@ -98,22 +98,22 @@ import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChil
 
 const CONFIG_EVENT = {
   enabled: true,
-  time: "05:00", // 東京時間で発火する時刻をここで指定
+  time: "05:07", // 東京時間で発火する時刻をここで指定
   audio: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kieru.mp3",     // 例: "https://......mp3"
   video: "",     // 例: "https://......mp4"
   target: { mapX: 100, mapY: 0, x: 150, y: 120 } // 発火時に全員TPする場所
 };
 
 const CONFIG_PHASES = {
-  A: "4:58", // 例: 夜開始
-  B: "04:59", // B の時刻
-  C: "05:00"  // C の時刻で解除
+  A: "4:00", // 例: 夜開始
+  B: "06:03", // B の時刻
+  C: "07:00"  // C の時刻で解除
 };
 
-const NIGHT_ALPHA = 80000000000000000; // 夜にかける暗さ（0..1）
-const AVATAR_FADE_SEC = 50; // アバターが下から消える演出（秒）
+const NIGHT_ALPHA = 800000000000000000; // 夜にかける暗さ（0..1）
+const AVATAR_FADE_SEC = 100; // アバターが下から消える演出（秒）
 const WHITE_FADE_SEC = 10;   // 白くなるフェード（秒）
-const WHITE_HOLD_SEC = 600;  // 真っ白になってから保持する秒（10分 = 600s）
+const WHITE_HOLD_SEC = 6000;  // 真っ白になってから保持する秒（10分 = 600s）
 const PREB_SEC = 60;         // B の1分前からフィルターを外し始める（60s）
 
 /* ================================
