@@ -50,7 +50,7 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
     <label>BGM音量</label>
     <input type="range" id="bgmVolume" min="0" max="1" step="0.01" value="0.6">
   </div>
-  <div style="margin-top:12px; font-size:12px; opacity:0.8;">イベント設定はコード内の CONFIG_EVENT で行ってください</div>
+  <div style="margin-top:12px; font-size:12px; opacity:0.8;"></div>
 </div>
 
 <canvas id="game" width="400" height="300"></canvas>
@@ -98,16 +98,16 @@ import { getDatabase, ref, set, onValue, remove, onChildAdded, push, get, onChil
 
 const CONFIG_EVENT = {
   enabled: true,
-  time: "06:05", // 東京時間で発火する時刻をここで指定
-  audio: "",     // 例: "https://......mp3"
+  time: "05:00", // 東京時間で発火する時刻をここで指定
+  audio: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kieru.mp3",     // 例: "https://......mp3"
   video: "",     // 例: "https://......mp4"
   target: { mapX: 100, mapY: 0, x: 150, y: 120 } // 発火時に全員TPする場所
 };
 
 const CONFIG_PHASES = {
   A: "23:00", // 例: 夜開始
-  B: "05:30", // B の時刻
-  C: "06:30"  // C の時刻で解除
+  B: "04:50", // B の時刻
+  C: "05:00"  // C の時刻で解除
 };
 
 const NIGHT_ALPHA = 0.8; // 夜にかける暗さ（0..1）
@@ -2141,7 +2141,7 @@ const maps = {
         id: 'seat_01',
         x: 280, y: 170, w: 40, h: 24,
         img: null,
-        sitImg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sit.png',
+        sitImg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/siting.png',
         interactText: 'E: 座る'
       }
     ]
