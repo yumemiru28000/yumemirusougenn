@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -13,10 +13,15 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 .touchButton { width: 60px; height: 60px; background: rgba(255,255,255,0.3); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; border-radius: 10px; user-select: none; touch-action: none; }
 #extraButtons { position: absolute; bottom: 150px; display:flex; gap:10px; z-index: 10; }
 #extraButtons .touchButton { background: rgba(0,200,255,0.4); }
-#sideUI{ position:absolute; right:20px; top:50%; transform:translateY(-50%); width:200px; text-align:center; z-index:5; }
+#sideUI{ position:absolute; right:20px; top:50%; transform:translateY(-50%); width:240px; text-align:center; z-index:15; }
 #zoneImage{ width:100%; display:none; }
 #zoneText{ margin-top:8px; font-size:14px; }
 .volumeBox{ margin-top:20px; }
+.smallInput{ width: 100%; padding:4px; font-size:12px; margin-top:6px; }
+.row{ display:flex; gap:6px; justify-content:center; align-items:center; margin-top:6px; }
+.label{ font-size:12px; }
+.countdownSmall{ position:absolute; right:8px; bottom:8px; z-index:30; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:6px; font-size:12px; }
+#eventControls { margin-top:10px; text-align:left; font-size:12px; background: rgba(0,0,0,0.4); padding:8px; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -27,6 +32,11 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 - オブジェクトに type:'radio' を設定すると E で操作できる例を追加しました（100,0 マップに例あり）。
 - 「E」表示は小さめ（約1/3）で、3秒で消えます。W/A/S/D の操作で再表示されます。
 - ラジオは同じマップの人だけが聞こえ、距離で音量が小さくなります。ループしません。再生中はオブジェクト下に残り時間が表示されます。
+- 追加機能:
+  - マップが無い方向へは出られないように制限。
+  - システムイベント（指定時刻に全員TP、MP3再生、アバター下から消失→MP4表示→白フェード）が可能（設定UIあり）。
+  - 透明で通り抜けできる座るオブジェクト(type:'seat')を追加。近づくと小さく「座る[E]」が表示。Eで座る/立つ。座ると指定PNGに置換。
+  - A/B/C の時間指定による夜フィルター（段階的解除、日の出エフェクト）を追加（UIで設定）。
 -->
 
 <form id="nameForm">
@@ -46,6 +56,34 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
     <label>BGM音量</label>
     <input type="range" id="bgmVolume" min="0" max="1" step="0.01" value="0.6">
   </div>
+
+  <div id="eventControls">
+    <div style="font-weight:bold;">イベント（全体TP）</div>
+    <label class="label">有効 <input type="checkbox" id="eventEnabled"></label>
+    <div class="row">
+      <input class="smallInput" id="eventTime" placeholder="HH:MM (東京)" value="06:05">
+    </div>
+    <div class="row">
+      <input class="smallInput" id="eventAudio" placeholder="MP3 URL">
+    </div>
+    <div class="row">
+      <input class="smallInput" id="eventVideo" placeholder="MP4 URL">
+    </div>
+    <div class="row">
+      <input class="smallInput" id="eventTarget" placeholder="mapX,mapY,x,y (例:0,0,150,120)">
+    </div>
+    <div class="row">
+      <button id="saveEvent">保存</button>
+      <button id="triggerNow">今すぐ実行</button>
+    </div>
+    <hr style="opacity:0.2;">
+    <div style="font-weight:bold;">夜/日の出 (A/B/C)</div>
+    <div class="row"><input class="smallInput" id="phaseA" placeholder="A 時刻 HH:MM" value=""></div>
+    <div class="row"><input class="smallInput" id="phaseB" placeholder="B 時刻 HH:MM" value=""></div>
+    <div class="row"><input class="smallInput" id="phaseC" placeholder="C 時刻 HH:MM" value=""></div>
+    <div class="row"><button id="savePhases">保存</button></div>
+  </div>
+
 </div>
 
 <canvas id="game" width="400" height="300"></canvas>
@@ -58,10 +96,14 @@ canvas { background: #000; border: 4px solid #fff; width: 400px; height: 300px; 
 </div>
 
 <div id="extraButtons" style="display:none;">
-  <div class="touchButton" data-key="shift">shift</div> 
+  <div class="touchButton" data-key="shift">shift</div>
   <div class="touchButton" data-key="space">探す</div>
-  
 </div>
+
+<div id="countdown" class="countdownSmall" style="display:none;"></div>
+
+<!-- video element used for event (will be drawn to canvas) -->
+<video id="eventVideoElem" playsinline webkit-playsinline crossorigin="anonymous" style="display:none; position:absolute; left:0; top:0; width:400px; height:300px; object-fit:cover; z-index:5;"></video>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -110,10 +152,14 @@ nameForm.addEventListener('submit', async (e)=>{
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
-function resizeCanvas(){ const scaleX = window.innerWidth / W; const scaleY = window.innerHeight / H; const scale = Math.min(scaleX, scaleY); canvas.style.transform = `scale(${scale})`; canvas.style.transformOrigin = 'top left'; canvas.style.left = `${(window.innerWidth - W*scale)/2}px`; canvas.style.top  = `${(window.innerHeight - H*scale)/2}px`; canvas.style.position = 'absolute'; }
+function resizeCanvas(){ const scaleX = window.innerWidth / W; const scaleY = window.innerHeight / H; const scale = Math.min(scaleX, scaleY); canvas.style.transform = `scale(${scale})`; canvas.style.transformOrigin = 'top left'; canvas.style.left = `${(window.innerWidth - W*scale)/2}px`; canvas.style.top  = `${(window.innerHeight - H*scale)/2}px`; canvas.style.position = 'absolute'; // ensure video alignment
+  // align event video element
+  const ev = document.getElementById('eventVideoElem');
+  if(ev){ ev.style.transform = canvas.style.transform; ev.style.transformOrigin = 'top left'; ev.style.left = canvas.style.left; ev.style.top = canvas.style.top; ev.style.position='absolute'; }
+}
 window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-const player = { x: SPAWN.x, y: SPAWN.y, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false, shift:false, dir:'down', moving:false, crouch:false };
+const player = { x: SPAWN.x, y: SPAWN.y, size:24, speed:1.2, img:new Image(), imgLoaded:false, hidden:false, shift:false, dir:'down', moving:false, crouch:false, sitting:null };
 
 /* --- BGM 管理 --- */
 let currentBgmZoneId = null;
@@ -122,10 +168,10 @@ const albumBgmAudio = new Audio(); albumBgmAudio.loop = false; albumBgmAudio.vol
 const bgmVolume = document.getElementById('bgmVolume');
 bgmVolume.addEventListener('input', ()=>{ singleBgmAudio.volume = bgmVolume.value; albumBgmAudio.volume  = bgmVolume.value; });
 
-function playSingleBgm(url){ if(singleBgmAudio.src !== url){ singleBgmAudio.src = url; singleBgmAudio.play(); } }
+function playSingleBgm(url){ if(singleBgmAudio.src !== url){ singleBgmAudio.src = url; singleBgmAudio.play().catch(()=>{}); } }
 function stopSingleBgm(){ singleBgmAudio.pause(); singleBgmAudio.currentTime = 0; }
 let albumList=[], albumIndex=0, albumActive=false;
-function playAlbum(list){ if(albumActive && JSON.stringify(albumList)===JSON.stringify(list)) return; albumList=list; albumIndex=0; albumActive=true; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play(); albumBgmAudio.onended=()=>{ if(!albumActive) return; albumIndex=(albumIndex+1)%albumList.length; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play(); }; }
+function playAlbum(list){ if(albumActive && JSON.stringify(albumList)===JSON.stringify(list)) return; albumList=list; albumIndex=0; albumActive=true; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play().catch(()=>{}); albumBgmAudio.onended=()=>{ if(!albumActive) return; albumIndex=(albumIndex+1)%albumList.length; albumBgmAudio.src=albumList[albumIndex]; albumBgmAudio.play().catch(()=>{}); }; }
 function stopAlbum(){ albumActive=false; albumBgmAudio.pause(); albumBgmAudio.currentTime=0; }
 function checkBgmZone(){
   let singleHit=null, albumHit=null;
@@ -201,23 +247,42 @@ const maps = {
   },
   '0,0': {
     name:'ZZ病院前',
-    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',  
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(8-8).png',
     block:{up:false,down:false,left:false,right:false},
     objects:[
-     
       {type:'event',x:60,y:200,w:80,h:40,img:null,event:'A'}
-   
     ]
   },
- 
-    '-7,-7': {
+  '-7,-7': {
     name:'始まりの町',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(1-1).png',
     block:{up:false,down:true,left:false,right:true},
-    objects:[
-    
-    ]
-  },   
+    objects:[ ]
+  },
+  '-6,-7': {
+    name:'始まりの町',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(1-2).png',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[ ]
+  },
+  '-5,-7': {
+    name:'始まりの町',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(1-3).png',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[ ]
+  },
+  '-4,-7': {
+    name:'始まりの町',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(1-4).png',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[ ]
+  },
+  '7,7': {
+    name:'始まりの町',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(15-15).png',
+    block:{up:false,down:true,left:false,right:true},
+    objects:[ ]
+  }, 
   '-6,-7': {
     name:'始まりの町',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/image_(1-2).png',
@@ -2046,20 +2111,30 @@ const maps = {
     objects:[
     ]
   },
-  '100,0': {
+   '100,0': {
     name:'ユメの草原',
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
     block:{up:false,down:false,left:false,right:false},
-    objects:[ { type: 'warp', x: 50, y: 18, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png', to: { x: 50, y: 200, mapX: 50, mapY: 0 } },
+    objects:[
+      { type: 'warp', x: 50, y: 18, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png', to: { x: 50, y: 200, mapX: 50, mapY: 0 } },
       {type:'grass',x:60,y:200,w:80,h:40,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kusanew4.png',event:'A'},
       // ラジオプレイヤー（試作）
       {
         type: 'radio',
         id: 'radio_01',
-        x: 200, y: 140, w: 8, h: 12, // 縦長でキャラの約1/3幅に相当（調整可）
+        x: 200, y: 140, w: 8, h: 12,
         img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio.png',
         audio: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kyokurajio.mp3',
         interactText: 'E: 使用'
+      },
+      // 透明な座るオブジェクト（通り抜け可） の例
+      {
+        type: 'seat',
+        id: 'seat_01',
+        x: 280, y: 170, w: 40, h: 24,
+        img: null,
+        sitImg: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sit.png',
+        interactText: 'E: 座る'
       }
     ]
   }
@@ -2116,6 +2191,10 @@ addEventListener('keydown', e=>{
   if(e.key.toLowerCase() === 'e'){
     if(currentInteract){
       toggleObjectActive(currentInteract.mapKey, currentInteract.index);
+      // also handle seat sit/stand
+      if(currentInteract.obj && currentInteract.obj.type === 'seat'){
+        toggleSeat(currentInteract.mapKey, currentInteract.index);
+      }
       // keep prompt visible when toggled
       lastInteractDisplayTime = Date.now();
     }
@@ -2150,14 +2229,19 @@ document.querySelectorAll('.touchButton').forEach(btn=>{
       }
       lastInteractDisplayTime = Date.now();
     }
-else if(key === 'space'){
-    triggerSpaceEvent();
-  }
-  else if(key === 'e'){        // ★ここを追加
-    triggerInteract();         // ← キーボードEと同じ関数
-    lastInteractDisplayTime = Date.now();
-  }
-  else { keyState[key]=true; lastInteractDisplayTime = Date.now(); }
+    else if(key === 'space'){
+      triggerSpaceEvent();
+    }
+    else if(key === 'e'){
+      if(currentInteract){
+        toggleObjectActive(currentInteract.mapKey, currentInteract.index);
+        if(currentInteract.obj && currentInteract.obj.type === 'seat'){
+          toggleSeat(currentInteract.mapKey, currentInteract.index);
+        }
+        lastInteractDisplayTime = Date.now();
+      }
+    }
+    else { keyState[key]=true; lastInteractDisplayTime = Date.now(); }
   });
   btn.addEventListener('touchend', e=>{
     e.preventDefault();
@@ -2205,7 +2289,7 @@ function triggerSpaceEvent(){
 }
 
 /* --- Firebase 送信 --- */
-function sendPosition(){ if(player.hidden) return; set(ref(db,'players/'+userId),{ x:player.x, y:player.y, mapX, mapY, name:playerName, dir:player.dir, moving:player.moving, crouch:player.crouch, timestamp:Date.now() }); }
+function sendPosition(){ if(player.hidden) return; set(ref(db,'players/'+userId),{ x:player.x, y:player.y, mapX, mapY, name:playerName, dir:player.dir, moving:player.moving, crouch:player.crouch, timestamp:Date.now(), sitting: player.sitting || null }); }
 const playersRef = ref(db,'players');
 onValue(playersRef,snap=>{ const data = snap.val()||{}; for(const id in data) if(id!==userId) otherPlayers[id]=data[id]; });
 onChildRemoved(playersRef,snap=>{ const id = snap.key; delete otherPlayers[id]; });
@@ -2405,7 +2489,7 @@ function findInteractableObject(){
   const foot = getPlayerFootCircle(player);
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
-    if(obj.type === 'radio' || obj.usable){
+    if(obj.type === 'radio' || obj.usable || obj.type === 'seat'){
       if(circleRectOverlap(foot, obj)){
         currentInteract = { mapKey: key, index: i, obj };
         lastInteractDisplayTime = Date.now();
@@ -2426,6 +2510,29 @@ function findInteractableObject(){
   }
 }
 
+/* --- seat (座る) 管理 --- */
+function toggleSeat(mapKey, index){
+  const key = `${mapKey}`;
+  const obj = maps[mapKey].objects[index];
+  if(!obj || obj.type !== 'seat') return;
+  // if currently sitting on this seat, stand up
+  if(player.sitting && player.sitting.mapKey === mapKey && player.sitting.index == index){
+    player.sitting = null;
+    // allow movement
+    // reposition slightly to avoid re-triggering immediate sit
+    player.x = Math.min(Math.max(0, player.x + 2), W - player.size);
+    sendPosition();
+    return;
+  }
+  // sit: fix position on top of object
+  player.sitting = { mapKey, index, sitImg: obj.sitImg || null };
+  player.x = obj.x + Math.max(0, (obj.w - player.size) / 2);
+  player.y = obj.y + Math.max(0, obj.h - player.size);
+  // stop movement keys while sitting
+  keyState['w']=keyState['a']=keyState['s']=keyState['d']=false;
+  sendPosition();
+}
+
 /* --- ノートパーティクル --- */
 function spawnNoteForObject(uniqueKey, obj){
   objectNotes[uniqueKey] = objectNotes[uniqueKey] || [];
@@ -2434,20 +2541,319 @@ function spawnNoteForObject(uniqueKey, obj){
   objectNotes[uniqueKey].push({ x, y, alpha: 1, dy: -0.25, vx: (Math.random()-0.5)*0.3 });
 }
 
+/* ---------------------------
+   新規：スケジュールイベント
+   ---------------------------*/
+const eventEnabledInput = document.getElementById('eventEnabled');
+const eventTimeInput = document.getElementById('eventTime');
+const eventAudioInput = document.getElementById('eventAudio');
+const eventVideoInput = document.getElementById('eventVideo');
+const eventTargetInput = document.getElementById('eventTarget');
+const saveEventBtn = document.getElementById('saveEvent');
+const triggerNowBtn = document.getElementById('triggerNow');
+
+const eventElem = document.getElementById('countdown');
+const eventVideoElem = document.getElementById('eventVideoElem');
+
+// load saved event config
+const savedEventConfig = JSON.parse(localStorage.getItem('zz_event_config') || '{}');
+if(savedEventConfig.time) eventTimeInput.value = savedEventConfig.time;
+if(savedEventConfig.audio) eventAudioInput.value = savedEventConfig.audio;
+if(savedEventConfig.video) eventVideoInput.value = savedEventConfig.video;
+if(savedEventConfig.target) eventTargetInput.value = savedEventConfig.target;
+eventEnabledInput.checked = savedEventConfig.enabled || false;
+
+// save handler
+saveEventBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const cfg = { enabled: eventEnabledInput.checked, time: eventTimeInput.value, audio: eventAudioInput.value, video: eventVideoInput.value, target: eventTargetInput.value };
+  localStorage.setItem('zz_event_config', JSON.stringify(cfg));
+  alert('保存しました');
+});
+
+// trigger now (for testing) - writes to DB
+triggerNowBtn.addEventListener('click', async (e)=>{
+  e.preventDefault();
+  const cfg = JSON.parse(localStorage.getItem('zz_event_config') || '{}');
+  const parsed = parseEventTarget(cfg.target || eventTargetInput.value);
+  await set(ref(db,'system/event'),{
+    startedBy: userId,
+    timestamp: Date.now(),
+    type: 'globalTeleport',
+    audio: cfg.audio || eventAudioInput.value || '',
+    video: cfg.video || eventVideoInput.value || '',
+    mapX: parsed.mapX, mapY: parsed.mapY, x: parsed.x, y: parsed.y,
+    durationAvatarFade: 30,
+    whiteFadeDuration: 10
+  });
+});
+
+// parse "mapX,mapY,x,y"
+function parseEventTarget(str){
+  if(!str) return { mapX: SPAWN.mapX, mapY: SPAWN.mapY, x: SPAWN.x, y: SPAWN.y };
+  const parts = str.split(',').map(s=>parseInt(s.trim()));
+  if(parts.length >=4) return { mapX: parts[0], mapY: parts[1], x: parts[2], y: parts[3] };
+  return { mapX: SPAWN.mapX, mapY: SPAWN.mapY, x: SPAWN.x, y: SPAWN.y };
+}
+
+// system/event listener - when any client writes this, all clients react
+const systemEventRef = ref(db,'system/event');
+onValue(systemEventRef, async snap=>{
+  const ev = snap.val();
+  if(!ev) return;
+  // start the event locally
+  startGlobalEvent(ev);
+});
+
+/* helper: get Tokyo time hours and minutes as "HH:MM" */
+function getTokyoHHMM(){
+  const now = Date.now();
+  const tokyoMs = now + (new Date().getTimezoneOffset()*60000) + (9*3600*1000);
+  const d = new Date(tokyoMs);
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+
+/* schedule checker - periodically check if configured time reached; then write DB event */
+let lastScheduledFireDate = null;
+setInterval(()=>{
+  try{
+    const cfg = JSON.parse(localStorage.getItem('zz_event_config') || '{}');
+    if(!cfg.enabled) return;
+    const target = (cfg.time || eventTimeInput.value || '').trim();
+    if(!target) return;
+    const nowTokyo = new Date(Date.now() + (new Date().getTimezoneOffset()*60000) + (9*3600*1000));
+    const hhmm = `${nowTokyo.getHours().toString().padStart(2,'0')}:${nowTokyo.getMinutes().toString().padStart(2,'0')}`;
+    // ensure we only fire once per day for that hhmm
+    const todayKey = `${nowTokyo.getFullYear()}-${nowTokyo.getMonth()+1}-${nowTokyo.getDate()} ${hhmm}`;
+    if(hhmm === target && lastScheduledFireDate !== todayKey){
+      lastScheduledFireDate = todayKey;
+      // push event to DB
+      const parsed = parseEventTarget(cfg.target || eventTargetInput.value);
+      set(ref(db,'system/event'),{
+        startedBy: userId,
+        timestamp: Date.now(),
+        type: 'globalTeleport',
+        audio: cfg.audio || eventAudioInput.value || '',
+        video: cfg.video || eventVideoInput.value || '',
+        mapX: parsed.mapX, mapY: parsed.mapY, x: parsed.x, y: parsed.y,
+        durationAvatarFade: 30,
+        whiteFadeDuration: 10
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}, 5000);
+
+/* Global event local state */
+let globalEventState = { active:false, startTime:0, audio:null, video:null, mapX:0, mapY:0, x:0, y:0, avatarFadeDur:30, whiteFadeDur:10 };
+
+/* Start event locally */
+async function startGlobalEvent(ev){
+  if(!ev) return;
+  // If already active and same timestamp, ignore
+  if(globalEventState.active && globalEventState.startTime === ev.timestamp) return;
+  globalEventState.active = true;
+  globalEventState.startTime = ev.timestamp || Date.now();
+  globalEventState.mapX = ev.mapX; globalEventState.mapY = ev.mapY; globalEventState.x = ev.x; globalEventState.y = ev.y;
+  globalEventState.avatarFadeDur = ev.durationAvatarFade || 30;
+  globalEventState.whiteFadeDur = ev.whiteFadeDuration || 10;
+
+  // Teleport this client to target and upload
+  mapX = globalEventState.mapX; mapY = globalEventState.mapY;
+  player.x = globalEventState.x; player.y = globalEventState.y;
+  sendPosition(); checkUiZone(); checkBgmZone();
+
+  // setup audio
+  if(ev.audio){
+    try{
+      if(globalEventState.audio){ globalEventState.audio.pause(); }
+      globalEventState.audio = new Audio(ev.audio);
+      globalEventState.audio.loop = false;
+      globalEventState.audio.volume = parseFloat(bgmVolume.value || 0.6);
+      await globalEventState.audio.play().catch(()=>{});
+    }catch(e){}
+  }
+
+  // setup video element (will be drawn to canvas)
+  if(ev.video){
+    try{
+      const v = eventVideoElem;
+      v.pause();
+      v.src = ev.video;
+      v.crossOrigin = 'anonymous';
+      v.muted = true; // mute video if audio is separate
+      v.loop = true;
+      await v.play().catch(()=>{ /* autoplay may be blocked, but we'll still draw when ready */ });
+      v.style.display = 'block';
+      // keep transform aligned with canvas
+      resizeCanvas();
+      globalEventState.video = v;
+    }catch(e){}
+  }
+
+  // start timers
+  globalEventState.phase = 'avatarFade'; // first phase
+  globalEventState.phaseStart = Date.now();
+
+  // show countdown UI
+  eventElem.style.display = 'block';
+}
+
+/* Called to end global event (clear DB optional) */
+function endGlobalEvent(){
+  if(globalEventState.audio){ try{ globalEventState.audio.pause(); }catch(e){} }
+  if(globalEventState.video){ try{ globalEventState.video.pause(); globalEventState.video.style.display = 'none'; }catch(e){} }
+  // remove DB event node (optional)
+  remove(ref(db,'system/event')).catch(()=>{});
+  globalEventState = { active:false, startTime:0, audio:null, video:null };
+  eventElem.style.display = 'none';
+}
+
+/* --- インジケータ描画用 --- */
+function drawEventCountdown(){
+  if(!globalEventState.active) return;
+  const now = Date.now();
+  let elapsed = (now - globalEventState.phaseStart) / 1000;
+  let totalRemaining = 0;
+  if(globalEventState.phase === 'avatarFade'){
+    totalRemaining = Math.max(0, globalEventState.avatarFadeDur - elapsed) + globalEventState.whiteFadeDur;
+  }else if(globalEventState.phase === 'whiteFade'){
+    totalRemaining = Math.max(0, globalEventState.whiteFadeDur - elapsed);
+  }
+  eventElem.textContent = `終了まで ${Math.ceil(totalRemaining)}s`;
+}
+
+/* --- インジケータ update: progress and transitions --- */
+function updateGlobalEventProgress(){
+  if(!globalEventState.active) return;
+  const now = Date.now();
+  const elapsed = (now - globalEventState.phaseStart) / 1000;
+  if(globalEventState.phase === 'avatarFade'){
+    if(elapsed >= globalEventState.avatarFadeDur){
+      // move to white fade
+      globalEventState.phase = 'whiteFade';
+      globalEventState.phaseStart = Date.now();
+      // ensure avatar fully invisible at this point
+    }
+  }else if(globalEventState.phase === 'whiteFade'){
+    if(elapsed >= globalEventState.whiteFadeDur){
+      // end event
+      endGlobalEvent();
+    }
+  }
+}
+
+/* helper - return progress [0..1] for avatar fade (0 means none, 1 means fully gone) */
+function getAvatarFadeProgress(){
+  if(!globalEventState.active) return 0;
+  if(globalEventState.phase === 'avatarFade'){
+    const elapsed = (Date.now() - globalEventState.phaseStart) / 1000;
+    return Math.min(1, elapsed / globalEventState.avatarFadeDur);
+  }else if(globalEventState.phase === 'whiteFade'){
+    return 1;
+  }
+  return 0;
+}
+
+/* --- 夜/日の出スケジュール (A/B/C) --- */
+const phaseAInput = document.getElementById('phaseA');
+const phaseBInput = document.getElementById('phaseB');
+const phaseCInput = document.getElementById('phaseC');
+const savePhasesBtn = document.getElementById('savePhases');
+const phaseConfigKey = 'zz_phase_config';
+const loadedPhases = JSON.parse(localStorage.getItem(phaseConfigKey) || '{}');
+if(loadedPhases.A) phaseAInput.value = loadedPhases.A;
+if(loadedPhases.B) phaseBInput.value = loadedPhases.B;
+if(loadedPhases.C) phaseCInput.value = loadedPhases.C;
+savePhasesBtn.addEventListener('click', (e)=>{ e.preventDefault(); const cfg = { A: phaseAInput.value || '', B: phaseBInput.value || '', C: phaseCInput.value || '' }; localStorage.setItem(phaseConfigKey, JSON.stringify(cfg)); alert('保存しました'); });
+
+// phase runtime state
+let nightFilterAlpha = 0; // 0..1, 1 means very dark
+let currentPhase = null;
+let phaseTransition = { active:false, start:0, duration:0, from:0, to:0, sunriseStart:0 };
+
+/* check phase times every 5s */
+setInterval(()=>{
+  const cfg = JSON.parse(localStorage.getItem(phaseConfigKey) || '{}');
+  const nowTokyo = new Date(Date.now() + (new Date().getTimezoneOffset()*60000) + (9*3600*1000));
+  const hhmm = `${nowTokyo.getHours().toString().padStart(2,'0')}:${nowTokyo.getMinutes().toString().padStart(2,'0')}`;
+  // if matched A/B/C exactly, trigger transitions
+  if(cfg.A && hhmm === cfg.A && currentPhase !== 'A'){
+    // A: immediately set night filter to strong value (e.g. 0.8)
+    currentPhase = 'A';
+    nightFilterAlpha = 0.8;
+    phaseTransition.active = false;
+  }
+  if(cfg.B && hhmm === cfg.B && currentPhase !== 'B'){
+    // B: start a 40s transition from current alpha to 0 over 40s; sunrise starts at 20s into this transition
+    currentPhase = 'B';
+    phaseTransition.active = true;
+    phaseTransition.start = Date.now();
+    phaseTransition.duration = 40000; // 40s
+    phaseTransition.from = nightFilterAlpha;
+    phaseTransition.to = 0;
+    phaseTransition.sunriseStart = phaseTransition.start + 20000;
+  }
+  if(cfg.C && hhmm === cfg.C && currentPhase !== 'C'){
+    // C: ensure filter is removed
+    currentPhase = 'C';
+    nightFilterAlpha = 0;
+    phaseTransition.active = false;
+  }
+},5000);
+
+/* animate phase transitions */
+function updatePhaseTransition(){
+  if(phaseTransition.active){
+    const now = Date.now();
+    const t = Math.min(1, (now - phaseTransition.start) / phaseTransition.duration);
+    nightFilterAlpha = phaseTransition.from + (phaseTransition.to - phaseTransition.from) * t;
+    // stop when complete
+    if(t >= 1) phaseTransition.active = false;
+  }
+}
+
+/* draw sunrise effect if needed */
+function drawSunriseEffect(){
+  if(currentPhase === 'B' && phaseTransition.start){
+    const now = Date.now();
+    if(now >= phaseTransition.sunriseStart){
+      // progress from 0..1 from sunriseStart to sunriseStart + 20000 (20s)
+      const p = Math.min(1, (now - phaseTransition.sunriseStart) / 20000);
+      // draw a subtle radial gradient at top-right
+      const gx = W - 20, gy = 20;
+      const grad = ctx.createRadialGradient(gx, gy, 10, gx, gy, 200);
+      grad.addColorStop(0, `rgba(255,220,160,${0.6 * p})`);
+      grad.addColorStop(1, `rgba(255,220,160,${0})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* --- 更新 / 描画 --- */
 function update() {
   const key = mapX + ',' + mapY;
-  if(!maps[key]) return;
+  if(!maps[key]) {
+    // If no map: clamp player inside canvas (ユーザー要求: マップがない所には行けない)
+    // However map is missing entirely — keep player inside the current canvas boundaries
+    player.x = Math.max(0, Math.min(player.x, W - player.size));
+    player.y = Math.max(0, Math.min(player.y, H - player.size));
+    return;
+  }
   const map = maps[key];
 
   const ox = player.x, oy = player.y;
   player.moving = false;
   player.crouch = player.shift;
 
-  if (keyState.w) { player.y -= player.speed; player.dir = 'up'; player.moving = true; }
-  if (keyState.s) { player.y += player.speed; player.dir = 'down'; player.moving = true; }
-  if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
-  if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
+  // If sitting, prevent movement keys from affecting position
+  if(!player.sitting){
+    if (keyState.w) { player.y -= player.speed; player.dir = 'up'; player.moving = true; }
+    if (keyState.s) { player.y += player.speed; player.dir = 'down'; player.moving = true; }
+    if (keyState.a) { player.x -= player.speed; player.dir = 'left'; player.moving = true; }
+    if (keyState.d) { player.x += player.speed; player.dir = 'right'; player.moving = true; }
+  }
 
   // walk sound
   const anyMoveKey = keyState['w'] || keyState['a'] || keyState['s'] || keyState['d'];
@@ -2484,6 +2890,7 @@ function update() {
   let blockedByObject = false;
   for(let i=0;i<map.objects.length;i++){
     const obj = map.objects[i];
+    // seat and radio are non-blocking by default; block only when type==='block'
     if(!circleRectOverlap(foot, obj)) continue;
     if(obj.type === 'block'){
       const objPixelResult = isPassableByObjectPixel(key, i, foot, obj);
@@ -2501,18 +2908,25 @@ function update() {
   }
   if(blockedByObject || blockedByMapMask){ player.x = ox; player.y = oy; }
 
-  // tile transitions
+  // tile transitions: only if neighboring map exists; otherwise clamp to edge
   let nx = mapX, ny = mapY;
-  if (player.x < 0) nx--;
-  if (player.x + player.size > W) nx++;
-  if (player.y < 0) ny--;
-  if (player.y + player.size > H) ny++;
-  if (maps[nx + ',' + ny]) {
-    mapX = nx; mapY = ny;
-    if (player.x < 0) player.x = W - player.size;
-    if (player.x + player.size > W) player.x = 0;
-    if (player.y < 0) player.y = H - player.size;
-    if (player.y + player.size > H) player.y = 0;
+  let movedTile = false;
+  if (player.x < 0) { nx--; movedTile = true; }
+  if (player.x + player.size > W) { nx++; movedTile = true; }
+  if (player.y < 0) { ny--; movedTile = true; }
+  if (player.y + player.size > H) { ny++; movedTile = true; }
+  if (movedTile) {
+    if (maps[nx + ',' + ny]) {
+      mapX = nx; mapY = ny;
+      if (player.x < 0) player.x = W - player.size;
+      if (player.x + player.size > W) player.x = 0;
+      if (player.y < 0) player.y = H - player.size;
+      if (player.y + player.size > H) player.y = 0;
+    } else {
+      // neighbor map does not exist -> prevent moving out
+      player.x = Math.max(0, Math.min(player.x, W - player.size));
+      player.y = Math.max(0, Math.min(player.y, H - player.size));
+    }
   }
 
   // find interactable objects every frame
@@ -2562,6 +2976,13 @@ function update() {
   if (playerName) sendPosition();
   checkBgmZone();
   checkUiZone();
+
+  // update global event
+  updateGlobalEventProgress();
+  drawEventCountdown();
+
+  // update phase transitions
+  updatePhaseTransition();
 }
 
 /* --- getImage --- */
@@ -2581,33 +3002,81 @@ function draw(){
   if(status[`bg_${key}`]==='loaded'){ ctx.drawImage(images[`bg_${key}`],0,0,W,H); }else{ ctx.fillStyle='#333'; ctx.fillRect(0,0,W,H); }
 
   // draw objects (skip mask-type)
-  map.objects.forEach((o,i)=>{
-    if (o.mask) return;
-    if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
-      ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
-    } else if (o.type === 'radio') {
-      // fallback rectangle for radio if no image
-      ctx.fillStyle = 'rgba(180,180,255,0.9)';
-      ctx.fillRect(o.x, o.y, o.w, o.h);
+  if(map && map.objects){
+    map.objects.forEach((o,i)=>{
+      if (o.mask) return;
+      if (o.img && status[`obj_${key}_${i}`] === 'loaded') {
+        ctx.drawImage(images[`obj_${key}_${i}`], o.x, o.y, o.w, o.h);
+      } else if (o.type === 'radio') {
+        // fallback rectangle for radio if no image
+        ctx.fillStyle = 'rgba(180,180,255,0.9)';
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+      } else if (o.type === 'seat') {
+        // make seat transparent by default (but draw faint outline for debugging)
+        // ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.strokeRect(o.x,o.y,o.w,o.h);
+      }
+    });
+  }
+
+  // If global event video active: draw video frame under avatars
+  const avatarFadeP = getAvatarFadeProgress(); // 0..1
+  if(globalEventState.active && globalEventState.video && globalEventState.video.readyState >= 2){
+    try{
+      ctx.drawImage(globalEventState.video, 0, 0, W, H);
+    }catch(e){
+      // drawing may fail due to cross-origin; ignore to avoid breaking
+      // console.warn('video draw failed', e);
     }
-  });
+  }
 
   // draw other players
   for(const id in otherPlayers){
     const p = otherPlayers[id];
     if(p.mapX===mapX && p.mapY===mapY){
+      // For global event, clip avatars top area only (fade from bottom)
+      if(globalEventState.active){
+        const fadeHeight = avatarFadeP * H;
+        const visibleTop = Math.max(0, H - fadeHeight);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0,0,W,visibleTop);
+        ctx.clip();
+      }
       const img = getImage(p);
-      if(img) ctx.drawImage(img,p.x,p.y,player.size,player.size);
+      if(p.sitting && p.sitting.sitImg){
+        // draw sitting png if provided (note: crossOrigin drawing not guaranteed)
+        const sitImg = new Image(); sitImg.crossOrigin='anonymous'; sitImg.src = p.sitting.sitImg;
+        try{ ctx.drawImage(sitImg, p.x, p.y, player.size, player.size); }catch(e){}
+      } else {
+        if(img) ctx.drawImage(img,p.x,p.y,player.size,player.size);
+      }
       ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText(p.name||id,p.x,p.y-5);
+      if(globalEventState.active) ctx.restore();
     }
   }
 
-  // draw player
+  // draw player (respect sitting replacement)
   if(!player.hidden){
-    const img = getImage(player);
-    if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
+    if(globalEventState.active){
+      const fadeHeight = avatarFadeP * H;
+      const visibleTop = Math.max(0, H - fadeHeight);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0,0,W,visibleTop);
+      ctx.clip();
+    }
+
+    if(player.sitting && player.sitting.sitImg){
+      const sitImg = new Image(); sitImg.crossOrigin='anonymous'; sitImg.src = player.sitting.sitImg;
+      try{ ctx.drawImage(sitImg, player.x, player.y, player.size, player.size); }catch(e){}
+    } else {
+      const img = getImage(player);
+      if(img) ctx.drawImage(img,player.x,player.y,player.size,player.size);
+    }
     ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
     if(playerName) ctx.fillText(playerName,player.x,player.y-5);
+
+    if(globalEventState.active) ctx.restore();
   }
 
   // draw active-object note symbols (♪)
@@ -2656,7 +3125,7 @@ function draw(){
   const SHOW_DURATION = 3000;
   if(currentInteract && (Date.now() - lastInteractDisplayTime) <= SHOW_DURATION){
     const obj = currentInteract.obj;
-    const text = obj.interactText || 'E: 使用';
+    const text = obj.interactText || (obj.type==='seat' ? 'E: 座る' : 'E: 使用');
     // Use small font (about 1/3 of previous) - choose 6px for readability/size compromise
     const smallFont = '6px sans-serif';
     ctx.font = smallFont;
@@ -2671,25 +3140,7 @@ function draw(){
     if(activeFlag){
       const sText = '再生中 (E:停止)';
       ctx.font = smallFont;
-      const sWidth = ctx.measureText(sText).width;
-      //ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      //ctx.fillRect(obj.x - 6, obj.y - 26, sWidth + 12, 12);
       ctx.fillStyle = '#fff';
-      //ctx.fillText(sText, obj.x, obj.y - 14);
-
-      // show remaining time under the object if playing locally
-      const uniqueKey = makeUniqueKey(currentInteract.mapKey, currentInteract.index);
-      const entry = playingAudios[uniqueKey];
-      if(entry && entry.audio){
-        const rem = entry.audio.duration && !isNaN(entry.audio.duration) ? Math.max(0, entry.audio.duration - entry.audio.currentTime) : null;
-        const timeText = rem !== null ? `残り ${formatTimeSec(rem)}` : '残り --:--';
-        ctx.font = '8px monospace';
-        //ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        const w2 = ctx.measureText(timeText).width;
-        //ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
-        //ctx.fillStyle = '#fff';
-        //ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
-      }
     }
   }
 
@@ -2705,13 +3156,29 @@ function draw(){
       const rem = entry.audio.duration && !isNaN(entry.audio.duration) ? Math.max(0, entry.audio.duration - entry.audio.currentTime) : null;
       const timeText = rem !== null ? `残り ${formatTimeSec(rem)}` : '残り --:--';
       ctx.font = '8px monospace';
-      //ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      const w2 = ctx.measureText(timeText).width;
-     // ctx.fillRect(obj.x - 6, obj.y + obj.h + 2, w2 + 12, 14);
-     //ctx.fillStyle = '#fff';
-     //ctx.fillText(timeText, obj.x, obj.y + obj.h + 14);
     }
   }
+
+  // Draw global event related overlays
+  if(globalEventState.active){
+    // draw avatar fade mask top area already handled by clipping when drawing avatars
+    // draw white fade overlay if in whiteFade phase
+    if(globalEventState.phase === 'whiteFade'){
+      const elapsed = (Date.now() - globalEventState.phaseStart) / 1000;
+      const alpha = Math.min(1, elapsed / globalEventState.whiteFadeDur);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fillRect(0,0,W,H);
+    }
+    // draw small countdown (also updated in DOM)
+  }
+
+  // Draw night/dark filter overlay
+  if(nightFilterAlpha > 0){
+    ctx.fillStyle = `rgba(0,20,40,${nightFilterAlpha})`;
+    ctx.fillRect(0,0,W,H);
+  }
+  // draw sunrise effect if B-phase
+  drawSunriseEffect();
 }
 
 /* --- メインループ --- */
@@ -2722,5 +3189,4 @@ window.addEventListener('beforeunload', ()=>{ remove(ref(db,'players/'+userId));
 
 </script>
 </body>
-</html>     
-  
+</html>
