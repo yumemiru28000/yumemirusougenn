@@ -100,21 +100,21 @@ const CONFIG_EVENT = {
   enabled: true,
   start: "06:05", // event start (Tokyo HH:MM)
   end:   "06:09", // event end (Tokyo HH:MM)
-  audio: "",      // mp3 url (optional)
+  audio: "https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/kieru.mp3",      // mp3 url (optional)
   video: "",      // mp4 url (optional, CORS required)
   target: { mapX: 100, mapY: 0, x: 150, y: 120 } // teleport destination
 };
 
 const CONFIG_PHASES = {
   A: "23:00", // night start
-  B: "05:29", // B time (we will start pre-B at B-1 minute automatically)
+  B: "06:02", // B time (we will start pre-B at B-1 minute automatically)
   C: "06:30"  // finish
 };
 
 const CONFIG_BLOCKS = [
-  // Example: block from 00:00 to 01:00 Tokyo
-  // { start: "00:00", end: "01:00" }
-  // Add entries here to block access in those ranges
+   Example: block from 06:07 to 06:20 Tokyo
+  { start: "06:07", end: "06:20" }
+   Add entries here to block access in those ranges
 ];
 
 const EMOTES = [
