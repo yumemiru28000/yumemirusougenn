@@ -2143,8 +2143,14 @@ function loadImage(key, src){
 for(const k in maps){
   loadImage(`bg_${k}`, maps[k].bg);
   if(maps[k].collisionMask) loadImage(`mask_${k}`, maps[k].collisionMask);
-  maps[k].objects.forEach((o,i)=>{ if(o.img) loadImage(`obj_${k}_${i}`, o.img); });
+  maps[k].objects.forEach((o,i)=>{
+    if(o.img) loadImage(`obj_${k}_${i}`, o.img);
+
+    // ★追加：座り画像もロード
+    if(o.sitImg) loadImage(`sit_${k}_${i}`, o.sitImg);
+  });
 }
+
 
 /* --- input handling (extend for R and Q and touch E/R/Q) --- */
 const keyState = {};
@@ -2766,7 +2772,17 @@ setInterval(()=>{ const now = Date.now(); for(let i=activeExprBubbles.length-1;i
    ============================================================ */
 
 /* helper: get image for player */
-function getImage(p){ if(p.crouch) return sprites.crouch[p.dir]; if(p.moving) return sprites.walk[p.dir]; return sprites.idle[p.dir]; }
+function getImage(p){
+  // ★座っている場合
+  if(p.sitting){
+    const { mapKey, index } = p.sitting;
+    return images[`sit_${mapKey}_${index}`] || sprites.idle[p.dir];
+  }
+
+  if(p.crouch) return sprites.crouch[p.dir];
+  if(p.moving) return sprites.walk[p.dir];
+  return sprites.idle[p.dir];
+}
 
 /* --- event schedule & night/dawn logic helpers --- */
 
