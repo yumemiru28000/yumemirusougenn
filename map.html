@@ -2095,8 +2095,7 @@ const maps = {
     bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
     block:{up:false,down:false,left:false,right:false},
     objects:[
-      { type: 'warp', x: 50, y: 18, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png', to: { x: 50, y: 200, mapX: 50, mapY: 0 } },
-      {type:'grass',x:60,y:200,w:80,h:40,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio1.png',event:'A'},
+      
       {
         type: 'radio',
         id: 'radio_01',
@@ -2117,6 +2116,18 @@ const maps = {
   }
 };
 
+   '100,-1': {
+    name:'ユメの草原',
+    bg:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/sougen.png',
+    block:{up:false,down:false,left:false,right:false},
+    objects:[
+      { type: 'warp', x: 50, y: 18, w: 40, h: 40, img: 'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/doa.png', to: { x: 50, y: 200, mapX: 50, mapY: 0 } },
+      {type:'grass',x:60,y:200,w:80,h:40,img:'https://raw.githubusercontent.com/yumemiru28000/yumemirusougenn/main/radio1.png',event:'A'}
+   
+    
+    ]
+  }
+};
 /* --- pixel mask loaders (left mostly intact) --- */
 const imagePixelData = {}; const images = {}; const status = {};
 function loadImage(key, src){
